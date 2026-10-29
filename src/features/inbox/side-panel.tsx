@@ -26,7 +26,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 }
 
 /** Context next to the thread: contact, channel, assignment, window, and internal notes (plan 3.3 side panel). */
-export function SidePanel({ conversation: c, members, canReply, onAssign }: { conversation: Conversation; members: Member[]; canReply: boolean; onAssign: (userId: string | null) => void }) {
+export function SidePanel({ conversation: c, members, canReply, onAssign, idPrefix }: { conversation: Conversation; members: Member[]; canReply: boolean; onAssign: (userId: string | null) => void; idPrefix: string }) {
   const t = useTranslations("inbox");
   const { workspace, me } = useWorkspace();
   const channels = useChannels(workspace.id);
@@ -53,10 +53,10 @@ export function SidePanel({ conversation: c, members, canReply, onAssign }: { co
       </section>
 
       <section>
-        <label htmlFor="assignee" className="mb-1.5 block text-xs font-semibold text-muted-foreground">
+        <label htmlFor={`${idPrefix}-assignee`} className="mb-1.5 block text-xs font-semibold text-muted-foreground">
           {t("side.assignee")}
         </label>
-        <Select id="assignee" value={c.assigneeId ?? ""} disabled={!canReply} onChange={(e) => onAssign(e.target.value || null)}>
+        <Select id={`${idPrefix}-assignee`} value={c.assigneeId ?? ""} disabled={!canReply} onChange={(e) => onAssign(e.target.value || null)}>
           <option value="">{t("actions.unassign")}</option>
           {members.map((m) => (
             <option key={m.userId} value={m.userId}>
@@ -66,12 +66,12 @@ export function SidePanel({ conversation: c, members, canReply, onAssign }: { co
         </Select>
       </section>
 
-      <Notes conversationId={c.id} canWrite={canReply} members={members} />
+      <Notes conversationId={c.id} canWrite={canReply} members={members} idPrefix={idPrefix} />
     </div>
   );
 }
 
-function Notes({ conversationId, canWrite, members }: { conversationId: string; canWrite: boolean; members: Member[] }) {
+function Notes({ conversationId, canWrite, members, idPrefix }: { conversationId: string; canWrite: boolean; members: Member[]; idPrefix: string }) {
   const t = useTranslations("inbox.side");
   const tc = useTranslations("common");
   const errorMessage = useErrorMessage();
@@ -108,10 +108,10 @@ function Notes({ conversationId, canWrite, members }: { conversationId: string; 
       </div>
       {canWrite ? (
         <form onSubmit={submit} className="space-y-2">
-          <label htmlFor={`note-${conversationId}`} className="sr-only">
+          <label htmlFor={`${idPrefix}-note`} className="sr-only">
             {t("addNote")}
           </label>
-          <Textarea id={`note-${conversationId}`} className="min-h-16" maxLength={2000} placeholder={t("notePlaceholder")} value={text} onChange={(e) => setText(e.target.value)} />
+          <Textarea id={`${idPrefix}-note`} className="min-h-16" maxLength={2000} placeholder={t("notePlaceholder")} value={text} onChange={(e) => setText(e.target.value)} />
           <Button type="submit" size="sm" variant="secondary" loading={add.isPending} disabled={!text.trim()}>
             {t("addNote")}
           </Button>

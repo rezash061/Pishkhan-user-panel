@@ -4,6 +4,7 @@ import { MutationCache, QueryCache, QueryClient, QueryClientProvider } from "@ta
 import { useState, type ReactNode } from "react";
 import { Toaster } from "sonner";
 import { ApiError } from "@/lib/api/errors";
+import { notifyPlanLimit, PlanLimitProvider } from "./plan-limit";
 
 function shouldRetry(failureCount: number, error: unknown): boolean {
   // Client errors will not fix themselves; network and 5xx get two more tries.
@@ -18,11 +19,16 @@ function onAuthLost(error: unknown) {
 }
 
 export function Providers({ children }: { children: ReactNode }) {
+  // Every failed query or mutation passes through here: lost sessions go to login, plan limits open the upgrade sheet.
+  const onError = (error: unknown) => {
+    onAuthLost(error);
+    notifyPlanLimit(error);
+  };
   const [client] = useState(
     () =>
       new QueryClient({
-        queryCache: new QueryCache({ onError: onAuthLost }),
-        mutationCache: new MutationCache({ onError: onAuthLost }),
+        queryCache: new QueryCache({ onError }),
+        mutationCache: new MutationCache({ onError }),
         defaultOptions: {
           queries: { staleTime: 30_000, retry: shouldRetry, refetchOnWindowFocus: true },
           mutations: { retry: false },
@@ -31,7 +37,7 @@ export function Providers({ children }: { children: ReactNode }) {
   );
   return (
     <QueryClientProvider client={client}>
-      {children}
+      <PlanLimitProvider>{children}</PlanLimitProvider>
       <Toaster dir="rtl" position="top-center" richColors closeButton toastOptions={{ style: { fontFamily: "inherit" } }} />
     </QueryClientProvider>
   );

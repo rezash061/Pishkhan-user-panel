@@ -1,3 +1,5 @@
+import { RequirePermission } from "@/features/workspace/require-permission";
+import { P } from "@/lib/permissions";
 import type { Metadata } from "next";
 import { getTranslations } from "next-intl/server";
 import { TeamPage } from "@/features/team/team-page";
@@ -8,5 +10,5 @@ export async function generateMetadata(): Promise<Metadata> {
 }
 
 export default function Page() {
-  return <TeamPage />;
+  return <RequirePermission permission={P.membersRead}><TeamPage /></RequirePermission>;
 }

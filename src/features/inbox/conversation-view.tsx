@@ -183,10 +183,10 @@ export function ConversationView({ conversationId }: { conversationId: string })
       </section>
 
       <aside className="hidden w-80 shrink-0 overflow-y-auto border-s bg-surface xl:block">
-        <SidePanel conversation={c} members={members.data ?? []} canReply={canReply} onAssign={(id) => assign.mutate(id, { onError: fail })} />
+        <SidePanel idPrefix="aside" conversation={c} members={members.data ?? []} canReply={canReply} onAssign={(id) => assign.mutate(id, { onError: fail })} />
       </aside>
       <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} title={t("actions.details")} variant="sheet">
-        <SidePanel conversation={c} members={members.data ?? []} canReply={canReply} onAssign={(id) => assign.mutate(id, { onError: fail })} />
+        <SidePanel idPrefix="sheet" conversation={c} members={members.data ?? []} canReply={canReply} onAssign={(id) => assign.mutate(id, { onError: fail })} />
       </Dialog>
     </div>
   );

@@ -30,6 +30,7 @@ node tests/mock-api/server.mjs      # :5080
 | `pnpm gen:api` | Regenerate `src/lib/api/schema.d.ts` from `openapi/api.v1.json` (copy the file from `backend/openapi/` after backend changes). |
 | `pnpm check:api` | CI: fails if the generated client is stale. |
 | `pnpm typecheck` / `pnpm lint` / `pnpm test` / `pnpm build` | |
+| `pnpm e2e` | Playwright on phone and desktop viewports against the mock Api host, with axe accessibility checks (run `pnpm build` first). |
 
 ## How it fits together
 

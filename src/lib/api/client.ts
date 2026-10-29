@@ -16,13 +16,16 @@ export function csrfToken(): string {
 }
 
 /** Calls go to this app's BFF (`/api/bff/*`), which adds the bearer token. Paths stay typed as the backend's `/api/v1/*`. */
-const bffFetch: typeof fetch = (input, init) => {
+const bffFetch: typeof fetch = async (input, init) => {
   const request = input instanceof Request ? input : new Request(input, init);
   const url = new URL(request.url);
   url.pathname = url.pathname.replace(/^\/api\/v1\//, "/api/bff/");
   const headers = new Headers(request.headers);
-  if (request.method !== "GET" && request.method !== "HEAD") headers.set("x-csrf-token", csrfToken());
-  return fetch(new Request(url, { method: request.method, headers, body: request.body, credentials: "same-origin", duplex: "half" } as RequestInit));
+  const hasBody = request.method !== "GET" && request.method !== "HEAD";
+  if (hasBody) headers.set("x-csrf-token", csrfToken());
+  // Buffer the body: a streamed request body (ReadableStream) needs HTTP/2 in Chromium and fails over HTTP/1.1.
+  const body = hasBody ? await request.arrayBuffer() : undefined;
+  return fetch(url, { method: request.method, headers, body, credentials: "same-origin" });
 };
 
 export const api = createClient<paths>({
