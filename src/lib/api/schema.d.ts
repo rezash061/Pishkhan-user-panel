@@ -1282,7 +1282,29 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        get?: never;
+        /** Pending invitations (not yet accepted or expired), newest first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PendingInvitationResponse"][];
+                    };
+                };
+            };
+        };
         put?: never;
         /** Invite a team member by phone (SMS link) */
         post: {
@@ -1339,6 +1361,52 @@ export interface paths {
             };
         };
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/invitations/{invitationId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Revoke a pending invitation; its link stops working */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    invitationId: string;
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         options?: never;
         head?: never;
         patch?: never;
@@ -1587,7 +1655,7 @@ export interface paths {
             parameters: {
                 query?: {
                     cursor?: string;
-                    limit?: number | string;
+                    limit?: number;
                 };
                 header?: never;
                 path: {
@@ -1699,7 +1767,7 @@ export interface paths {
         };
         /**
          * Conversations, most recent customer message first
-         * @description Filters: `status`, `assignee` (`me`, `none` or a user id), `channelAccountId`, `unread=true`. Keyset pagination: pass `cursor` from the previous page.
+         * @description Filters: `status`, `assignee` (`me`, `none` or a user id), `channelAccountId`, `unread=true`, `q` (customer name or username, or a phone or email the customer gave). Keyset pagination: pass `cursor` from the previous page.
          */
         get: {
             parameters: {
@@ -1708,8 +1776,9 @@ export interface paths {
                     assignee?: string;
                     channelAccountId?: string;
                     unread?: boolean;
+                    q?: string;
                     cursor?: string;
-                    limit?: number | string;
+                    limit?: number;
                 };
                 header?: never;
                 path: {
@@ -1797,7 +1866,7 @@ export interface paths {
             parameters: {
                 query?: {
                     cursor?: string;
-                    limit?: number | string;
+                    limit?: number;
                 };
                 header?: never;
                 path: {
@@ -2741,7 +2810,7 @@ export interface paths {
         get: {
             parameters: {
                 query?: {
-                    days?: number | string;
+                    days?: number;
                 };
                 header?: never;
                 path: {
@@ -3396,7 +3465,7 @@ export interface paths {
                     tag?: string;
                     status?: string;
                     cursor?: string;
-                    limit?: number | string;
+                    limit?: number;
                 };
                 header?: never;
                 path: {
@@ -4065,6 +4134,73 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/audit": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The workspace's audit log, newest first (owner only)
+         * @description Actions by staff (support access) show as actor "support", without the staff member's identity or address.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    Actor?: string;
+                    Action?: string;
+                    EntityType?: string;
+                    From?: string;
+                    To?: string;
+                    Page?: number;
+                    PageSize?: number;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PagedResultOfAuditEntryResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4081,17 +4217,38 @@ export interface components {
             /** Format: uuid */
             assigneeId: null | string;
         };
+        AuditEntryResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: date-time */
+            occurredAt: string;
+            actorType: string;
+            /** Format: uuid */
+            actorId: null | string;
+            actorName: string;
+            /** Format: uuid */
+            onBehalfOf: null | string;
+            /** Format: uuid */
+            workspaceId: null | string;
+            action: string;
+            entityType: string;
+            entityId: null | string;
+            reason: null | string;
+            ip: null | string;
+            before: null | components["schemas"]["JsonElement"];
+            after: null | components["schemas"]["JsonElement"];
+        };
         BacklogRunResponse: {
             /** Format: uuid */
             id: string;
             status: string;
             mediaId: string;
             /** Format: int32 */
-            pages: number | string;
+            pages: number;
             /** Format: int32 */
-            commentsSeen: number | string;
+            commentsSeen: number;
             /** Format: int32 */
-            commentsQueued: number | string;
+            commentsQueued: number;
             error: null | string;
             /** Format: date-time */
             createdAt: string;
@@ -4139,7 +4296,7 @@ export interface components {
              * Format: int32
              * @default 0
              */
-            sortOrder: number | string;
+            sortOrder: number;
         };
         CategoryResponse: {
             /** Format: uuid */
@@ -4148,7 +4305,7 @@ export interface components {
             /** Format: uuid */
             parentId: null | string;
             /** Format: int32 */
-            sortOrder: number | string;
+            sortOrder: number;
         };
         ChangeRoleRequest: {
             role: string;
@@ -4175,6 +4332,12 @@ export interface components {
             /** Format: uri */
             authorizeUrl: string;
         };
+        ConversationContact: {
+            /** Format: uuid */
+            id: string;
+            displayName: null | string;
+            username: null | string;
+        };
         ConversationResponse: {
             /** Format: uuid */
             id: string;
@@ -4183,6 +4346,7 @@ export interface components {
             channelKind: string;
             /** Format: uuid */
             contactId: string;
+            contact: components["schemas"]["ConversationContact"];
             status: string;
             /** Format: uuid */
             assigneeId: null | string;
@@ -4196,8 +4360,9 @@ export interface components {
             /** Format: date-time */
             humanAgentUntil: null | string;
             /** Format: int32 */
-            unreadCount: number | string;
+            unreadCount: number;
             lastMessagePreview: null | string;
+            handoff: null | components["schemas"]["HandoffInfo"];
         };
         CreateWorkspaceRequest: {
             name: string;
@@ -4218,14 +4383,14 @@ export interface components {
             status: string;
             contentType: string;
             /** Format: int64 */
-            size: number | string;
+            size: number;
             originalName: null | string;
             url: null | string;
             thumbnailUrl: null | string;
             /** Format: int32 */
-            width: null | number | string;
+            width: null | number;
             /** Format: int32 */
-            height: null | number | string;
+            height: null | number;
             /** Format: date-time */
             createdAt: string;
         };
@@ -4260,11 +4425,11 @@ export interface components {
             variable?: null | string;
             retryText?: null | string;
             /** Format: int32 */
-            maxRetries?: null | number | string;
+            maxRetries?: null | number;
             conditions?: null | components["schemas"]["FlowCondition"][];
             match?: null | string;
             /** Format: int32 */
-            delaySeconds?: null | number | string;
+            delaySeconds?: null | number;
             actions?: null | components["schemas"]["RuleAction"][];
             goal?: null | string;
         };
@@ -4279,7 +4444,7 @@ export interface components {
             status: string;
             graph: components["schemas"]["FlowGraph"];
             /** Format: int32 */
-            publishedVersion: null | number | string;
+            publishedVersion: null | number;
             /** Format: date-time */
             publishedAt: null | string;
             validation: components["schemas"]["FlowValidation"];
@@ -4290,6 +4455,12 @@ export interface components {
             errors: components["schemas"]["FlowIssue"][];
             warnings: components["schemas"]["FlowIssue"][];
             isValid?: boolean;
+        };
+        HandoffInfo: {
+            reason: string;
+            suggestedReply: null | string;
+            /** Format: date-time */
+            at: null | string;
         };
         /** Format: binary */
         IFormFile: string;
@@ -4304,13 +4475,13 @@ export interface components {
             fileId: string;
             status: string;
             /** Format: int32 */
-            rows: number | string;
+            rows: number;
             /** Format: int32 */
-            created: number | string;
+            created: number;
             /** Format: int32 */
-            updated: number | string;
+            updated: number;
             /** Format: int32 */
-            skipped: number | string;
+            skipped: number;
             errors: components["schemas"]["ImportRowError"][];
             error: null | string;
             /** Format: date-time */
@@ -4320,7 +4491,7 @@ export interface components {
         };
         ImportRowError: {
             /** Format: int32 */
-            row: number | string;
+            row: number;
             column: string;
             code: string;
         };
@@ -4336,6 +4507,7 @@ export interface components {
             phone: string;
             role: string;
         };
+        JsonElement: unknown;
         LoginResponse: {
             accessToken: string;
             /** Format: date-time */
@@ -4379,6 +4551,10 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        MessageAttachment: {
+            type: string;
+            url: null | string;
+        };
         MessageButton: {
             type: string;
             title: string;
@@ -4413,10 +4589,11 @@ export interface components {
             sentAt: null | string;
             /** Format: date-time */
             readAt: null | string;
+            attachments: components["schemas"]["MessageAttachment"][];
         };
         Money: {
             /** Format: int64 */
-            amount?: number | string;
+            amount?: number;
             currency?: components["schemas"]["Currency"];
         };
         NoteRequest: {
@@ -4445,6 +4622,15 @@ export interface components {
             tag?: null | string;
             isEmpty?: boolean;
         };
+        PagedResultOfAuditEntryResponse: {
+            items: components["schemas"]["AuditEntryResponse"][];
+            /** Format: int32 */
+            totalCount: number;
+            /** Format: int32 */
+            page: number;
+            /** Format: int32 */
+            pageSize: number;
+        };
         PageOfConversationResponse: {
             items: components["schemas"]["ConversationResponse"][];
             nextCursor: null | string;
@@ -4466,11 +4652,23 @@ export interface components {
             password: string;
             totpCode: null | string;
         };
+        PendingInvitationResponse: {
+            /** Format: uuid */
+            id: string;
+            role: string;
+            phone: string;
+            /** Format: uuid */
+            invitedBy: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            expiresAt: string;
+        };
         ProblemDetails: {
             type?: null | string;
             title?: null | string;
             /** Format: int32 */
-            status?: null | number | string;
+            status?: null | number;
             detail?: null | string;
             instance?: null | string;
         };
@@ -4510,7 +4708,7 @@ export interface components {
             linkUrl: null | string;
             variants: components["schemas"]["VariantResponse"][];
             /** Format: int32 */
-            revision: number | string;
+            revision: number;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -4556,9 +4754,9 @@ export interface components {
         };
         RequestOtpResponse: {
             /** Format: int32 */
-            expiresInSeconds: number | string;
+            expiresInSeconds: number;
             /** Format: int32 */
-            resendAfterSeconds: number | string;
+            resendAfterSeconds: number;
         };
         RuleAction: {
             kind: string;
@@ -4582,7 +4780,7 @@ export interface components {
             trigger: null | components["schemas"]["TriggerConfig"];
             actions: null | components["schemas"]["RuleAction"][];
             /** Format: int32 */
-            priority: number | string;
+            priority: number;
             /** @default true */
             enabled: boolean;
         };
@@ -4597,10 +4795,10 @@ export interface components {
             actions: components["schemas"]["RuleAction"][];
             postId: null | string;
             /** Format: int32 */
-            priority: number | string;
+            priority: number;
             enabled: boolean;
             /** Format: int32 */
-            revision: number | string;
+            revision: number;
             /** Format: date-time */
             createdAt: string;
             /** Format: date-time */
@@ -4610,29 +4808,29 @@ export interface components {
             /** Format: date */
             day: string;
             /** Format: int32 */
-            fired: number | string;
+            fired: number;
             /** Format: int32 */
-            privateReplies: number | string;
+            privateReplies: number;
             /** Format: int32 */
-            publicReplies: number | string;
+            publicReplies: number;
             /** Format: int32 */
-            flowsStarted: number | string;
+            flowsStarted: number;
         };
         RuleStatsResponse: {
             /** Format: uuid */
             ruleId: string;
             /** Format: int32 */
-            days: number | string;
+            days: number;
             /** Format: int32 */
-            fired: number | string;
+            fired: number;
             /** Format: int32 */
-            privateReplies: number | string;
+            privateReplies: number;
             /** Format: int32 */
-            publicReplies: number | string;
+            publicReplies: number;
             /** Format: int32 */
-            flowsStarted: number | string;
+            flowsStarted: number;
             /** Format: int32 */
-            commentsQueued: number | string;
+            commentsQueued: number;
             perDay: components["schemas"]["RuleStatsDayResponse"][];
             latestBacklogRun: null | components["schemas"]["BacklogRunResponse"];
         };
@@ -4661,14 +4859,14 @@ export interface components {
             businessHours: null | components["schemas"]["BusinessHours"];
             fallbackText: null | string;
             /** Format: int32 */
-            fallbackCooldownMinutes: null | number | string;
+            fallbackCooldownMinutes: null | number;
         };
         SettingsView: {
             aiEnabled: boolean;
             businessHours: components["schemas"]["BusinessHours"];
             fallbackText: null | string;
             /** Format: int32 */
-            fallbackCooldownMinutes: number | string;
+            fallbackCooldownMinutes: number;
         };
         StorefrontCard: {
             /** Format: uuid */
@@ -4717,7 +4915,7 @@ export interface components {
             postId?: null | string;
             payload?: null | string;
             /** Format: int32 */
-            cooldownMinutes?: null | number | string;
+            cooldownMinutes?: null | number;
         };
         UpdateMeRequest: {
             displayName: null | string;
@@ -4735,7 +4933,7 @@ export interface components {
             };
             price: null | components["schemas"]["Money"];
             /** Format: int32 */
-            stock: null | number | string;
+            stock: null | number;
             stockPolicy: null | string;
         };
         VariantResponse: {
@@ -4748,7 +4946,7 @@ export interface components {
             price: null | components["schemas"]["Money"];
             effectivePrice: null | components["schemas"]["Money"];
             /** Format: int32 */
-            stock: null | number | string;
+            stock: null | number;
             stockPolicy: string;
             inStock: boolean;
         };

@@ -1,13 +1,14 @@
 "use client";
 
 import { useVirtualizer } from "@tanstack/react-virtual";
-import { BotOff, Hand, Inbox as InboxIcon } from "lucide-react";
+import { BotOff, Hand, Inbox as InboxIcon, Search } from "lucide-react";
 import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
-import { useEffect, useMemo, useRef } from "react";
+import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/field";
 import { Avatar, EmptyState, Skeleton } from "@/components/ui/misc";
 import { useWorkspace } from "@/features/workspace/context";
 import type { Conversation } from "@/lib/api/types";
@@ -15,7 +16,7 @@ import { cn } from "@/lib/cn";
 import { toPersianDigits } from "@/lib/i18n/digits";
 import { formatRelative } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
-import { contactLabel } from "./contact";
+import { contactTitle } from "./contact";
 import { inboxFilters, useConversations, type InboxFilter } from "./data";
 
 const ROW_HEIGHT = 76;
@@ -35,7 +36,9 @@ export function ConversationList() {
   const search = useSearchParams();
   const params = useParams<{ conversationId?: string }>();
   const filter = (inboxFilters as string[]).includes(search.get("filter") ?? "") ? (search.get("filter") as InboxFilter) : "all";
-  const query = useConversations(workspace.id, filter);
+  const [q, setQ] = useState("");
+  const searchText = useDeferredValue(q.trim());
+  const query = useConversations(workspace.id, filter, searchText);
   const items = useMemo(() => query.data?.pages.flatMap((p) => p.items) ?? [], [query.data]);
   const scrollRef = useRef<HTMLDivElement>(null);
   const base = `/w/${workspace.id}/inbox`;
@@ -73,6 +76,10 @@ export function ConversationList() {
     <div className="flex h-full min-h-0 flex-col">
       <div className="shrink-0 border-b px-3 pt-3">
         <h1 className="px-1 pb-2 text-lg font-bold">{t("title")}</h1>
+        <div className="relative pb-2">
+          <Search className="pointer-events-none absolute start-3 top-[calc(50%-0.25rem)] size-4 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <Input type="search" aria-label={t("search")} placeholder={t("searchPlaceholder")} className="ps-9" value={q} onChange={(e) => setQ(e.target.value)} />
+        </div>
         <div role="tablist" aria-label={t("title")} className="-mx-3 flex gap-1 overflow-x-auto px-3 pb-2 scrollbar-thin">
           {inboxFilters.map((f) => (
             <Link
@@ -102,7 +109,11 @@ export function ConversationList() {
         ) : query.isError ? (
           <EmptyState title={errorMessage(query.error)} action={<Button variant="outline" onClick={() => query.refetch()}>{tc("retry")}</Button>} />
         ) : items.length === 0 ? (
+          searchText ? (
+          <EmptyState icon={<Search />} title={t("noResults")} body={t("noResultsBody")} />
+        ) : (
           <EmptyState icon={<InboxIcon />} title={t("empty")} body={filter === "all" ? t("emptyAll") : undefined} />
+        )
         ) : (
           <ul className="relative" style={{ height: virtualizer.getTotalSize() }}>
             {virtualItems.map((row) => {
@@ -122,7 +133,7 @@ export function ConversationList() {
 
 function Row({ conversation: c, href, active }: { conversation: Conversation; href: string; active: boolean }) {
   const t = useTranslations("inbox");
-  const name = contactLabel(c.contactId);
+  const { title } = contactTitle(c, (id) => t("customer", { id }));
   const unread = c.unreadCount > 0;
   const time = c.lastInboundAt ?? c.lastOutboundAt;
   return (
@@ -131,10 +142,12 @@ function Row({ conversation: c, href, active }: { conversation: Conversation; hr
       aria-current={active ? "page" : undefined}
       className={cn("flex h-full items-center gap-3 border-b px-3 transition-colors", active ? "bg-primary-soft" : "hover:bg-surface-muted")}
     >
-      <Avatar name={name} />
+      <Avatar name={title} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
-          <span className={cn("min-w-0 flex-1 truncate text-sm", unread ? "font-bold" : "font-medium")}>{t("customer", { id: name })}</span>
+          <span className={cn("min-w-0 flex-1 truncate text-sm", unread ? "font-bold" : "font-medium")} dir="auto">
+            {title}
+          </span>
           {time ? <span className="shrink-0 text-xs text-muted-foreground">{formatRelative(time)}</span> : null}
         </div>
         <div className="mt-0.5 flex items-center gap-1.5">

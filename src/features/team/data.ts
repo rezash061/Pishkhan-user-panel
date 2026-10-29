@@ -15,9 +15,31 @@ export function useMembers(ws: string, enabled = true) {
 }
 
 export function useInvite(ws: string) {
+  const qc = useQueryClient();
   return useMutation({
     mutationFn: async (vars: { phone: string; role: WorkspaceRole }) =>
       unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/invitations", { params: { path: { workspaceId: ws } }, body: vars })),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.invitations(ws) }),
+  });
+}
+
+/** Invitations not yet accepted or expired (phones come masked). Needs `workspace.members.manage`. */
+export function usePendingInvitations(ws: string, enabled: boolean) {
+  return useQuery({
+    queryKey: qk.invitations(ws),
+    enabled,
+    queryFn: async () => unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/invitations", { params: { path: { workspaceId: ws } } })),
+  });
+}
+
+export function useRevokeInvitation(ws: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (invitationId: string) => {
+      const { response, error } = await api.DELETE("/api/v1/workspaces/{workspaceId}/invitations/{invitationId}", { params: { path: { workspaceId: ws, invitationId } } });
+      if (!response.ok) unwrap({ error, response });
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.invitations(ws) }),
   });
 }
 

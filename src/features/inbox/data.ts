@@ -23,21 +23,17 @@ type MessagePages = InfiniteData<Page<OptimisticMessage>, string | null>;
 /** A message as shown in the thread; `local` marks an optimistic send that the server has not confirmed yet. */
 export type OptimisticMessage = Message & { local?: "sending" | "failed"; localError?: string };
 
-function normalize(c: Conversation): Conversation {
-  return { ...c, unreadCount: Number(c.unreadCount) || 0 };
-}
-
-export function useConversations(ws: string, filter: InboxFilter) {
+export function useConversations(ws: string, filter: InboxFilter, q = "") {
   return useInfiniteQuery({
-    queryKey: qk.conversationList(ws, filter),
+    queryKey: q ? [...qk.conversationList(ws, filter), q] : qk.conversationList(ws, filter),
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }) => {
       const page = unwrap(
         await api.GET("/api/v1/workspaces/{workspaceId}/conversations", {
-          params: { path: { workspaceId: ws }, query: { ...filterQuery[filter], cursor: pageParam ?? undefined, limit: 30 } },
+          params: { path: { workspaceId: ws }, query: { ...filterQuery[filter], q: q || undefined, cursor: pageParam ?? undefined, limit: 30 } },
         }),
       );
-      return { items: page.items.map((c) => normalize(c as Conversation)), nextCursor: page.nextCursor } satisfies Page<Conversation>;
+      return page satisfies Page<Conversation>;
     },
     getNextPageParam: (last) => last.nextCursor,
   });
@@ -46,8 +42,7 @@ export function useConversations(ws: string, filter: InboxFilter) {
 export function useConversation(ws: string, id: string) {
   return useQuery({
     queryKey: qk.conversation(ws, id),
-    queryFn: async () =>
-      normalize(unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/conversations/{conversationId}", { params: { path: { workspaceId: ws, conversationId: id } } })) as Conversation),
+    queryFn: async () => unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/conversations/{conversationId}", { params: { path: { workspaceId: ws, conversationId: id } } })),
   });
 }
 
@@ -106,8 +101,7 @@ export function patchConversation(qc: QueryClient, ws: string, id: string, patch
   return found;
 }
 
-export function setConversation(qc: QueryClient, ws: string, conversation: Conversation) {
-  const c = normalize(conversation);
+export function setConversation(qc: QueryClient, ws: string, c: Conversation) {
   qc.setQueryData(qk.conversation(ws, c.id), c);
   patchConversation(qc, ws, c.id, c);
 }
@@ -176,7 +170,7 @@ export function useAssign(ws: string, id: string) {
           params: { path: { workspaceId: ws, conversationId: id } },
           body: { assigneeId },
         }),
-      ) as Conversation,
+      ),
     (assigneeId) => ({ assigneeId }),
   );
 }
@@ -191,7 +185,7 @@ export function useChangeStatus(ws: string, id: string) {
           params: { path: { workspaceId: ws, conversationId: id } },
           body: { status, reason: null },
         }),
-      ) as Conversation,
+      ),
     (status) => ({ status, ...(status === "handed_off" ? { aiPaused: true } : {}) }),
   );
 }
@@ -206,7 +200,7 @@ export function useAiPause(ws: string, id: string) {
           params: { path: { workspaceId: ws, conversationId: id } },
           body: { paused },
         }),
-      ) as Conversation,
+      ),
     (paused) => ({ aiPaused: paused }),
   );
 }
@@ -267,6 +261,7 @@ export function useSendMessage(ws: string, id: string, myUserId: string) {
         tag: null,
         sentAt: null,
         readAt: null,
+        attachments: [],
         local: "sending",
       });
     },

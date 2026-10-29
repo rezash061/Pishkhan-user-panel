@@ -12,12 +12,13 @@ import { Dialog } from "@/components/ui/dialog";
 import { Avatar, EmptyState, Skeleton } from "@/components/ui/misc";
 import { useMembers } from "@/features/team/data";
 import { useWorkspace } from "@/features/workspace/context";
-import type { ConversationStatus } from "@/lib/api/types";
+import type { ConversationStatus, Handoff } from "@/lib/api/types";
+import { formatRelative } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
 import { useJoinConversation } from "@/lib/realtime/hub";
 import { Composer, type ComposerHandle } from "./composer";
-import { contactLabel } from "./contact";
+import { contactTitle } from "./contact";
 import { newLocalMessage, useAiPause, useAssign, useChangeStatus, useConversation, useMarkRead, useQuickReplies, useSendMessage, type OptimisticMessage } from "./data";
 import { SidePanel } from "./side-panel";
 import { Thread } from "./thread";
@@ -111,18 +112,25 @@ export function ConversationView({ conversationId }: { conversationId: string })
     return <EmptyState title={errorMessage(conversation.error)} action={<Link href={backHref} className="text-primary hover:underline">{t("actions.backToList")}</Link>} />;
   }
 
-  const name = contactLabel(c.contactId);
+  const { title, handle } = contactTitle(c, (id) => t("customer", { id }));
 
   return (
     <div className="flex h-full min-h-0">
-      <section className="flex min-w-0 flex-1 flex-col" aria-label={t("customer", { id: name })}>
+      <section className="flex min-w-0 flex-1 flex-col" aria-label={title}>
         <header className="flex h-14 shrink-0 items-center gap-2 border-b bg-surface px-2 sm:px-3">
           <Link href={backHref} aria-label={t("actions.backToList")} className="grid size-9 place-items-center rounded-full hover:bg-surface-muted lg:hidden">
             <ArrowRight className="size-5" aria-hidden />
           </Link>
-          <Avatar name={name} className="size-9" />
+          <Avatar name={title} className="size-9" />
           <div className="min-w-0 flex-1">
-            <p className="truncate text-sm font-semibold">{t("customer", { id: name })}</p>
+            <p className="truncate text-sm font-semibold" dir="auto">
+              {title}
+              {handle ? (
+                <span className="ms-1.5 text-xs font-normal text-muted-foreground max-sm:hidden">
+                  <bdi dir="ltr">{handle}</bdi>
+                </span>
+              ) : null}
+            </p>
             <div className="flex items-center gap-1.5 overflow-hidden">
               <Badge tone={statusTone[c.status as ConversationStatus] ?? "neutral"}>{t(`status.${c.status}` as "status.open")}</Badge>
               {c.aiPaused ? (
@@ -172,6 +180,8 @@ export function ConversationView({ conversationId }: { conversationId: string })
 
         <Thread workspaceId={ws} conversationId={conversationId} senderName={senderName} onRetry={retry} onNewInbound={onNewInbound} />
 
+        {c.status === "handed_off" && c.handoff ? <HandoffBanner handoff={c.handoff} canReply={canReply} onUse={(text) => composer.current?.setText(text)} /> : null}
+
         <Composer
           ref={composer}
           conversation={c}
@@ -188,6 +198,35 @@ export function ConversationView({ conversationId }: { conversationId: string })
       <Dialog open={detailsOpen} onClose={() => setDetailsOpen(false)} title={t("actions.details")} variant="sheet">
         <SidePanel idPrefix="sheet" conversation={c} members={members.data ?? []} canReply={canReply} onAssign={(id) => assign.mutate(id, { onError: fail })} />
       </Dialog>
+    </div>
+  );
+}
+
+/** Why the conversation waits for a person, and the reply the AI or rule suggested, one tap from the composer. */
+function HandoffBanner({ handoff, canReply, onUse }: { handoff: Handoff; canReply: boolean; onUse: (text: string) => void }) {
+  const t = useTranslations("inbox.handoff");
+  const reason = handoff.reason === "manual" || handoff.reason === "automation" ? t(`reasons.${handoff.reason}`) : handoff.reason;
+  return (
+    <div className="shrink-0 space-y-2 border-t bg-warning-soft/60 px-3 py-2.5 text-sm" role="note">
+      <p className="flex flex-wrap items-center gap-x-1.5">
+        <Hand className="size-4 shrink-0 text-warning" aria-hidden />
+        <span className="font-medium">{t("title")}</span>
+        <span dir="auto">{reason}</span>
+        {handoff.at ? <span className="text-xs text-muted-foreground">· {formatRelative(handoff.at)}</span> : null}
+      </p>
+      {handoff.suggestedReply ? (
+        <div className="flex items-start gap-2 rounded-xl bg-surface p-2.5">
+          <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm" dir="auto">
+            <span className="mb-0.5 block text-xs text-muted-foreground">{t("suggested")}</span>
+            {handoff.suggestedReply}
+          </p>
+          {canReply ? (
+            <Button size="sm" variant="secondary" onClick={() => onUse(handoff.suggestedReply!)}>
+              {t("use")}
+            </Button>
+          ) : null}
+        </div>
+      ) : null}
     </div>
   );
 }

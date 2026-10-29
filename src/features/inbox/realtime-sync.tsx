@@ -57,6 +57,8 @@ export function RealtimeSync({ workspaceId }: { workspaceId: string }) {
       duration: 10_000,
     });
     if ("vibrate" in navigator) navigator.vibrate?.(200);
+    // The conversation now carries the handoff reason and suggested reply.
+    void qc.invalidateQueries({ queryKey: qk.conversation(workspaceId, p.conversationId) });
   });
 
   useHubEvent<{ channelAccountId: string; status: string; reason: string | null }>(HubEvents.channelStatus, (p) => {

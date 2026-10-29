@@ -33,6 +33,10 @@ const previews = [
 ];
 const statuses = ["handed_off", "open", "open", "pending", "open", "closed", "open", "open"];
 
+const svgThumb = (hue, label) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320"><rect width="320" height="320" fill="hsl(${hue} 70% 85%)"/><text x="160" y="175" font-size="40" text-anchor="middle" fill="hsl(${hue} 60% 30%)">${label}</text></svg>`)}`;
+const contacts = [["نیلوفر احمدی", "niloo.ahmadi"], [null, "sara_style"], ["مریم کاظمی", "maryam.k"], [null, null], ["زهرا رضایی", null], ["Ali Moradi", "ali.moradi"]];
+
 const conversations = Array.from({ length: 24 }, (_, i) => {
   const lastInbound = new Date(Date.now() - (i * 3 + 0.2) * H);
   return {
@@ -40,6 +44,7 @@ const conversations = Array.from({ length: 24 }, (_, i) => {
     channelAccountId: channel.id,
     channelKind: "instagram",
     contactId: `0199b000-0000-7000-9000-${String(5000 + i * 7).padStart(12, "0")}`,
+    contact: { id: `0199b000-0000-7000-9000-${String(5000 + i * 7).padStart(12, "0")}`, displayName: contacts[i % contacts.length][0], username: contacts[i % contacts.length][1] },
     status: statuses[i % statuses.length],
     assigneeId: i % 4 === 1 ? me.id : i % 4 === 2 ? teammate.userId : null,
     aiPaused: statuses[i % statuses.length] === "handed_off",
@@ -49,8 +54,11 @@ const conversations = Array.from({ length: 24 }, (_, i) => {
     humanAgentUntil: iso(new Date(lastInbound.getTime() + 7 * 24 * H)),
     unreadCount: i < 5 ? (i % 3) + 1 : 0,
     lastMessagePreview: previews[i % previews.length],
+    handoff: statuses[i % statuses.length] === "handed_off" ? { reason: "مشتری درخواست تخفیف عمده دارد", suggestedReply: "سلام! برای خرید عمده ۱۰٪ تخفیف داریم، چند عدد لازم دارید؟", at: iso(lastInbound) } : null,
   };
 });
+
+const invitations = [{ id: randomUUID(), role: "agent", phone: "+98912***4567", invitedBy: me.id, createdAt: ago(5 * H), expiresAt: iso(new Date(Date.now() + 6 * 24 * H)) }];
 
 const messages = new Map();
 for (const c of conversations) {
@@ -68,6 +76,7 @@ for (const c of conversations) {
     tag: null,
     sentAt: null,
     readAt: null,
+    attachments: [],
     ...extra,
   });
   messages.set(c.id, [
@@ -75,7 +84,8 @@ for (const c of conversations) {
     m(-26 * 60 + 1, "outbound", "سلام! خوش اومدید 🌸 قیمت مانتو کتان ۸۹۰ هزار تومانه و سایزهای M تا XL موجوده.", { handledBy: "ai" }),
     m(-30, "inbound", "رنگ کرم هم دارید؟", { kind: "text" }),
     m(-29, "outbound", "برای دیدن رنگ‌ها کلمه «رنگ» رو بفرستید.", { handledBy: "rule" }),
-    m(-5, "inbound", "", { kind: "story_reply", text: "این استوری رو می‌خوام" }),
+    m(-40, "inbound", null, { kind: "attachment", attachments: [{ type: "image", url: svgThumb(330, "عکس مشتری") }] }),
+    m(-5, "inbound", "این استوری رو می‌خوام", { kind: "story_reply", attachments: [{ type: "story_reply", url: svgThumb(20, "استوری") }] }),
     m(-2, "outbound", "بله کرم موجوده، براتون رزرو کنم؟", { handledBy: "human", sentBy: teammate.userId }),
     m(0, "inbound", c.lastMessagePreview),
   ].reverse());
@@ -89,8 +99,6 @@ let businessHours = { days: [6, 0, 1, 2, 3].map((day) => ({ day, ranges: [{ from
 const members = [{ userId: me.id, displayName: me.displayName, phone: me.phone, role: "owner", joinedAt: me.createdAt }, teammate];
 
 // Automation (BE-1.3) and catalog (BE-1.6).
-const svgThumb = (hue, label) =>
-  `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320"><rect width="320" height="320" fill="hsl(${hue} 70% 85%)"/><text x="160" y="175" font-size="40" text-anchor="middle" fill="hsl(${hue} 60% 30%)">${label}</text></svg>`)}`;
 const media = Array.from({ length: 8 }, (_, i) => ({
   id: `1790000000000${i}`,
   caption: ["مانتو کتان تابستانه 🌸 قیمت در کامنت", "شومیز حریر، ۴ رنگ", "ریلز پشت صحنه", "تخفیف یلدا", "شلوار بگ جین", "کیف چرم دست‌دوز", "معرفی کالکشن پاییز", "ارسال رایگان این هفته"][i],
@@ -248,7 +256,19 @@ const routes = [
     send(res, 200, businessHours);
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/members$/, (req, res) => send(res, 200, members)],
-  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/invitations$/, async (req, res) => send(res, 201, { id: randomUUID(), role: (await readBody(req)).role, expiresAt: iso(new Date(Date.now() + 7 * 24 * H)), status: "pending" })],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/invitations$/, async (req, res) => {
+    const body = await readBody(req);
+    const invitation = { id: randomUUID(), role: body.role, phone: `+98${String(body.phone).replace(/\D/g, "").slice(-10, -7)}***${String(body.phone).slice(-4)}`, invitedBy: me.id, createdAt: iso(now()), expiresAt: iso(new Date(Date.now() + 7 * 24 * H)) };
+    invitations.push(invitation);
+    send(res, 201, { id: invitation.id, role: invitation.role, expiresAt: invitation.expiresAt, status: "pending" });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/invitations$/, (req, res) => send(res, 200, invitations)],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/invitations\/([^/]+)$/, (req, res, url, [id]) => {
+    const index = invitations.findIndex((i) => i.id === id);
+    if (index < 0) return problem(res, 404, "common.not_found");
+    invitations.splice(index, 1);
+    send(res, 204);
+  }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/channels\/?$/, (req, res) => send(res, 200, [channel])],
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/channels\/instagram\/connect$/, (req, res) => problem(res, 422, "channels.instagram.not_configured")],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/channels\/[^/]+\/media$/, (req, res, url) => send(res, 200, page(media, url.searchParams.get("cursor"), Number(url.searchParams.get("limit") ?? 12)))],
@@ -259,6 +279,8 @@ const routes = [
     if (q.get("assignee") === "me") items = items.filter((c) => c.assigneeId === me.id);
     if (q.get("assignee") === "none") items = items.filter((c) => !c.assigneeId);
     if (q.get("unread") === "true") items = items.filter((c) => c.unreadCount > 0);
+    const term = q.get("q")?.trim().toLowerCase();
+    if (term) items = items.filter((c) => [c.contact.displayName, c.contact.username].some((v) => v?.toLowerCase().includes(term)));
     send(res, 200, page(items, q.get("cursor"), Number(q.get("limit") ?? 30)));
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/conversations\/([^/]+)$/, (req, res, url, [id]) => {
@@ -268,7 +290,7 @@ const routes = [
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/conversations\/([^/]+)\/messages$/, (req, res, url, [id]) => send(res, 200, page(messages.get(id) ?? [], url.searchParams.get("cursor"), Number(url.searchParams.get("limit") ?? 40)))],
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/conversations\/([^/]+)\/messages$/, async (req, res, url, [id]) => {
     const body = await readBody(req);
-    const msg = { id: randomUUID(), createdAt: iso(now()), direction: "outbound", kind: "text", text: body.text, status: "queued", errorCode: null, handledBy: "human", sentBy: me.id, tag: null, sentAt: null, readAt: null };
+    const msg = { id: randomUUID(), createdAt: iso(now()), direction: "outbound", kind: "text", text: body.text, status: "queued", errorCode: null, handledBy: "human", sentBy: me.id, tag: null, sentAt: null, readAt: null, attachments: [] };
     messages.get(id)?.unshift(msg);
     setTimeout(() => (msg.status = "sent"), 500);
     send(res, 202, msg);
@@ -278,7 +300,7 @@ const routes = [
     if (!c) return problem(res, 404, "common.not_found");
     const body = await readBody(req);
     if (action === "assign") c.assigneeId = body.assigneeId;
-    if (action === "status") Object.assign(c, { status: body.status }, body.status === "handed_off" ? { aiPaused: true } : {});
+    if (action === "status") Object.assign(c, { status: body.status, handoff: body.status === "handed_off" ? { reason: body.reason || "manual", suggestedReply: null, at: iso(now()) } : null }, body.status === "handed_off" ? { aiPaused: true } : {});
     if (action === "ai-pause") c.aiPaused = body.paused;
     send(res, 200, c);
   }],
