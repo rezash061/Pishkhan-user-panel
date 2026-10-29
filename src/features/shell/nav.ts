@@ -15,10 +15,10 @@ export interface NavItem {
 export const navItems: NavItem[] = [
   { key: "dashboard", href: "", icon: LayoutDashboard, tab: true },
   { key: "inbox", href: "/inbox", icon: Inbox, permission: P.inboxRead, tab: true },
-  { key: "automations", href: "/automations", icon: Workflow, permission: P.automationWrite, soon: true },
+  { key: "automations", href: "/automations", icon: Workflow, permission: P.settingsRead },
   { key: "agent", href: "/agent", icon: Bot, permission: P.agentWrite, soon: true },
   { key: "knowledge", href: "/knowledge", icon: BookOpen, permission: P.knowledgeWrite, soon: true },
-  { key: "catalog", href: "/catalog", icon: Package, permission: P.catalogRead, soon: true },
+  { key: "catalog", href: "/catalog", icon: Package, permission: P.catalogRead },
   { key: "contacts", href: "/contacts", icon: UsersRound, permission: P.crmRead, soon: true },
   { key: "channels", href: "/channels", icon: Radio, permission: P.settingsRead, tab: true },
   { key: "team", href: "/team", icon: Users, permission: P.membersRead },

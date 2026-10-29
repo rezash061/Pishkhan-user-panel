@@ -1,11 +1,12 @@
-import { ComingSoon } from "@/features/shell/coming-soon";
-import { RequirePermission } from "@/features/workspace/require-permission";
-import { P } from "@/lib/permissions";
+import { PageContainer } from "@/components/ui/page";
+import { CatalogHeader } from "@/features/catalog/header";
+import { ProductsPage } from "@/features/catalog/products-page";
 
 export default function Page() {
   return (
-    <RequirePermission permission={P.catalogRead}>
-      <ComingSoon feature="catalog" />
-    </RequirePermission>
+    <PageContainer>
+      <CatalogHeader />
+      <ProductsPage />
+    </PageContainer>
   );
 }

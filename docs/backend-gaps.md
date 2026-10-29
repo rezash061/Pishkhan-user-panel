@@ -29,5 +29,15 @@ Found on 2026-10-29 against `backend/openapi/api.v1.json` from branch `feature/b
 8. Dashboard summary (`GET /workspaces/{id}/dashboard`: counts, answered by AI/rules/humans, overnight summary).
 9. Pending invitations list and revoke (`GET/DELETE /workspaces/{id}/invitations`).
 10. Notification preferences, workspace deletion with grace period, support-session (impersonation) token exchange.
-11. Modules not yet in the API: automations/flows, AI agent settings + test chat + traces, knowledge, catalog,
+11. Modules not yet in the API: AI agent settings + test chat + traces, knowledge,
     contacts/CRM/forms, billing/plans/usage, web push (VAPID public key + subscription endpoint).
+
+## Automations and catalog (BE-1.3, BE-1.6)
+
+12. **Two sets of business hours.** Automation settings keep their own weekly hours (`sun`–`sat`, `"HH:mm-HH:mm"`),
+    separate from the workspace business hours in Tenancy, with a different shape and no closed dates. The panel offers
+    «copy from workspace hours», but the two can drift. One source (or automation hours referencing Tenancy's) would fix it.
+13. **No sandbox test run.** There is no endpoint to run a rule or flow against a sample message without a real
+    conversation; the panel tests keywords locally only. Plan 3.6 asks for a «test» panel.
+14. **Product images only through the product.** Images are attached by `fileId` inside the product PUT; there is no
+    endpoint to add, remove or reorder one image, so every image change re-sends the whole product.
