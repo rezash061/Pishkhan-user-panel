@@ -11,11 +11,12 @@
   --foreground: oklch(0.22 0.02 260);
   --muted-foreground: oklch(0.5 0.02 260);
   --border: oklch(0.91 0.008 250);
-  --ring: oklch(0.55 0.17 300);
-  --primary: oklch(0.52 0.2 300);
+  /* Brand shared with the public website (pishkhan-web ADR 0001): violet #5f2ceb, accent #f8486b. */
+  --ring: #5f2ceb;
+  --primary: #5f2ceb;
   --primary-foreground: oklch(0.99 0 0);
-  --primary-soft: oklch(0.95 0.035 300);
-  --accent: oklch(0.68 0.18 25);
+  --primary-soft: oklch(0.95 0.04 285);
+  --accent: #f8486b;
   --success: oklch(0.6 0.14 155);
   --success-soft: oklch(0.95 0.04 155);
   --warning: oklch(0.72 0.15 75);
@@ -23,7 +24,7 @@
   --danger: oklch(0.58 0.2 25);
   --danger-soft: oklch(0.95 0.035 25);
   --bubble-in: oklch(0.955 0.006 250);
-  --bubble-out: oklch(0.52 0.2 300);
+  --bubble-out: #5f2ceb;
   --bubble-out-foreground: oklch(0.99 0 0);
   color-scheme: light;
 }
@@ -36,15 +37,15 @@
     --foreground: oklch(0.95 0.005 250);
     --muted-foreground: oklch(0.7 0.015 260);
     --border: oklch(0.3 0.02 265);
-    --ring: oklch(0.7 0.15 300);
-    --primary: oklch(0.68 0.17 300);
-    --primary-foreground: oklch(0.15 0.02 300);
-    --primary-soft: oklch(0.3 0.06 300);
+    --ring: oklch(0.7 0.17 285);
+    --primary: oklch(0.68 0.18 285);
+    --primary-foreground: oklch(0.15 0.02 285);
+    --primary-soft: oklch(0.3 0.07 285);
     --success-soft: oklch(0.3 0.05 155);
     --warning-soft: oklch(0.32 0.06 75);
     --danger-soft: oklch(0.3 0.06 25);
     --bubble-in: oklch(0.27 0.018 265);
-    --bubble-out: oklch(0.55 0.16 300);
+    --bubble-out: oklch(0.55 0.2 285);
     color-scheme: dark;
   }
 }
