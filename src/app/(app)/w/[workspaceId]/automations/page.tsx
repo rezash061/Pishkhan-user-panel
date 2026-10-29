@@ -1,11 +1,12 @@
-import { ComingSoon } from "@/features/shell/coming-soon";
-import { RequirePermission } from "@/features/workspace/require-permission";
-import { P } from "@/lib/permissions";
+import { PageContainer } from "@/components/ui/page";
+import { AutomationsHeader } from "@/features/automations/header";
+import { RulesPage } from "@/features/automations/rules-page";
 
 export default function Page() {
   return (
-    <RequirePermission permission={P.automationWrite}>
-      <ComingSoon feature="automations" />
-    </RequirePermission>
+    <PageContainer>
+      <AutomationsHeader />
+      <RulesPage />
+    </PageContainer>
   );
 }

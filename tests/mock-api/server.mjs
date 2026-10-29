@@ -88,6 +88,88 @@ let quickReplies = [
 let businessHours = { days: [6, 0, 1, 2, 3].map((day) => ({ day, ranges: [{ from: "10:00:00", to: "21:00:00" }] })).concat([{ day: 4, ranges: [{ from: "10:00:00", to: "14:00:00" }] }]), closedDates: [] };
 const members = [{ userId: me.id, displayName: me.displayName, phone: me.phone, role: "owner", joinedAt: me.createdAt }, teammate];
 
+// Automation (BE-1.3) and catalog (BE-1.6).
+const svgThumb = (hue, label) =>
+  `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320"><rect width="320" height="320" fill="hsl(${hue} 70% 85%)"/><text x="160" y="175" font-size="40" text-anchor="middle" fill="hsl(${hue} 60% 30%)">${label}</text></svg>`)}`;
+const media = Array.from({ length: 8 }, (_, i) => ({
+  id: `1790000000000${i}`,
+  caption: ["مانتو کتان تابستانه 🌸 قیمت در کامنت", "شومیز حریر، ۴ رنگ", "ریلز پشت صحنه", "تخفیف یلدا", "شلوار بگ جین", "کیف چرم دست‌دوز", "معرفی کالکشن پاییز", "ارسال رایگان این هفته"][i],
+  mediaType: i === 2 ? "VIDEO" : "IMAGE",
+  mediaUrl: svgThumb(i * 40, `پست ${i + 1}`),
+  thumbnailUrl: svgThumb(i * 40, `پست ${i + 1}`),
+  permalink: `https://www.instagram.com/p/mock${i}/`,
+  timestamp: ago((i + 1) * 30 * H),
+}));
+let rules = [
+  {
+    id: randomUUID(), name: "قیمت زیر پست", channelAccountId: channel.id, triggerKind: "comment_keyword",
+    trigger: { match: "contains", keywords: ["قیمت", "price"], scope: "post", postId: media[0].id }, postId: media[0].id,
+    actions: [{ kind: "private_reply", message: { text: "سلام {{contact.first_name|عزیز}} 🌸 قیمت مانتو کتان ۸۹۰ هزار تومانه." } }, { kind: "public_reply", replies: ["دایرکت رو چک کنید 💌", "جوابتون رو دایرکت دادم 🌸"] }],
+    priority: 0, enabled: true, revision: 1, createdAt: ago(5 * 24 * H), updatedAt: ago(5 * 24 * H),
+  },
+  {
+    id: randomUUID(), name: "خوش‌آمد", channelAccountId: null, triggerKind: "new_conversation", trigger: {}, postId: null,
+    actions: [{ kind: "send_message", message: { text: "سلام! به گالری نیلوفر خوش اومدید 🌸", quickReplies: [{ title: "قیمت‌ها", payload: "قیمت‌ها" }, { title: "ارسال", payload: "ارسال" }] } }],
+    priority: 0, enabled: true, revision: 1, createdAt: ago(9 * 24 * H), updatedAt: ago(9 * 24 * H),
+  },
+];
+const backlogRuns = new Map();
+let flows = [];
+let automationSettings = { aiEnabled: true, businessHours: { timeZone: "Asia/Tehran", days: { sat: ["10:00-21:00"], sun: ["10:00-21:00"], mon: ["10:00-21:00"], tue: ["10:00-21:00"], wed: ["10:00-21:00"], thu: ["10:00-14:00"] }, isConfigured: true }, fallbackText: null, fallbackCooldownMinutes: 720 };
+let categories = [
+  { id: randomUUID(), name: "مانتو", parentId: null, sortOrder: 0 },
+  { id: randomUUID(), name: "شلوار", parentId: null, sortOrder: 1 },
+];
+const money = (toman) => (toman === null ? null : { amount: toman * 10, currency: "IRR" });
+const files = new Map();
+const productView = (p) => {
+  const variants = p.variants.map((v) => {
+    const effective = v.price ?? p.price;
+    return { ...v, effectivePrice: effective, inStock: v.stockPolicy === "unlimited" || (v.stock ?? 0) > 0 };
+  });
+  const prices = variants.map((v) => v.effectivePrice?.amount).filter((x) => x !== undefined && x !== null);
+  const minA = prices.length ? Math.min(...prices) : (p.price?.amount ?? null);
+  const maxA = prices.length ? Math.max(...prices) : (p.price?.amount ?? null);
+  return {
+    ...p,
+    pricingMode: "fixed",
+    minPrice: minA === null ? null : { amount: minA, currency: "IRR" },
+    maxPrice: maxA === null ? null : { amount: maxA, currency: "IRR" },
+    inStock: variants.length === 0 || variants.some((v) => v.inStock),
+    images: p.imageFileIds.map((id) => ({ fileId: id, status: "clean", url: files.get(id)?.url ?? svgThumb(200, "عکس") })),
+    variants,
+  };
+};
+const v = (attributes, toman, stock) => ({ id: randomUUID(), sku: null, attributes, price: money(toman), stock, stockPolicy: "track" });
+let products = [
+  { id: randomUUID(), title: "مانتو کتان تابستانه", description: "کتان ۱۰۰٪، مناسب تابستان.", categoryId: categories[0].id, tags: ["تابستانه", "پرفروش"], status: "active", price: money(890_000), imageFileIds: [], linkUrl: null, variants: [v({ سایز: "M" }, null, 4), v({ سایز: "L" }, null, 0), v({ سایز: "XL" }, 950_000, 2)], revision: 1, createdAt: ago(20 * 24 * H), updatedAt: ago(2 * H) },
+  { id: randomUUID(), title: "شلوار بگ جین", description: null, categoryId: categories[1].id, tags: [], status: "active", price: money(1_250_000), imageFileIds: [], linkUrl: null, variants: [], revision: 1, createdAt: ago(18 * 24 * H), updatedAt: ago(5 * H) },
+  { id: randomUUID(), title: "شومیز حریر", description: null, categoryId: null, tags: ["حراج"], status: "draft", price: null, imageFileIds: [], linkUrl: null, variants: [], revision: 1, createdAt: ago(3 * 24 * H), updatedAt: ago(3 * 24 * H) },
+];
+let cardSets = [];
+const imports = new Map();
+
+/** A small stand-in for backend `FlowValidator`: enough for the editor to show errors and warnings. */
+const validateFlow = (graph) => {
+  const errors = [];
+  const warnings = [];
+  const ids = new Set(graph.nodes.map((n) => n.id));
+  if (!ids.has(graph.start)) errors.push({ code: "flow.start_missing", nodeId: null });
+  for (const n of graph.nodes) {
+    if ((n.type === "message" || n.type === "question") && !n.message?.text?.trim()) errors.push({ code: n.type === "message" ? "flow.message_required" : "flow.prompt_required", nodeId: n.id });
+    if (n.type === "question" && !/^[a-z][a-z0-9_]{0,39}$/.test(n.variable ?? "")) errors.push({ code: "flow.variable_invalid", nodeId: n.id });
+  }
+  const seen = new Set([graph.start]);
+  const queue = [graph.start];
+  while (queue.length) {
+    const id = queue.shift();
+    for (const e of graph.edges.filter((x) => x.from === id)) if (!seen.has(e.to)) (seen.add(e.to), queue.push(e.to));
+  }
+  for (const n of graph.nodes) if (!seen.has(n.id)) warnings.push({ code: "flow.node_unreachable", nodeId: n.id });
+  return { errors, warnings, isValid: errors.length === 0 };
+};
+const flowView = (f) => ({ ...f, validation: validateFlow(f.graph) });
+
 const send = (res, status, body, headers = {}) => {
   res.writeHead(status, { "content-type": status >= 400 ? "application/problem+json" : "application/json", ...headers });
   res.end(body === undefined ? undefined : JSON.stringify(body));
@@ -169,7 +251,7 @@ const routes = [
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/invitations$/, async (req, res) => send(res, 201, { id: randomUUID(), role: (await readBody(req)).role, expiresAt: iso(new Date(Date.now() + 7 * 24 * H)), status: "pending" })],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/channels\/?$/, (req, res) => send(res, 200, [channel])],
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/channels\/instagram\/connect$/, (req, res) => problem(res, 422, "channels.instagram.not_configured")],
-  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/channels\/[^/]+\/media$/, (req, res) => send(res, 200, { items: [], nextCursor: null })],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/channels\/[^/]+\/media$/, (req, res, url) => send(res, 200, page(media, url.searchParams.get("cursor"), Number(url.searchParams.get("limit") ?? 12)))],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/conversations\/?$/, (req, res, url) => {
     const q = url.searchParams;
     let items = conversations;
@@ -221,6 +303,207 @@ const routes = [
   }],
   ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/quick-replies\/([^/]+)$/, (req, res, url, [id]) => {
     quickReplies = quickReplies.filter((q) => q.id !== id);
+    send(res, 204);
+  }],
+  // Automation
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/rules$/, (req, res) => send(res, 200, rules)],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/automation\/rules$/, async (req, res) => {
+    const body = await readBody(req);
+    if (["dm_keyword", "comment_keyword"].includes(body.triggerKind) && !body.trigger?.keywords?.length && !body.trigger?.pattern)
+      return problem(res, 400, "validation.failed", { "trigger.keywords": ["automation.keywords_required"] });
+    const rule = { ...body, id: randomUUID(), postId: body.trigger?.postId ?? null, revision: 1, createdAt: iso(now()), updatedAt: iso(now()) };
+    rules.push(rule);
+    send(res, 201, rule);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/rules\/([^/]+)$/, (req, res, url, [id]) => {
+    const rule = rules.find((r) => r.id === id);
+    return rule ? send(res, 200, rule) : problem(res, 404, "common.not_found");
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/automation\/rules\/([^/]+)$/, async (req, res, url, [id]) => {
+    const rule = rules.find((r) => r.id === id);
+    if (!rule) return problem(res, 404, "common.not_found");
+    Object.assign(rule, await readBody(req), { revision: rule.revision + 1, updatedAt: iso(now()) });
+    rule.postId = rule.trigger?.postId ?? rule.postId;
+    send(res, 200, rule);
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/automation\/rules\/([^/]+)$/, (req, res, url, [id]) => {
+    rules = rules.filter((r) => r.id !== id);
+    send(res, 204);
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/automation\/rules\/([^/]+)\/backlog-run$/, (req, res, url, [id]) => {
+    const rule = rules.find((r) => r.id === id);
+    if (!rule?.postId) return problem(res, 422, "automation.backlog_needs_post");
+    const run = { id: randomUUID(), status: "running", mediaId: rule.postId, pages: 0, commentsSeen: 0, commentsQueued: 0, error: null, createdAt: iso(now()), completedAt: null };
+    backlogRuns.set(id, run);
+    const tick = setInterval(() => {
+      run.pages += 1;
+      run.commentsSeen += 25;
+      run.commentsQueued += 9;
+      if (run.pages >= 3) (run.status = "completed"), (run.completedAt = iso(now())), clearInterval(tick);
+    }, 1200);
+    send(res, 202, run);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/rules\/([^/]+)\/stats$/, (req, res, url, [id]) => {
+    const days = Number(url.searchParams.get("days") ?? 30);
+    const perDay = Array.from({ length: days }, (_, i) => {
+      const fired = (i * 7 + id.charCodeAt(0)) % 13;
+      return { day: iso(new Date(Date.now() - (days - 1 - i) * 24 * H)).slice(0, 10), fired, privateReplies: fired, publicReplies: Math.floor(fired / 2), flowsStarted: 0 };
+    });
+    const sum = (k) => perDay.reduce((n, d) => n + d[k], 0);
+    send(res, 200, { ruleId: id, days, fired: sum("fired"), privateReplies: sum("privateReplies"), publicReplies: sum("publicReplies"), flowsStarted: 0, commentsQueued: 3, perDay, latestBacklogRun: backlogRuns.get(id) ?? null });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/flows$/, (req, res) => send(res, 200, flows.map(flowView))],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/automation\/flows$/, async (req, res) => {
+    const body = await readBody(req);
+    const flow = { id: randomUUID(), name: body.name, status: "draft", graph: body.graph, publishedVersion: null, publishedAt: null, updatedAt: iso(now()) };
+    flows.unshift(flow);
+    send(res, 201, flowView(flow));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/flows\/([^/]+)$/, (req, res, url, [id]) => {
+    const flow = flows.find((f) => f.id === id);
+    return flow ? send(res, 200, flowView(flow)) : problem(res, 404, "common.not_found");
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/automation\/flows\/([^/]+)$/, async (req, res, url, [id]) => {
+    const flow = flows.find((f) => f.id === id);
+    if (!flow) return problem(res, 404, "common.not_found");
+    const body = await readBody(req);
+    Object.assign(flow, { name: body.name, graph: body.graph, updatedAt: iso(now()) });
+    send(res, 200, flowView(flow));
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/automation\/flows\/([^/]+)$/, (req, res, url, [id]) => {
+    flows = flows.filter((f) => f.id !== id);
+    send(res, 204);
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/automation\/flows\/([^/]+)\/publish$/, (req, res, url, [id]) => {
+    const flow = flows.find((f) => f.id === id);
+    if (!flow) return problem(res, 404, "common.not_found");
+    const validation = validateFlow(flow.graph);
+    if (!validation.isValid) return send(res, 422, validation);
+    Object.assign(flow, { status: "published", publishedVersion: (flow.publishedVersion ?? 0) + 1, publishedAt: iso(new Date(Date.now() + 1000)), updatedAt: iso(now()) });
+    send(res, 200, flowView(flow));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/settings$/, (req, res) => send(res, 200, automationSettings)],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/automation\/settings$/, async (req, res) => {
+    const body = await readBody(req);
+    automationSettings = { ...body, businessHours: { ...body.businessHours, isConfigured: Object.values(body.businessHours.days).some((r) => r.length) } };
+    send(res, 200, automationSettings);
+  }],
+
+  // Files (scan finishes on the first read)
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/files$/, (req, res, url) => {
+    const chunks = [];
+    req.on("data", (c) => chunks.push(c));
+    req.on("end", () => {
+      const purpose = url.searchParams.get("purpose");
+      const body = Buffer.concat(chunks);
+      const type = /image\/(png|jpeg|webp|gif)/.exec(body.toString("latin1", 0, 600))?.[0] ?? "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+      const file = { id: randomUUID(), purpose, status: "pending_scan", contentType: type, size: body.length, originalName: null, url: null, thumbnailUrl: null, width: null, height: null, createdAt: iso(now()) };
+      files.set(file.id, file);
+      send(res, 202, file);
+    });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/files\/([^/]+)$/, (req, res, url, [id]) => {
+    const file = files.get(id);
+    if (!file) return problem(res, 404, "common.not_found");
+    if (file.status === "pending_scan") Object.assign(file, { status: "clean", url: file.purpose === "product_image" ? svgThumb(280, "عکس") : null });
+    send(res, 200, file);
+  }],
+
+  // Catalog
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/categories$/, (req, res) => send(res, 200, categories)],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/categories$/, async (req, res) => {
+    const body = await readBody(req);
+    if (categories.some((c) => c.name === body.name.trim() && c.parentId === body.parentId)) return problem(res, 409, "catalog.category_exists");
+    const c = { id: randomUUID(), name: body.name.trim(), parentId: body.parentId ?? null, sortOrder: body.sortOrder ?? 0 };
+    categories.push(c);
+    send(res, 201, c);
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/categories\/([^/]+)$/, async (req, res, url, [id]) => {
+    const c = categories.find((x) => x.id === id);
+    if (!c) return problem(res, 404, "common.not_found");
+    Object.assign(c, await readBody(req));
+    send(res, 200, c);
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/categories\/([^/]+)$/, (req, res, url, [id]) => {
+    categories = categories.filter((c) => c.id !== id);
+    for (const p of products) if (p.categoryId === id) p.categoryId = null;
+    send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/products$/, (req, res, url) => {
+    const q = url.searchParams;
+    let items = [...products].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt));
+    if (q.get("q")) items = items.filter((p) => `${p.title} ${p.description ?? ""} ${p.tags.join(" ")}`.includes(q.get("q")));
+    if (q.get("categoryId")) items = items.filter((p) => p.categoryId === q.get("categoryId"));
+    if (q.get("status")) items = items.filter((p) => p.status === q.get("status"));
+    if (q.get("tag")) items = items.filter((p) => p.tags.includes(q.get("tag")));
+    const result = page(items, q.get("cursor"), Number(q.get("limit") ?? 30));
+    send(res, 200, { ...result, items: result.items.map(productView) });
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/products$/, async (req, res) => {
+    const body = await readBody(req);
+    if (!body.title?.trim()) return problem(res, 400, "validation.failed", { title: ["validation.required"] });
+    if (body.status === "active" && !body.price && !(body.variants?.length && body.variants.every((x) => x.price))) return problem(res, 400, "validation.failed", { price: ["catalog.price_required"] });
+    const p = { ...body, id: randomUUID(), tags: body.tags ?? [], imageFileIds: body.imageFileIds ?? [], variants: (body.variants ?? []).map((x) => ({ ...x, id: x.id ?? randomUUID(), attributes: x.attributes ?? {} })), revision: 1, createdAt: iso(now()), updatedAt: iso(now()) };
+    products.push(p);
+    send(res, 201, productView(p));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/products\/([^/]+)$/, (req, res, url, [id]) => {
+    const p = products.find((x) => x.id === id);
+    return p ? send(res, 200, productView(p)) : problem(res, 404, "common.not_found");
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/products\/([^/]+)$/, async (req, res, url, [id]) => {
+    const p = products.find((x) => x.id === id);
+    if (!p) return problem(res, 404, "common.not_found");
+    const body = await readBody(req);
+    Object.assign(p, body, { variants: (body.variants ?? []).map((x) => ({ ...x, id: x.id ?? randomUUID(), attributes: x.attributes ?? {} })), revision: p.revision + 1, updatedAt: iso(now()) });
+    send(res, 200, productView(p));
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/products\/([^/]+)$/, (req, res, url, [id]) => {
+    products = products.filter((p) => p.id !== id);
+    send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/(export|import-template)$/, (req, res, url, [kind]) => {
+    res.writeHead(200, { "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "content-disposition": `attachment; filename=${kind === "export" ? "catalog-20261029.xlsx" : "catalog-template.xlsx"}` });
+    res.end(Buffer.from("PK mock sheet"));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/import$/, async (req, res) => {
+    const body = await readBody(req);
+    const job = { id: randomUUID(), fileId: body.fileId, status: "running", rows: 0, created: 0, updated: 0, skipped: 0, errors: [], error: null, createdAt: iso(now()), completedAt: null };
+    imports.set(job.id, job);
+    setTimeout(() => Object.assign(job, { status: "completed", rows: 12, created: 9, updated: 2, skipped: 1, errors: [{ row: 7, column: "قیمت", code: "catalog.price_invalid" }], completedAt: iso(now()) }), 1500);
+    send(res, 202, job);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/imports\/([^/]+)$/, (req, res, url, [id]) => {
+    const job = imports.get(id);
+    return job ? send(res, 200, job) : problem(res, 404, "common.not_found");
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/storefront-cards$/, (req, res) => send(res, 200, cardSets)],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/storefront-cards$/, async (req, res) => {
+    const body = await readBody(req);
+    const set = { id: randomUUID(), name: body.name, items: body.items, updatedAt: iso(now()) };
+    cardSets.unshift(set);
+    send(res, 201, set);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/storefront-cards\/([^/]+)\/preview$/, (req, res, url, [id]) => {
+    const set = cardSets.find((x) => x.id === id);
+    if (!set) return problem(res, 404, "common.not_found");
+    const cards = set.items
+      .map((i) => products.find((p) => p.id === i.productId))
+      .filter((p) => p && p.status === "active")
+      .map((p) => {
+        const view = productView(p);
+        return { productId: p.id, title: p.title.slice(0, 80), subtitle: `${new Intl.NumberFormat("fa-IR").format((view.minPrice?.amount ?? 0) / 10)} تومان`, imageUrl: view.images[0]?.url ?? null, linkUrl: p.linkUrl, buttonTitle: set.items.find((i) => i.productId === p.id)?.buttonTitle || "سفارش", payload: `product:${p.id}` };
+      });
+    send(res, 200, { id: set.id, name: set.name, cards });
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/storefront-cards\/([^/]+)$/, async (req, res, url, [id]) => {
+    const set = cardSets.find((x) => x.id === id);
+    if (!set) return problem(res, 404, "common.not_found");
+    Object.assign(set, await readBody(req), { updatedAt: iso(now()) });
+    send(res, 200, set);
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/storefront-cards\/([^/]+)$/, (req, res, url, [id]) => {
+    cardSets = cardSets.filter((x) => x.id !== id);
     send(res, 204);
   }],
 ];
