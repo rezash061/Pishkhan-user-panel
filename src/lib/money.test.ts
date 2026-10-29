@@ -5,7 +5,6 @@ describe("money", () => {
   it("converts Toman to backend Rial and back", () => {
     expect(moneyFromToman(890_000)).toEqual({ amount: 8_900_000, currency: "IRR" });
     expect(tomanOf({ amount: 8_900_000, currency: "IRR" })).toBe(890_000);
-    expect(tomanOf({ amount: "8900000", currency: "IRR" })).toBe(890_000);
     expect(tomanOf(null)).toBeNull();
   });
 

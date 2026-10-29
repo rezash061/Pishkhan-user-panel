@@ -6,6 +6,7 @@ export const qk = {
   channels: (ws: string) => ["channels", ws] as const,
   media: (ws: string, channelId: string) => ["media", ws, channelId] as const,
   members: (ws: string) => ["members", ws] as const,
+  invitations: (ws: string) => ["invitations", ws] as const,
   businessHours: (ws: string) => ["business-hours", ws] as const,
   quickReplies: (ws: string) => ["quick-replies", ws] as const,
   conversationLists: (ws: string) => ["conversations", ws] as const,

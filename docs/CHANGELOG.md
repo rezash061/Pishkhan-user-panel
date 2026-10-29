@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.3.0 — 2026-10-29
+
+- Inbox: customer names and @usernames from the API, search by name, username or phone, handoff reason with the suggested reply one tap into the composer, photos, voice notes, videos and the story a customer answered (with a placeholder once Instagram's URL expires).
+- Team: pending invitations with revoke.
+- API: refreshed from backend PR #13; the path-parameter patch in `scripts/gen-api.mjs` and the `unreadCount` number coercion are gone.
+
 ## 0.2.0 — 2026-10-29
 
 - Automations: rules grouped by trigger with on/off and priority order, rule editor with a Persian keyword matcher that mirrors the backend's normalizer, message builder with a live DM preview, post picker, action editor; comment-to-DM wizard that can answer old comments; rule stats; automation hours and fallback reply.

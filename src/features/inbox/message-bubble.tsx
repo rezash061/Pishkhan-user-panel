@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { formatDateTime, formatTime } from "@/lib/i18n/format";
 import { useCodeMessage } from "@/lib/i18n/use-error-message";
+import { Attachments } from "./attachments";
 import type { OptimisticMessage } from "./data";
 
 function StatusIcon({ message }: { message: OptimisticMessage }) {
@@ -22,7 +23,9 @@ export function MessageBubble({ message, senderName, onRetry }: { message: Optim
   const codeMessage = useCodeMessage();
   const outbound = message.direction === "outbound";
   const failed = message.local === "failed" || message.status === "failed";
-  const kindLabel = message.kind !== "text" && t.has(`kind.${message.kind}`) ? t(`kind.${message.kind}` as "kind.text") : null;
+  const attachments = message.attachments ?? [];
+  // An attachment shows itself; the [kind] label stays for kinds without one (quick reply, button).
+  const kindLabel = message.kind !== "text" && !attachments.length && t.has(`kind.${message.kind}`) ? t(`kind.${message.kind}` as "kind.text") : null;
 
   const by =
     message.handledBy === "rule" ? (
@@ -42,18 +45,21 @@ export function MessageBubble({ message, senderName, onRetry }: { message: Optim
   return (
     <div className={cn("flex", outbound ? "justify-end" : "justify-start")}>
       <div className={cn("max-w-[85%] space-y-1 sm:max-w-[70%]", outbound ? "items-end" : "items-start")}>
-        <div
-          className={cn(
-            "rounded-2xl px-3.5 py-2 text-sm leading-7 whitespace-pre-wrap break-words",
-            outbound ? "rounded-ee-md bg-bubble-out text-bubble-out-foreground" : "rounded-es-md bg-bubble-in",
-            message.local === "sending" && "opacity-70",
-            failed && "ring-2 ring-danger/60",
-          )}
-          dir="auto"
-        >
-          {kindLabel ? <span className={cn("mb-0.5 block text-xs", outbound ? "opacity-80" : "text-muted-foreground")}>[{kindLabel}]</span> : null}
-          {message.text}
-        </div>
+        <Attachments items={attachments} outbound={outbound} />
+        {message.text || kindLabel ? (
+          <div
+            className={cn(
+              "rounded-2xl px-3.5 py-2 text-sm leading-7 whitespace-pre-wrap break-words",
+              outbound ? "rounded-ee-md bg-bubble-out text-bubble-out-foreground" : "rounded-es-md bg-bubble-in",
+              message.local === "sending" && "opacity-70",
+              failed && "ring-2 ring-danger/60",
+            )}
+            dir="auto"
+          >
+            {kindLabel ? <span className={cn("mb-0.5 block text-xs", outbound ? "opacity-80" : "text-muted-foreground")}>[{kindLabel}]</span> : null}
+            {message.text}
+          </div>
+        ) : null}
         <div className={cn("flex flex-wrap items-center gap-x-2 gap-y-0.5 px-1 text-[11px] text-muted-foreground", outbound ? "justify-end" : "justify-start")}>
           {outbound && by ? by : null}
           {message.tag === "HUMAN_AGENT" ? <span title={t("humanAgentTag")}>· HUMAN_AGENT</span> : null}

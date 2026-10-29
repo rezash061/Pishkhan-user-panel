@@ -552,11 +552,42 @@
       "notePlaceholder": "یادداشت برای همکاران…",
       "noNotes": "یادداشتی نیست.",
       "windowClosed": "بسته",
-      "windowHuman": "فقط پاسخ انسانی، {time}"
+      "windowHuman": "فقط پاسخ انسانی، {time}",
+      "name": "نام",
+      "username": "اینستاگرام"
     },
     "handoffToast": "یک گفتگو منتظر پاسخ انسان است.",
     "open": "باز کردن",
-    "shortcuts": "میان‌برها: j/k جابه‌جایی، r پاسخ، e بستن، a سپردن به خودم"
+    "shortcuts": "میان‌برها: j/k جابه‌جایی، r پاسخ، e بستن، a سپردن به خودم",
+    "search": "جستجوی گفتگو",
+    "searchPlaceholder": "نام، نام کاربری یا شماره…",
+    "noResults": "گفتگویی پیدا نشد.",
+    "noResultsBody": "نام، نام کاربری اینستاگرام، ایمیل یا شماره موبایل مشتری را امتحان کنید.",
+    "handoff": {
+      "title": "منتظر پاسخ شما:",
+      "suggested": "پاسخ پیشنهادی",
+      "use": "استفاده",
+      "reasons": {
+        "manual": "یکی از اعضای تیم گفتگو را به انسان سپرد.",
+        "automation": "یک قانون اتوماسیون گفتگو را به انسان سپرد."
+      }
+    },
+    "attachment": {
+      "expired": "{type} دیگر در دسترس نیست",
+      "types": {
+        "image": "تصویر",
+        "sticker": "استیکر",
+        "story_reply": "پاسخ به استوری",
+        "story_mention": "منشن در استوری",
+        "share": "پست اشتراکی",
+        "animated_image": "گیف",
+        "video": "ویدیو",
+        "reel": "ریلز",
+        "ig_reel": "ریلز",
+        "audio": "پیام صوتی",
+        "file": "فایل"
+      }
+    }
   },
   "quickReplies": {
     "title": "پاسخ‌های آماده",
@@ -601,7 +632,13 @@
     "removeConfirm": "{name} از تیم حذف شود؟",
     "changeRole": "تغییر نقش",
     "joined": "عضو از {date}",
-    "noName": "بدون نام"
+    "noName": "بدون نام",
+    "pending": "دعوت‌های در انتظار",
+    "invitedAt": "دعوت در {date}",
+    "expires": "اعتبار تا {date}",
+    "revoke": "لغو دعوت",
+    "revokeConfirm": "دعوت {phone} لغو شود؟ لینک دعوت دیگر کار نمی‌کند.",
+    "revoked": "دعوت لغو شد."
   },
   "settings": {
     "title": "تنظیمات",

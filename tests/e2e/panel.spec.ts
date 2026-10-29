@@ -52,6 +52,44 @@ test("signs in, reads and answers a conversation", async ({ page }) => {
   await noHorizontalScroll(page);
 });
 
+test("finds a customer by name and answers a handoff with the suggested reply", async ({ page }) => {
+  await login(page);
+  await page.goto(`/w/${workspaceId}/inbox`);
+  await page.getByLabel("جستجوی گفتگو").fill("niloo");
+  const row = page.locator("ul li a").first();
+  await expect(row).toContainText("نیلوفر احمدی");
+  await expect(page.locator("ul li a")).toHaveCount(4);
+  await page.getByLabel("جستجوی گفتگو").fill("هیچ‌کس");
+  await expect(page.getByText("گفتگویی پیدا نشد.")).toBeVisible();
+
+  // Conversation 1000 is handed off with a reason and a suggested reply, and has a photo and a story reply.
+  await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001000`);
+  await expect(page.locator("header").getByText("نیلوفر احمدی")).toBeVisible();
+  const banner = page.getByRole("note");
+  await expect(banner).toContainText("مشتری درخواست تخفیف عمده دارد");
+  await banner.getByRole("button", { name: "استفاده" }).click();
+  await expect(page.getByLabel(/پاسخ بنویسید/)).toHaveValue(/خرید عمده/);
+  await expect(page.getByRole("link", { name: "پاسخ به استوری" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "تصویر" })).toBeVisible();
+  await noHorizontalScroll(page);
+});
+
+test("lists a pending invitation and revokes it", async ({ page }) => {
+  await login(page);
+  await page.goto(`/w/${workspaceId}/team`);
+  const last4 = String(Date.now()).slice(-4);
+  await page.getByRole("button", { name: "دعوت همکار" }).first().click();
+  await page.getByLabel("شمارهٔ موبایل همکار").fill(`0912111${last4}`);
+  await page.getByRole("dialog").getByRole("button", { name: "دعوت همکار" }).click();
+  const masked = `+۹۸۹۱۲***${last4.replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹".charAt(Number(d)))}`;
+  const section = page.getByRole("region", { name: "دعوت‌های در انتظار" });
+  await expect(section.getByText(masked)).toBeVisible();
+  await section.getByRole("button", { name: "لغو دعوت" }).last().click();
+  await page.getByRole("dialog").getByRole("button", { name: "لغو دعوت" }).click();
+  await expect(page.getByText("دعوت لغو شد.")).toBeVisible();
+  await expect(page.getByText(masked)).toHaveCount(0);
+});
+
 test("adds an internal note", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001001`);

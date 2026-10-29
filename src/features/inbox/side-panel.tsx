@@ -12,7 +12,7 @@ import { useWorkspace } from "@/features/workspace/context";
 import type { Conversation, Member } from "@/lib/api/types";
 import { formatCountdown, formatDateTime, formatRelative } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
-import { contactLabel } from "./contact";
+import { contactName } from "./contact";
 import { useAddNote, useNotes } from "./data";
 import { messagingWindow } from "./window";
 
@@ -32,13 +32,23 @@ export function SidePanel({ conversation: c, members, canReply, onAssign, idPref
   const channels = useChannels(workspace.id);
   const channel = channels.data?.find((ch) => ch.id === c.channelAccountId);
   const win = messagingWindow(c);
+  const contact = contactName(c);
 
   return (
     <div className="space-y-5 p-4">
       <section>
         <h3 className="mb-1 text-xs font-semibold text-muted-foreground">{t("side.contact")}</h3>
         <dl className="divide-y">
-          <Row label={t("side.contact")}>{t("customer", { id: contactLabel(c.contactId) })}</Row>
+          <Row label={t("side.name")}>
+            <span dir="auto">{contact.name ?? t("customer", { id: contact.short })}</span>
+          </Row>
+          {contact.username ? (
+            <Row label={t("side.username")}>
+              <a href={`https://instagram.com/${encodeURIComponent(contact.username)}`} target="_blank" rel="noreferrer" className="text-primary hover:underline" dir="ltr">
+                @{contact.username}
+              </a>
+            </Row>
+          ) : null}
           <Row label={t("side.channel")}>
             <span className="inline-flex items-center gap-1" dir="ltr">
               <InstagramIcon className="size-3.5" />@{channel?.username ?? "…"}

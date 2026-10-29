@@ -13,13 +13,13 @@ import { PageContainer } from "@/components/ui/page";
 import { PhoneInput } from "@/components/ui/phone-input";
 import { useWorkspace } from "@/features/workspace/context";
 import { ApiError } from "@/lib/api/errors";
-import { roles, type Member, type WorkspaceRole } from "@/lib/api/types";
+import { roles, type Member, type PendingInvitation, type WorkspaceRole } from "@/lib/api/types";
 import { toPersianDigits } from "@/lib/i18n/digits";
 import { formatDate } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
 import { groupMobile, normalizeIranMobile } from "@/lib/phone";
-import { useChangeRole, useInvite, useMembers, useRemoveMember } from "./data";
+import { useChangeRole, useInvite, useMembers, usePendingInvitations, useRemoveMember, useRevokeInvitation } from "./data";
 
 export function TeamPage() {
   const t = useTranslations();
@@ -104,6 +104,8 @@ export function TeamPage() {
         )}
       </Card>
 
+      {manage ? <PendingInvitations /> : null}
+
       <InviteDialog open={inviteOpen} onClose={() => setInviteOpen(false)} roles={assignable} />
       <ConfirmDialog
         open={Boolean(removing)}
@@ -184,5 +186,64 @@ function InviteDialog({ open, onClose, roles: options }: { open: boolean; onClos
         </fieldset>
       </form>
     </Dialog>
+  );
+}
+
+function PendingInvitations() {
+  const t = useTranslations();
+  const errorMessage = useErrorMessage();
+  const { workspace } = useWorkspace();
+  const invitations = usePendingInvitations(workspace.id, true);
+  const revoke = useRevokeInvitation(workspace.id);
+  const [revoking, setRevoking] = useState<PendingInvitation | null>(null);
+  const items = invitations.data ?? [];
+  if (!invitations.isError && items.length === 0) return null;
+
+  return (
+    <section className="mt-6 space-y-2" aria-labelledby="pending-invitations">
+      <h2 id="pending-invitations" className="text-sm font-semibold text-muted-foreground">
+        {t("team.pending")}
+      </h2>
+      <Card className="divide-y overflow-hidden">
+        {invitations.isError ? (
+          <EmptyState title={errorMessage(invitations.error)} />
+        ) : (
+          items.map((i) => (
+            <div key={i.id} className="flex flex-wrap items-center gap-3 p-4">
+              <div className="min-w-0 flex-1">
+                <p className="font-medium" dir="ltr">
+                  <span className="inline-block">{toPersianDigits(i.phone)}</span>
+                </p>
+                <p className="text-xs text-muted-foreground">
+                  {t(`roles.${i.role}` as "roles.owner")} · {t("team.invitedAt", { date: formatDate(i.createdAt) })} · {t("team.expires", { date: formatDate(i.expiresAt) })}
+                </p>
+              </div>
+              <Button variant="ghost" size="sm" className="text-danger" onClick={() => setRevoking(i)}>
+                {t("team.revoke")}
+              </Button>
+            </div>
+          ))
+        )}
+      </Card>
+      <ConfirmDialog
+        open={Boolean(revoking)}
+        onClose={() => setRevoking(null)}
+        danger
+        title={t("team.revoke")}
+        body={revoking ? t("team.revokeConfirm", { phone: toPersianDigits(revoking.phone) }) : null}
+        confirmLabel={t("team.revoke")}
+        loading={revoke.isPending}
+        onConfirm={() =>
+          revoking &&
+          revoke.mutate(revoking.id, {
+            onSuccess: () => {
+              setRevoking(null);
+              toast.success(t("team.revoked"));
+            },
+            onError: (e) => toast.error(errorMessage(e)),
+          })
+        }
+      />
+    </section>
   );
 }

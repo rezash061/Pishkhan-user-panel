@@ -51,14 +51,14 @@ node tests/mock-api/server.mjs      # :5080
 
 ## Status
 
-Built against the backend's current API (Phase 0 + BE-1.1, BE-1.2, BE-1.5; automations from BE-1.3 and catalog from BE-1.6, both still open PRs in the backend):
+Built against the backend's current API (Phase 0 through BE-1.6, plus backend PR #13 for inbox details and invitations):
 
 | Area | State |
 |---|---|
 | Phone OTP login with ALTCHA, password + TOTP login, sessions, profile, password, TOTP setup | Done |
-| Workspace creation, picker, invitations (accept), team (invite, roles, remove) | Done |
+| Workspace creation, picker, invitations (accept), team (invite, pending invitations with revoke, roles, remove) | Done |
 | Onboarding: workspace → Instagram connect (official OAuth) | Done; template, import, teach and test steps wait for their backend modules |
-| Inbox: filters, virtualized list, thread, optimistic send with retry, 24-hour/7-day window, quick replies (`/`), notes, assign, status, AI pause, live updates, keyboard shortcuts | Done |
+| Inbox: filters, virtualized list, thread, optimistic send with retry, 24-hour/7-day window, quick replies (`/`), notes, assign, status, AI pause, live updates, keyboard shortcuts, customer names, search, handoff reason and suggested reply, attachments and story replies | Done |
 | Channels: status, reconnect, disconnect, recent posts; banners for disconnected/expiring accounts | Done |
 | Settings: general, business hours with Jalali closed dates, quick replies | Done |
 | PWA: manifest, icons, service worker with offline page, install prompt | Done; web push waits for backend VAPID keys |
