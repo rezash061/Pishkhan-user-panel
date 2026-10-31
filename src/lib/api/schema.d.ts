@@ -287,6 +287,85 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/auth/support-session": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Exchange a one-time support-session token (from the back office link) for a 30-minute access token
+         * @description The token works once and for 2 minutes. The session has no refresh token; `POST /auth/logout` ends it. Under it, password, TOTP and session changes (and other sensitive actions) answer 403 `auth.support_session.not_allowed`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path?: never;
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ExchangeSupportSessionRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SupportSessionResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unauthorized */
+                401: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/auth/logout": {
         parameters: {
             query?: never;
@@ -4679,67 +4758,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/api/v1/workspaces/{workspaceId}/dashboard": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * Dashboard: activity over `range` (today, 7d, 30d), the overnight summary, the inbox now and channel health
-         * @description Period counts come from hourly rollups and may lag a few minutes; `inbox` and `channels` are live. Days are Tehran days.
-         */
-        get: {
-            parameters: {
-                query?: {
-                    range?: string;
-                };
-                header?: never;
-                path: {
-                    workspaceId: string;
-                };
-                cookie?: never;
-            };
-            requestBody?: never;
-            responses: {
-                /** @description OK */
-                200: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/json": components["schemas"]["DashboardResponse"];
-                    };
-                };
-                /** @description Bad Request */
-                400: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-                /** @description Too Many Requests */
-                429: {
-                    headers: {
-                        [name: string]: unknown;
-                    };
-                    content: {
-                        "application/problem+json": components["schemas"]["ProblemDetails"];
-                    };
-                };
-            };
-        };
-        put?: never;
-        post?: never;
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
     "/api/v1/workspaces/{workspaceId}/notifications": {
         parameters: {
             query?: never;
@@ -4988,6 +5006,67 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dashboard: activity over `range` (today, 7d, 30d), the overnight summary, the inbox now and channel health
+         * @description Period counts come from hourly rollups and may lag a few minutes; `inbox` and `channels` are live. Days are Tehran days.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    range?: string;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DashboardResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -5208,6 +5287,9 @@ export interface components {
             ranges: components["schemas"]["TimeRange"][];
         };
         DayOfWeek: number;
+        ExchangeSupportSessionRequest: {
+            token: string;
+        };
         FileResponse: {
             /** Format: uuid */
             id: string;
@@ -5474,6 +5556,24 @@ export interface components {
             /** Format: date-time */
             createdAt: string;
         };
+        NotificationResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            title: string;
+            body: null | string;
+            link: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readAt: null | string;
+        };
+        NotificationsPage: {
+            items: components["schemas"]["NotificationResponse"][];
+            nextCursor: null | string;
+            /** Format: int32 */
+            unreadCount: number;
+        };
         OutboundAttachment: {
             type: string;
             /** Format: uri */
@@ -5543,6 +5643,20 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             expiresAt: string;
+        };
+        PreferenceItem: {
+            kind: string;
+            inApp: boolean;
+            push: boolean;
+            sms: boolean;
+        };
+        PreferenceResponse: {
+            kind: string;
+            label: string;
+            inApp: boolean;
+            push: boolean;
+            sms: boolean;
+            smsAvailable: boolean;
         };
         ProblemDetails: {
             type?: null | string;
@@ -5799,6 +5913,9 @@ export interface components {
             newPassword: string;
             currentPassword: null | string;
         };
+        SetPreferencesRequest: {
+            items: components["schemas"]["PreferenceItem"][];
+        };
         SettingsRequest: {
             aiEnabled: boolean;
             fallbackText: null | string;
@@ -5828,6 +5945,17 @@ export interface components {
             id: string;
             name: string;
             cards: components["schemas"]["StorefrontCard"][];
+        };
+        SupportSessionResponse: {
+            accessToken: string;
+            /** Format: date-time */
+            accessTokenExpiresAt: string;
+            /** Format: uuid */
+            workspaceId: string;
+            /** Format: uuid */
+            userId: string;
+            staffUsername: string;
+            reason: string;
         };
         TimeRange: {
             /** Format: time */
@@ -5910,41 +6038,6 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             deletionScheduledFor: null | string;
-        };
-        NotificationResponse: {
-            /** Format: uuid */
-            id: string;
-            kind: string;
-            title: string;
-            body: null | string;
-            link: null | string;
-            /** Format: date-time */
-            createdAt: string;
-            /** Format: date-time */
-            readAt: null | string;
-        };
-        NotificationsPage: {
-            items: components["schemas"]["NotificationResponse"][];
-            nextCursor: null | string;
-            /** Format: int32 */
-            unreadCount: number;
-        };
-        PreferenceItem: {
-            kind: string;
-            inApp: boolean;
-            push: boolean;
-            sms: boolean;
-        };
-        PreferenceResponse: {
-            kind: string;
-            label: string;
-            inApp: boolean;
-            push: boolean;
-            sms: boolean;
-            smsAvailable: boolean;
-        };
-        SetPreferencesRequest: {
-            items: components["schemas"]["PreferenceItem"][];
         };
     };
     responses: never;

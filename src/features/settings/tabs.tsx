@@ -16,6 +16,7 @@ export function SettingsTabs() {
         { href: `${base}/business-hours`, label: t("businessHours") },
         ...(can(P.inboxRead) ? [{ href: `${base}/quick-replies`, label: t("quickReplies") }] : []),
         { href: `${base}/notifications`, label: t("notifications") },
+        ...(can(P.auditRead) ? [{ href: `${base}/audit`, label: t("audit") }] : []),
       ]}
     />
   );

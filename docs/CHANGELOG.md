@@ -2,6 +2,8 @@
 
 ## 0.5.1 — 2026-10-31
 
+- Settings: «گزارش فعالیت» for owners (`GET /workspaces/{id}/audit`): who changed what and when, with support access shown as «پشتیبانی پیشخوان» with its reason, a filter (support, team, workspace), changed fields per entry, and paging. The «support» notification links here.
+- API refreshed from backend main (notifications, support sessions and audit merged).
 - Fix: a redirect loop (ERR_TOO_MANY_REDIRECTS) after signing in when the backend answered a server-rendered page with an error. Only a 401 now sends the user to `/login?expired=1`, which clears the dead cookies instead of bouncing back into the app; any other backend answer shows the error page and logs the path and status in the panel's server log.
 
 ## 0.5.0 — 2026-10-31

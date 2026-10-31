@@ -250,6 +250,77 @@
         }
       }
     },
+    "/api/v1/auth/support-session": {
+      "post": {
+        "tags": [
+          "Support sessions"
+        ],
+        "summary": "Exchange a one-time support-session token (from the back office link) for a 30-minute access token",
+        "description": "The token works once and for 2 minutes. The session has no refresh token; `POST /auth/logout` ends it. Under it, password, TOTP and session changes (and other sensitive actions) answer 403 `auth.support_session.not_allowed`.",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ExchangeSupportSessionRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SupportSessionResponse"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/api/v1/auth/logout": {
       "post": {
         "tags": [
@@ -263,7 +334,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -288,7 +359,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -321,7 +392,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -377,7 +448,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -425,7 +496,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -453,7 +524,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -492,7 +563,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -517,7 +588,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -565,7 +636,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -613,7 +684,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -694,7 +765,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -720,7 +791,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -775,7 +846,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -821,7 +892,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -895,7 +966,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -975,7 +1046,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -1039,7 +1110,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -1075,7 +1146,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -1159,7 +1230,7 @@
                   },
                   {
                     "day": 5,
-                    "ranges": []
+                    "ranges": [ ]
                   }
                 ],
                 "closedDates": [
@@ -1204,7 +1275,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -1243,7 +1314,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -1328,7 +1399,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -1374,7 +1445,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -1453,7 +1524,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -1490,7 +1561,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -1538,7 +1609,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -1633,7 +1704,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -1688,7 +1759,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -1727,7 +1798,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -1784,7 +1855,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -1875,7 +1946,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -1923,7 +1994,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -2011,7 +2082,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -2065,7 +2136,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -2135,7 +2206,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -2238,7 +2309,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -2323,7 +2394,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -2409,7 +2480,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -2474,7 +2545,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -2522,7 +2593,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -2580,7 +2651,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -2663,7 +2734,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -2702,7 +2773,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -2775,7 +2846,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -2869,7 +2940,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -2914,7 +2985,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -2961,7 +3032,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -3026,7 +3097,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -3080,7 +3151,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -3162,7 +3233,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -3207,7 +3278,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -3283,7 +3354,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -3346,7 +3417,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -3384,7 +3455,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -3448,7 +3519,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -3502,7 +3573,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -3585,7 +3656,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -3630,7 +3701,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -3685,7 +3756,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -3751,7 +3822,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -3786,7 +3857,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -3851,7 +3922,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -3928,7 +3999,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -4024,7 +4095,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -4062,7 +4133,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -4135,7 +4206,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -4229,7 +4300,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -4275,7 +4346,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -4356,7 +4427,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -4429,7 +4500,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -4483,7 +4554,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -4576,7 +4647,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -4621,7 +4692,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -4707,7 +4778,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -4771,7 +4842,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -4857,7 +4928,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -4886,7 +4957,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -4915,7 +4986,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -4992,7 +5063,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -5046,7 +5117,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -5084,7 +5155,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -5148,7 +5219,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -5202,7 +5273,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -5284,7 +5355,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -5329,7 +5400,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -5384,7 +5455,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -5503,71 +5574,7 @@
         },
         "security": [
           {
-            "bearer": []
-          }
-        ]
-      }
-    },
-    "/api/v1/workspaces/{workspaceId}/dashboard": {
-      "get": {
-        "tags": [
-          "Dashboard"
-        ],
-        "summary": "Dashboard: activity over `range` (today, 7d, 30d), the overnight summary, the inbox now and channel health",
-        "description": "Period counts come from hourly rollups and may lag a few minutes; `inbox` and `channels` are live. Days are Tehran days.",
-        "parameters": [
-          {
-            "name": "workspaceId",
-            "in": "path",
-            "required": true,
-            "schema": {
-              "type": "string",
-              "format": "uuid"
-            }
-          },
-          {
-            "name": "range",
-            "in": "query",
-            "schema": {
-              "type": "string"
-            }
-          }
-        ],
-        "responses": {
-          "200": {
-            "description": "OK",
-            "content": {
-              "application/json": {
-                "schema": {
-                  "$ref": "#/components/schemas/DashboardResponse"
-                }
-              }
-            }
-          },
-          "400": {
-            "description": "Bad Request",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          },
-          "429": {
-            "description": "Too Many Requests",
-            "content": {
-              "application/problem+json": {
-                "schema": {
-                  "$ref": "#/components/schemas/ProblemDetails"
-                }
-              }
-            }
-          }
-        },
-        "security": [
-          {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -5646,7 +5653,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -5694,7 +5701,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -5723,7 +5730,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       }
@@ -5762,7 +5769,7 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
           }
         ]
       },
@@ -5846,7 +5853,71 @@
         },
         "security": [
           {
-            "bearer": []
+            "bearer": [ ]
+          }
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Dashboard: activity over `range` (today, 7d, 30d), the overnight summary, the inbox now and channel health",
+        "description": "Period counts come from hourly rollups and may lag a few minutes; `inbox` and `channels` are live. Days are Tehran days.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": [ ]
           }
         ]
       }
@@ -6662,6 +6733,17 @@
       "DayOfWeek": {
         "type": "integer"
       },
+      "ExchangeSupportSessionRequest": {
+        "required": [
+          "token"
+        ],
+        "type": "object",
+        "properties": {
+          "token": {
+            "type": "string"
+          }
+        }
+      },
       "FileResponse": {
         "required": [
           "id",
@@ -7330,7 +7412,7 @@
           }
         }
       },
-      "JsonElement": {},
+      "JsonElement": { },
       "LoginResponse": {
         "required": [
           "accessToken",
@@ -7717,6 +7799,79 @@
           }
         }
       },
+      "NotificationResponse": {
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "link",
+          "createdAt",
+          "readAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "link": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "NotificationsPage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "unreadCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponse"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unreadCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
       "OutboundAttachment": {
         "required": [
           "type",
@@ -8000,6 +8155,60 @@
           "expiresAt": {
             "type": "string",
             "format": "date-time"
+          }
+        }
+      },
+      "PreferenceItem": {
+        "required": [
+          "kind",
+          "inApp",
+          "push",
+          "sms"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "inApp": {
+            "type": "boolean"
+          },
+          "push": {
+            "type": "boolean"
+          },
+          "sms": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PreferenceResponse": {
+        "required": [
+          "kind",
+          "label",
+          "inApp",
+          "push",
+          "sms",
+          "smsAvailable"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "inApp": {
+            "type": "boolean"
+          },
+          "push": {
+            "type": "boolean"
+          },
+          "sms": {
+            "type": "boolean"
+          },
+          "smsAvailable": {
+            "type": "boolean"
           }
         }
       },
@@ -9118,6 +9327,20 @@
           }
         }
       },
+      "SetPreferencesRequest": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreferenceItem"
+            }
+          }
+        }
+      },
       "SettingsRequest": {
         "required": [
           "aiEnabled",
@@ -9231,6 +9454,40 @@
             "items": {
               "$ref": "#/components/schemas/StorefrontCard"
             }
+          }
+        }
+      },
+      "SupportSessionResponse": {
+        "required": [
+          "accessToken",
+          "accessTokenExpiresAt",
+          "workspaceId",
+          "userId",
+          "staffUsername",
+          "reason"
+        ],
+        "type": "object",
+        "properties": {
+          "accessToken": {
+            "type": "string"
+          },
+          "accessTokenExpiresAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "workspaceId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "userId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "staffUsername": {
+            "type": "string"
+          },
+          "reason": {
+            "type": "string"
           }
         }
       },
@@ -9573,147 +9830,6 @@
             "format": "date-time"
           }
         }
-      },
-      "NotificationResponse": {
-        "required": [
-          "id",
-          "kind",
-          "title",
-          "body",
-          "link",
-          "createdAt",
-          "readAt"
-        ],
-        "type": "object",
-        "properties": {
-          "id": {
-            "type": "string",
-            "format": "uuid"
-          },
-          "kind": {
-            "type": "string"
-          },
-          "title": {
-            "type": "string"
-          },
-          "body": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "link": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "createdAt": {
-            "type": "string",
-            "format": "date-time"
-          },
-          "readAt": {
-            "type": [
-              "null",
-              "string"
-            ],
-            "format": "date-time"
-          }
-        }
-      },
-      "NotificationsPage": {
-        "required": [
-          "items",
-          "nextCursor",
-          "unreadCount"
-        ],
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/NotificationResponse"
-            }
-          },
-          "nextCursor": {
-            "type": [
-              "null",
-              "string"
-            ]
-          },
-          "unreadCount": {
-            "type": "integer",
-            "format": "int32"
-          }
-        }
-      },
-      "PreferenceItem": {
-        "required": [
-          "kind",
-          "inApp",
-          "push",
-          "sms"
-        ],
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string"
-          },
-          "inApp": {
-            "type": "boolean"
-          },
-          "push": {
-            "type": "boolean"
-          },
-          "sms": {
-            "type": "boolean"
-          }
-        }
-      },
-      "PreferenceResponse": {
-        "required": [
-          "kind",
-          "label",
-          "inApp",
-          "push",
-          "sms",
-          "smsAvailable"
-        ],
-        "type": "object",
-        "properties": {
-          "kind": {
-            "type": "string"
-          },
-          "label": {
-            "type": "string"
-          },
-          "inApp": {
-            "type": "boolean"
-          },
-          "push": {
-            "type": "boolean"
-          },
-          "sms": {
-            "type": "boolean"
-          },
-          "smsAvailable": {
-            "type": "boolean"
-          }
-        }
-      },
-      "SetPreferencesRequest": {
-        "required": [
-          "items"
-        ],
-        "type": "object",
-        "properties": {
-          "items": {
-            "type": "array",
-            "items": {
-              "$ref": "#/components/schemas/PreferenceItem"
-            }
-          }
-        }
       }
     },
     "securitySchemes": {
@@ -9728,6 +9844,9 @@
   "tags": [
     {
       "name": "Auth"
+    },
+    {
+      "name": "Support sessions"
     },
     {
       "name": "Account"
@@ -9755,6 +9874,9 @@
     },
     {
       "name": "Audit"
+    },
+    {
+      "name": "Notifications"
     },
     {
       "name": "Dashboard"

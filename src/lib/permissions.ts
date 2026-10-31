@@ -21,6 +21,7 @@ export const P = {
   filesRead: "workspace.files.read",
   analyticsRead: "workspace.analytics.read",
   workspaceDelete: "workspace.delete",
+  auditRead: "workspace.audit.read",
 } as const;
 
 export type Permission = (typeof P)[keyof typeof P];
@@ -29,7 +30,7 @@ const all = Object.values(P) as Permission[];
 
 const sets: Record<WorkspaceRole, ReadonlySet<Permission>> = {
   owner: new Set(all),
-  admin: new Set(all.filter((p) => p !== P.billingManage && p !== P.workspaceDelete)),
+  admin: new Set(all.filter((p) => p !== P.billingManage && p !== P.workspaceDelete && p !== P.auditRead)),
   agent: new Set([P.settingsRead, P.inboxRead, P.inboxReply, P.catalogRead, P.crmRead, P.crmWrite, P.filesUpload, P.filesRead, P.membersRead]),
   viewer: new Set([P.settingsRead, P.inboxRead, P.catalogRead, P.crmRead, P.filesRead, P.membersRead, P.analyticsRead]),
 };
