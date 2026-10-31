@@ -36,13 +36,15 @@ Items marked ✅ were closed by backend PR #13 (`feature/user-panel-gaps`) and t
 
 ## Automations and catalog (BE-1.3, BE-1.6)
 
-12. **Two sets of business hours.** Automation settings keep their own weekly hours (`sun`–`sat`, `"HH:mm-HH:mm"`),
+Items 12–15 were closed by backend PR #14; the panel now uses one set of hours, the dry-run endpoints and per-image endpoints.
+
+12. ✅ **Two sets of business hours.** Automation settings keep their own weekly hours (`sun`–`sat`, `"HH:mm-HH:mm"`),
     separate from the workspace business hours in Tenancy, with a different shape and no closed dates. The panel offers
     «copy from workspace hours», but the two can drift. One source (or automation hours referencing Tenancy's) would fix it.
-13. **No sandbox test run.** There is no endpoint to run a rule or flow against a sample message without a real
+13. ✅ **No sandbox test run.** There is no endpoint to run a rule or flow against a sample message without a real
     conversation; the panel tests keywords locally only. Plan 3.6 asks for a «test» panel.
-14. **Product images only through the product.** Images are attached by `fileId` inside the product PUT; there is no
+14. ✅ **Product images only through the product.** Images are attached by `fileId` inside the product PUT; there is no
     endpoint to add, remove or reorder one image, so every image change re-sends the whole product.
-15. **Automation hours** (12) are moving to the workspace business hours in a coming backend PR, together with product
+15. ✅ **Automation hours** (12) are moving to the workspace business hours in a coming backend PR, together with product
     image and test-run endpoints (13, 14). The panel will drop its separate automation-hours editor then.
 16. **Contact profile picture.** `ConversationContact` has no `profilePicUrl`, so avatars are initials.

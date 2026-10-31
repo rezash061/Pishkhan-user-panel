@@ -1,6 +1,6 @@
 "use client";
 
-import { AtSign, ChevronDown, Moon, MessageCircleMore, MessageSquareText, MessagesSquare, MousePointerClick, Radio, Share2, Sparkles, Trash2, CircleDot, type LucideIcon } from "lucide-react";
+import { AtSign, ChevronDown, FlaskConical, Moon, MessageCircleMore, MessageSquareText, MessagesSquare, MousePointerClick, Radio, Share2, Sparkles, Trash2, CircleDot, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -27,6 +27,7 @@ import { KeywordInput } from "./keyword-input";
 import { PostPicker } from "./post-picker";
 import { emptyRuleForm, formFromRule, hasPostScope, isCommentTrigger, keywordsAllowed, keywordsRequired, ruleProblems, ruleRequestFromForm, withTrigger, type RuleForm } from "./rule-form";
 import { RuleStatsPanel } from "./rule-stats";
+import { RuleTester } from "./sandbox";
 
 export const triggerIcons: Record<TriggerKind, LucideIcon> = {
   dm_keyword: MessageSquareText,
@@ -69,6 +70,7 @@ export function RuleEditor({ rule, initialTrigger }: { rule?: Rule; initialTrigg
   const remove = useDeleteRule(ws);
   const [form, setForm] = useState<RuleForm>(() => (rule ? formFromRule(rule) : emptyRuleForm(initialTrigger)));
   const [submitted, setSubmitted] = useState(false);
+  const [testing, setTesting] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
   const base = `/w/${ws}/automations`;
 
@@ -111,11 +113,19 @@ export function RuleEditor({ rule, initialTrigger }: { rule?: Rule; initialTrigg
             </Link>
             <h1 className="truncate text-xl font-bold sm:text-2xl">{rule ? rule.name : t("editor.newTitle")}</h1>
           </div>
-          {rule && writable ? (
-            <Button variant="outline" className="text-danger" onClick={() => setConfirmDelete(true)}>
-              <Trash2 aria-hidden />
-              {t("editor.delete")}
-            </Button>
+          {rule ? (
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setTesting(true)}>
+                <FlaskConical aria-hidden />
+                {t("test.thisRule")}
+              </Button>
+              {writable ? (
+                <Button variant="outline" className="text-danger" onClick={() => setConfirmDelete(true)}>
+                  <Trash2 aria-hidden />
+                  {t("editor.delete")}
+                </Button>
+              ) : null}
+            </div>
           ) : null}
         </div>
 
@@ -285,6 +295,7 @@ export function RuleEditor({ rule, initialTrigger }: { rule?: Rule; initialTrigg
         ) : null}
       </form>
 
+      {rule && testing ? <RuleTester rule={rule} open onClose={() => setTesting(false)} /> : null}
       {rule ? (
         <ConfirmDialog
           open={confirmDelete}

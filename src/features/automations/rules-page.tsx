@@ -1,7 +1,7 @@
 "use client";
 
 import { useQueryClient } from "@tanstack/react-query";
-import { ArrowDown, ArrowUp, MessageCircleMore, Plus, Workflow } from "lucide-react";
+import { ArrowDown, ArrowUp, FlaskConical, MessageCircleMore, Plus, Workflow } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -21,6 +21,7 @@ import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
 import { toRuleRequest, useRules, useSaveRule } from "./data";
 import { triggerIcons } from "./rule-editor";
+import { RuleTester } from "./sandbox";
 
 /** Rules in the order the engine tries them: higher priority first, then older first (backend `Order`). */
 export function engineOrder(rules: Rule[]): Rule[] {
@@ -38,6 +39,7 @@ export function RulesPage() {
   const channels = useChannels(ws);
   const save = useSaveRule(ws);
   const [channel, setChannel] = useState("");
+  const [testing, setTesting] = useState(false);
   const base = `/w/${ws}/automations`;
 
   const update = (rule: Rule, patch: Partial<Rule>) => {
@@ -82,6 +84,11 @@ export function RulesPage() {
         ) : (
           <p className="text-sm text-muted-foreground">{t("rules.subtitle")}</p>
         )}
+        <div className="flex flex-wrap gap-2">
+          <Button variant="outline" onClick={() => setTesting(true)}>
+            <FlaskConical aria-hidden />
+            {t("test.open")}
+          </Button>
         {writable ? (
           <div className="flex flex-wrap gap-2">
             <Link href={`${base}/comments/new`} className={buttonVariants({ variant: "outline" })}>
@@ -94,7 +101,9 @@ export function RulesPage() {
             </Link>
           </div>
         ) : null}
+        </div>
       </div>
+      {testing ? <RuleTester open onClose={() => setTesting(false)} /> : null}
 
       {rules.isPending ? (
         <div className="space-y-3">

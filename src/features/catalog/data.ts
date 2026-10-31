@@ -94,6 +94,34 @@ export function useSaveProduct(ws: string) {
   });
 }
 
+/**
+ * Saves image changes on an existing product at once (add, remove, reorder), without the rest of the form. Only the
+ * cached product's images change, so an editor with unsaved edits keeps them.
+ */
+export function useProductImages(ws: string, productId: string) {
+  const qc = useQueryClient();
+  const params = { params: { path: { workspaceId: ws, productId } } };
+  const done = (product: Product) => {
+    qc.setQueryData<Product>(qk.product(ws, productId), (old) => (old ? { ...old, images: product.images } : old));
+    void qc.invalidateQueries({ queryKey: qk.productLists(ws) });
+  };
+  return {
+    add: useMutation({
+      mutationFn: async (fileId: string) => unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/catalog/products/{productId}/images", { ...params, body: { fileId } })),
+      onSuccess: done,
+    }),
+    remove: useMutation({
+      mutationFn: async (fileId: string) =>
+        unwrap(await api.DELETE("/api/v1/workspaces/{workspaceId}/catalog/products/{productId}/images/{fileId}", { params: { path: { workspaceId: ws, productId, fileId } } })),
+      onSuccess: done,
+    }),
+    reorder: useMutation({
+      mutationFn: async (fileIds: string[]) => unwrap(await api.PUT("/api/v1/workspaces/{workspaceId}/catalog/products/{productId}/images/order", { ...params, body: { fileIds } })),
+      onSuccess: done,
+    }),
+  };
+}
+
 export function useDeleteProduct(ws: string) {
   const qc = useQueryClient();
   return useMutation({

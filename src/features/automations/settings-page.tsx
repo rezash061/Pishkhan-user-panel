@@ -1,52 +1,21 @@
 "use client";
 
-import { useQueryClient } from "@tanstack/react-query";
-import { Copy, Plus, X } from "lucide-react";
+import { Clock, Pencil } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Input, Textarea } from "@/components/ui/field";
 import { Skeleton, Switch } from "@/components/ui/misc";
+import { useBusinessHours, weekOrder } from "@/features/settings/business-hours";
 import { useWorkspace } from "@/features/workspace/context";
-import { api, unwrap } from "@/lib/api/client";
-import { qk } from "@/lib/api/keys";
-import type { AutomationSettings, BusinessHours } from "@/lib/api/types";
+import type { AutomationSettings } from "@/lib/api/types";
+import { toPersianDigits } from "@/lib/i18n/digits";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
 import { useAutomationSettings, useSaveAutomationSettings } from "./data";
-
-/** Automation's own hours use day keys (backend `BusinessHours.DayKeys`), Saturday first in the Iranian week. */
-export const dayKeys = ["sat", "sun", "mon", "tue", "wed", "thu", "fri"] as const;
-type DayKey = (typeof dayKeys)[number];
-type Range = { from: string; to: string };
-type Week = Record<DayKey, Range[]>;
-/** .NET DayOfWeek (0 = Sunday) → automation day key. */
-const dotnetDay: Record<number, DayKey> = { 0: "sun", 1: "mon", 2: "tue", 3: "wed", 4: "thu", 5: "fri", 6: "sat" };
-
-export function toWeek(days: Record<string, string[]>): Week {
-  const week = Object.fromEntries(dayKeys.map((d) => [d, [] as Range[]])) as Week;
-  for (const d of dayKeys)
-    week[d] = (days[d] ?? []).map((r) => {
-      const [from = "", to = ""] = r.split("-").map((x) => x.trim());
-      return { from, to };
-    });
-  return week;
-}
-
-export function fromWeek(week: Week): Record<string, string[]> {
-  const out: Record<string, string[]> = {};
-  for (const d of dayKeys) if (week[d].length) out[d] = week[d].map((r) => `${r.from}-${r.to}`);
-  return out;
-}
-
-/** Workspace business hours (Settings) in the automation format, so sellers can keep both the same with one click. */
-export function weekFromWorkspaceHours(hours: BusinessHours): Week {
-  const week = toWeek({});
-  for (const d of hours.days) week[dotnetDay[Number(d.day)]!] = d.ranges.map((r) => ({ from: r.from.slice(0, 5), to: r.to.slice(0, 5) }));
-  return week;
-}
 
 export function AutomationSettingsPage() {
   const errorMessage = useErrorMessage();
@@ -59,46 +28,19 @@ export function AutomationSettingsPage() {
 
 function SettingsForm({ initial }: { initial: AutomationSettings }) {
   const t = useTranslations("automations.settings");
-  const td = useTranslations("settings.hours");
   const errorMessage = useErrorMessage();
-  const qc = useQueryClient();
   const { workspace, can } = useWorkspace();
-  const ws = workspace.id;
   const writable = can(P.automationWrite);
-  const save = useSaveAutomationSettings(ws);
+  const save = useSaveAutomationSettings(workspace.id);
   const [aiEnabled, setAiEnabled] = useState(initial.aiEnabled);
   const [fallbackText, setFallbackText] = useState(initial.fallbackText ?? "");
-  const [cooldown, setCooldown] = useState(Number(initial.fallbackCooldownMinutes));
-  const [week, setWeek] = useState<Week>(() => toWeek(initial.businessHours.days));
-  const configured = dayKeys.some((d) => week[d].length > 0);
-  const labels: Record<DayKey, string> = { sat: td("days.6"), sun: td("days.0"), mon: td("days.1"), tue: td("days.2"), wed: td("days.3"), thu: td("days.4"), fri: td("days.5") };
-
-  const copyFromWorkspace = async () => {
-    try {
-      const hours = await qc.fetchQuery({
-        queryKey: qk.businessHours(ws),
-        queryFn: async () => unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/business-hours", { params: { path: { workspaceId: ws } } })),
-      });
-      setWeek(weekFromWorkspaceHours(hours));
-      toast.success(t("copied"));
-    } catch (e) {
-      toast.error(errorMessage(e));
-    }
-  };
+  const [cooldown, setCooldown] = useState(initial.fallbackCooldownMinutes ?? 0);
 
   const submit = () =>
     save.mutate(
-      {
-        aiEnabled,
-        fallbackText: fallbackText.trim() || null,
-        fallbackCooldownMinutes: cooldown,
-        businessHours: { timeZone: initial.businessHours.timeZone || "Asia/Tehran", days: fromWeek(week) },
-      },
+      { aiEnabled, fallbackText: fallbackText.trim() || null, fallbackCooldownMinutes: cooldown },
       { onSuccess: () => toast.success(t("saved")), onError: (e) => toast.error(errorMessage(e)) },
     );
-
-  const update = (day: DayKey, ranges: Range[]) => setWeek({ ...week, [day]: ranges });
-  const invalid = dayKeys.some((d) => week[d].some((r) => !r.from || !r.to || r.from >= r.to));
 
   return (
     <div className="space-y-5">
@@ -112,55 +54,7 @@ function SettingsForm({ initial }: { initial: AutomationSettings }) {
         </CardBody>
       </Card>
 
-      <Card>
-        <CardHeader
-          title={t("hours")}
-          description={t("hoursHint")}
-          action={
-            writable ? (
-              <Button variant="outline" size="sm" onClick={() => void copyFromWorkspace()}>
-                <Copy aria-hidden />
-                {t("copyFromSettings")}
-              </Button>
-            ) : null
-          }
-        />
-        <CardBody className="space-y-1">
-          {!configured ? <p className="mb-2 rounded-xl bg-surface-muted p-3 text-sm text-muted-foreground">{t("alwaysOpen")}</p> : null}
-          {dayKeys.map((day) => {
-            const ranges = week[day];
-            return (
-              <div key={day} className="flex flex-wrap items-start gap-3 border-b py-3 last:border-0">
-                <div className="flex w-36 items-center gap-3 pt-1.5">
-                  <Switch label={labels[day]} checked={ranges.length > 0} disabled={!writable} onChange={(on) => update(day, on ? [{ from: "09:00", to: "21:00" }] : [])} />
-                  <span className="text-sm font-medium">{labels[day]}</span>
-                </div>
-                <div className="min-w-0 flex-1 space-y-2">
-                  {ranges.length === 0 ? <p className="pt-1.5 text-sm text-muted-foreground">{configured ? td("closed") : t("noHours")}</p> : null}
-                  {ranges.map((r, i) => (
-                    <div key={i} className="flex items-center gap-2">
-                      <Input type="time" dir="ltr" aria-label={`${labels[day]} ${td("from")}`} className="h-9 w-28" disabled={!writable} value={r.from} onChange={(e) => update(day, ranges.map((x, j) => (j === i ? { ...x, from: e.target.value } : x)))} />
-                      <span className="text-sm text-muted-foreground">{td("to")}</span>
-                      <Input type="time" dir="ltr" aria-label={`${labels[day]} ${td("to")}`} className="h-9 w-28" disabled={!writable} value={r.to} onChange={(e) => update(day, ranges.map((x, j) => (j === i ? { ...x, to: e.target.value } : x)))} />
-                      {writable && ranges.length > 1 ? (
-                        <Button variant="ghost" size="icon-sm" aria-label={td("closed")} onClick={() => update(day, ranges.filter((_, j) => j !== i))}>
-                          <X />
-                        </Button>
-                      ) : null}
-                    </div>
-                  ))}
-                  {writable && ranges.length > 0 && ranges.length < 4 ? (
-                    <Button variant="link" size="sm" className="h-auto px-0" onClick={() => update(day, [...ranges, { from: "17:00", to: "21:00" }])}>
-                      <Plus aria-hidden />
-                      {td("addRange")}
-                    </Button>
-                  ) : null}
-                </div>
-              </div>
-            );
-          })}
-        </CardBody>
-      </Card>
+      <HoursSummary />
 
       <Card>
         <CardHeader title={t("fallback")} description={t("fallbackHint")} />
@@ -175,10 +69,69 @@ function SettingsForm({ initial }: { initial: AutomationSettings }) {
       </Card>
 
       {writable ? (
-        <Button onClick={submit} loading={save.isPending} disabled={invalid}>
+        <Button onClick={submit} loading={save.isPending}>
           {t("save")}
         </Button>
       ) : null}
     </div>
+  );
+}
+
+/**
+ * Automations read the workspace's business hours (one set for the whole panel), so this only shows them and links to
+ * the place they are edited.
+ */
+function HoursSummary() {
+  const t = useTranslations("automations.settings");
+  const td = useTranslations("settings.hours");
+  const errorMessage = useErrorMessage();
+  const { workspace, can } = useWorkspace();
+  const hours = useBusinessHours(workspace.id);
+  const hhmm = (time: string) => toPersianDigits(time.slice(0, 5));
+
+  return (
+    <Card>
+      <CardHeader
+        title={t("hours")}
+        description={t("hoursHint")}
+        action={
+          can(P.settingsWrite) ? (
+            <Link href={`/w/${workspace.id}/settings/business-hours`} className={buttonVariants({ variant: "outline", size: "sm" })}>
+              <Pencil aria-hidden />
+              {t("editHours")}
+            </Link>
+          ) : null
+        }
+      />
+      <CardBody>
+        {hours.isPending ? (
+          <Skeleton className="h-40" />
+        ) : hours.isError ? (
+          <p className="text-sm text-danger">{errorMessage(hours.error)}</p>
+        ) : (
+          <>
+            <dl className="divide-y text-sm">
+              {weekOrder.map((day) => {
+                const ranges = hours.data.days.find((d) => d.day === day)?.ranges ?? [];
+                return (
+                  <div key={day} className="flex items-center justify-between gap-3 py-2">
+                    <dt className="font-medium">{td(`days.${day}` as "days.0")}</dt>
+                    <dd className={ranges.length ? "tabular-nums" : "text-muted-foreground"}>
+                      {ranges.length ? ranges.map((r) => `${td("from")} ${hhmm(r.from)} ${td("to")} ${hhmm(r.to)}`).join("، ") : td("closed")}
+                    </dd>
+                  </div>
+                );
+              })}
+            </dl>
+            {hours.data.closedDates.length ? (
+              <p className="mt-3 flex items-center gap-1.5 text-xs text-muted-foreground">
+                <Clock className="size-3.5" aria-hidden />
+                {t("closedDates", { n: toPersianDigits(hours.data.closedDates.length) })}
+              </p>
+            ) : null}
+          </>
+        )}
+      </CardBody>
+    </Card>
   );
 }

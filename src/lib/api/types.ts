@@ -39,8 +39,12 @@ export type FlowEdge = Schemas["FlowEdge"];
 export type FlowCondition = Schemas["FlowCondition"];
 export type FlowIssue = Schemas["FlowIssue"];
 export type FlowValidation = Schemas["FlowValidation"];
-export type AutomationSettings = Schemas["SettingsView"];
-export type AutomationHours = Schemas["BusinessHours"];
+export type AutomationSettings = Schemas["SettingsResponse"];
+export type RuleTestRequest = Schemas["RuleTestRequest"];
+export type RuleTestResult = Schemas["RuleTestResponse"];
+export type FlowTestResult = Schemas["FlowTestResponse"];
+export type SandboxStep = Schemas["SandboxStep"];
+export type SandboxMessage = Schemas["SandboxMessage"];
 
 // Catalog (BE-1.6)
 export type Category = Schemas["CategoryResponse"];

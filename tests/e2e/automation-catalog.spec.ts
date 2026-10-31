@@ -89,6 +89,36 @@ test("builds, validates and publishes a flow", async ({ page }) => {
   await page.getByRole("button", { name: "انتشار" }).click();
   await expect(page.getByText("منتشرشده (نسخهٔ ۱)")).toBeVisible();
   await noHorizontalScroll(page);
+
+  // Chat with the flow: it asks, waits, and finishes after an answer.
+  await page.getByRole("button", { name: "تست", exact: true }).click();
+  const tester = page.getByRole("dialog");
+  await expect(tester.getByText("سایزتون چنده؟")).toBeVisible();
+  await expect(tester.getByText("منتظر جواب مشتری")).toBeVisible();
+  await tester.getByLabel("جواب مشتری").fill("M");
+  await tester.getByRole("button", { name: "فرستادن" }).click();
+  await expect(tester.getByText("سناریو تمام شد")).toBeVisible();
+});
+
+test("tests a rule against a sample comment without sending anything", async ({ page }) => {
+  await login(page);
+  await page.goto(`${base}/automations`);
+  await page.getByRole("link", { name: /قیمت زیر پست/ }).click();
+  await page.getByRole("button", { name: "تست این قانون" }).click();
+  const tester = page.getByRole("dialog");
+  await expect(tester.getByLabel("متن")).toHaveValue("قیمت");
+  await tester.getByRole("button", { name: "اجرای تست" }).click();
+  await expect(tester.getByText("قانون «قیمت زیر پست» جواب می‌دهد.")).toBeVisible();
+  await expect(tester.getByText(/سلام عزیز 🌸 قیمت مانتو کتان/)).toBeVisible();
+  await expect(tester.getByText(/پاسخ زیر کامنت/)).toBeVisible();
+  await noHorizontalScroll(page);
+});
+
+test("automation settings show the workspace business hours", async ({ page }) => {
+  await login(page);
+  await page.goto(`${base}/automations/settings`);
+  await expect(page.getByRole("link", { name: "ویرایش ساعت کاری" })).toHaveAttribute("href", `${base}/settings/business-hours`);
+  await expect(page.getByText("شنبه").first()).toBeVisible();
 });
 
 test("adds a product with size variants and Toman prices", async ({ page }) => {
@@ -109,6 +139,14 @@ test("adds a product with size variants and Toman prices", async ({ page }) => {
   await noHorizontalScroll(page);
   await page.getByRole("button", { name: "افزودن محصول" }).click();
   await page.waitForURL(/\/catalog\/products\/[0-9a-f-]{36}$/);
+
+  // On a saved product an image is stored at once, without pressing Save.
+  const png = Buffer.from("iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==", "base64");
+  await page.locator('input[type="file"][accept^="image"]').setInputFiles({ name: "front.png", mimeType: "image/png", buffer: png });
+  await expect(page.getByText("اصلی", { exact: true })).toBeVisible();
+  await expect(page.getByRole("status", { name: "در حال بارگذاری" })).toHaveCount(0, { timeout: 10_000 });
+  await page.reload();
+  await expect(page.getByText("اصلی", { exact: true })).toBeVisible();
 
   await page.goto(`${base}/catalog`);
   const row = page.getByRole("link", { name: new RegExp(`شومیز ${run}`) });
