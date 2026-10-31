@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.4.0 — 2026-10-31
+
+- Automations: «تست پاسخ‌ها» runs a sample DM or comment through the rules (or one rule) and shows the outcome, business-hours state, what would be sent with variables filled in, other rules that also matched, and the flow it starts. Nothing is sent.
+- Flows: «تست» chats with a flow (draft or published) turn by turn, with quick-reply taps as answers.
+- Automation settings show the workspace business hours (the one set automations now read) with a link to edit them; the separate automation hours editor is gone.
+- Product images on a saved product are added, removed and reordered at once through the new image endpoints.
+- API refreshed from backend PR #14.
+
 ## 0.3.0 — 2026-10-29
 
 - Inbox: customer names and @usernames from the API, search by name, username or phone, handoff reason with the suggested reply one tap into the composer, photos, voice notes, videos and the story a customer answered (with a placeholder once Instagram's URL expires).

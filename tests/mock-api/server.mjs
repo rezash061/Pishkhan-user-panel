@@ -123,7 +123,7 @@ let rules = [
 ];
 const backlogRuns = new Map();
 let flows = [];
-let automationSettings = { aiEnabled: true, businessHours: { timeZone: "Asia/Tehran", days: { sat: ["10:00-21:00"], sun: ["10:00-21:00"], mon: ["10:00-21:00"], tue: ["10:00-21:00"], wed: ["10:00-21:00"], thu: ["10:00-14:00"] }, isConfigured: true }, fallbackText: null, fallbackCooldownMinutes: 720 };
+let automationSettings = { aiEnabled: true, fallbackText: null, fallbackCooldownMinutes: 720 };
 let categories = [
   { id: randomUUID(), name: "مانتو", parentId: null, sortOrder: 0 },
   { id: randomUUID(), name: "شلوار", parentId: null, sortOrder: 1 },
@@ -407,8 +407,63 @@ const routes = [
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/settings$/, (req, res) => send(res, 200, automationSettings)],
   ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/automation\/settings$/, async (req, res) => {
     const body = await readBody(req);
-    automationSettings = { ...body, businessHours: { ...body.businessHours, isConfigured: Object.values(body.businessHours.days).some((r) => r.length) } };
+    automationSettings = { aiEnabled: body.aiEnabled, fallbackText: body.fallbackText, fallbackCooldownMinutes: body.fallbackCooldownMinutes };
     send(res, 200, automationSettings);
+  }],
+  // Dry runs: a small stand-in for the backend's sandbox (keyword "contains" matching, variables filled in).
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/automation\/test$/, async (req, res) => {
+    const body = await readBody(req);
+    const vars = { "contact.first_name": body.contact?.name?.split(" ")[0] ?? null, "comment.text": body.text };
+    const fill = (text) => text?.replace(/\{\{\s*([a-z_.]+)\s*(?:\|([^}]*))?\}\}/g, (_, name, fallback) => vars[name] ?? fallback ?? "");
+    const comment = body.source === "comment";
+    const candidates = body.ruleId ? rules.filter((r) => r.id === body.ruleId) : rules.filter((r) => r.enabled).sort((a, b) => b.priority - a.priority);
+    const matches = candidates.filter((r) => {
+      if (comment !== ["comment_keyword", "comment_any", "live_comment"].includes(r.triggerKind)) return false;
+      if (r.triggerKind === "new_conversation") return body.isNewConversation;
+      if (r.postId && r.postId !== body.mediaId) return false;
+      const keywords = r.trigger.keywords ?? [];
+      return !keywords.length || keywords.some((k) => (body.text ?? "").toLowerCase().includes(k.toLowerCase()));
+    });
+    const [rule, ...others] = matches;
+    const steps = (rule?.actions ?? []).map((a) => {
+      if (a.message) return { type: a.kind, message: { ...a.message, text: fill(a.message.text) } };
+      if (a.kind === "public_reply") return { type: a.kind, replies: a.replies };
+      return { type: a.kind, tag: a.tag ?? null, reason: a.reason ?? null };
+    });
+    send(res, 200, { outcome: rule ? "rule" : automationSettings.aiEnabled && !comment ? "ai" : "none", ruleId: rule?.id ?? null, ruleName: rule?.name ?? null, businessOpen: true, otherMatches: others.map((r) => r.id), steps, flow: null });
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/automation\/flows\/([^/]+)\/test$/, async (req, res, url, [id]) => {
+    const flow = flows.find((f) => f.id === id);
+    if (!flow) return problem(res, 404, "common.not_found");
+    const validation = validateFlow(flow.graph);
+    if (!validation.isValid) return send(res, 422, validation);
+    const body = await readBody(req);
+    const answers = [...(body.answers ?? [])];
+    const variables = {};
+    const fill = (text) => text?.replace(/\{\{\s*flow\.([a-z0-9_]+)\s*(?:\|([^}]*))?\}\}/g, (_, name, fallback) => variables[name] ?? fallback ?? "");
+    const next = (node, handle = "next") => flow.graph.edges.find((e) => e.from === node && (e.handle ?? "next") === handle)?.to ?? null;
+    const turns = [{ input: null, steps: [] }];
+    let current = flow.graph.start;
+    let status = "completed";
+    for (let guard = 0; current && guard < 200; guard++) {
+      const node = flow.graph.nodes.find((n) => n.id === current);
+      const steps = turns.at(-1).steps;
+      if (!node || node.type === "end") break;
+      if (node.type === "message") steps.push({ type: "send_message", message: { ...node.message, text: fill(node.message.text) } });
+      if (node.type === "question") {
+        steps.push({ type: "send_message", message: { ...node.message, text: fill(node.message.text) } });
+        const answer = answers.shift();
+        if (!answer) {
+          status = "waiting_input";
+          break;
+        }
+        variables[node.variable] = answer.text ?? answer.payload;
+        turns.push({ input: answer, steps: [] });
+      }
+      if (node.type === "action") for (const a of node.actions) turns.at(-1).steps.push({ type: a.kind, tag: a.tag ?? null });
+      current = next(node.id);
+    }
+    send(res, 200, { flowId: flow.id, version: body.published ? flow.publishedVersion : null, status, currentNode: status === "completed" ? null : current, variables, turns });
   }],
 
   // Files (scan finishes on the first read)
@@ -478,6 +533,30 @@ const routes = [
     if (!p) return problem(res, 404, "common.not_found");
     const body = await readBody(req);
     Object.assign(p, body, { variants: (body.variants ?? []).map((x) => ({ ...x, id: x.id ?? randomUUID(), attributes: x.attributes ?? {} })), revision: p.revision + 1, updatedAt: iso(now()) });
+    send(res, 200, productView(p));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/products\/([^/]+)\/images$/, async (req, res, url, [id]) => {
+    const p = products.find((x) => x.id === id);
+    if (!p) return problem(res, 404, "common.not_found");
+    const { fileId } = await readBody(req);
+    if (!p.imageFileIds.includes(fileId)) {
+      if (p.imageFileIds.length >= 10) return problem(res, 400, "validation.failed", { fileId: ["catalog.too_many_images"] });
+      p.imageFileIds.push(fileId);
+    }
+    send(res, 200, productView(p));
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/products\/([^/]+)\/images\/order$/, async (req, res, url, [id]) => {
+    const p = products.find((x) => x.id === id);
+    if (!p) return problem(res, 404, "common.not_found");
+    const { fileIds } = await readBody(req);
+    if (fileIds.length !== p.imageFileIds.length || !fileIds.every((f) => p.imageFileIds.includes(f))) return problem(res, 400, "validation.failed", { fileIds: ["catalog.image_order_invalid"] });
+    p.imageFileIds = fileIds;
+    send(res, 200, productView(p));
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/products\/([^/]+)\/images\/([^/]+)$/, (req, res, url, [id, fileId]) => {
+    const p = products.find((x) => x.id === id);
+    if (!p || !p.imageFileIds.includes(fileId)) return problem(res, 404, "common.not_found");
+    p.imageFileIds = p.imageFileIds.filter((f) => f !== fileId);
     send(res, 200, productView(p));
   }],
   ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/products\/([^/]+)$/, (req, res, url, [id]) => {

@@ -51,7 +51,7 @@ node tests/mock-api/server.mjs      # :5080
 
 ## Status
 
-Built against the backend's current API (Phase 0 through BE-1.6, plus backend PR #13 for inbox details and invitations):
+Built against the backend's current API (Phase 0 through BE-1.6, plus backend PRs #13 and #14):
 
 | Area | State |
 |---|---|
@@ -62,6 +62,6 @@ Built against the backend's current API (Phase 0 through BE-1.6, plus backend PR
 | Channels: status, reconnect, disconnect, recent posts; banners for disconnected/expiring accounts | Done |
 | Settings: general, business hours with Jalali closed dates, quick replies | Done |
 | PWA: manifest, icons, service worker with offline page, install prompt | Done; web push waits for backend VAPID keys |
-| Automations: rules by trigger with priority order, rule editor (Persian keyword preview and tester, message builder with buttons/quick replies/variables and a live DM preview, post picker, actions), comment-to-DM wizard with old-comment backlog, rule stats, flows (list-based builder, server validation, publish), automation hours and fallback | Done; canvas flow builder is a follow-up |
+| Automations: rules by trigger with priority order, rule editor (Persian keyword preview and tester, message builder with buttons/quick replies/variables and a live DM preview, post picker, actions), comment-to-DM wizard with old-comment backlog, rule stats, rule and flow dry-run testers, flows (list-based builder, server validation, publish), fallback reply (hours come from the workspace business hours) | Done; canvas flow builder is a follow-up |
 | Catalog: products with filters, editor with images, option/variant matrix, Toman prices and stock; categories; storefront card sets with preview; Excel export, template and import job | Done |
 | AI agent, knowledge, contacts, billing, dashboard KPIs from the backend | Placeholder pages until the backend modules exist |

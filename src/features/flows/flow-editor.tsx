@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bell, Bot, Clock, Flag, GitFork, HelpCircle, LayoutGrid, MessageCircle, Pencil, Play, Plus, Rocket, Trash2, Zap, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Bell, Bot, Clock, FlaskConical, Flag, GitFork, HelpCircle, LayoutGrid, MessageCircle, Pencil, Play, Plus, Rocket, Trash2, Zap, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -13,6 +13,7 @@ import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { PageContainer } from "@/components/ui/page";
 import { useFlow, usePublishFlow, useSaveFlow } from "@/features/automations/data";
 import { renderSample } from "@/features/automations/model";
+import { FlowTester } from "@/features/automations/sandbox";
 import { useWorkspace } from "@/features/workspace/context";
 import { ApiError } from "@/lib/api/errors";
 import type { Flow, FlowGraph, FlowNode, FlowNodeType } from "@/lib/api/types";
@@ -72,6 +73,7 @@ function FlowEditor({ flow }: { flow: Flow }) {
   const [dirty, setDirty] = useState(false);
   const [editing, setEditing] = useState<string | null>(null);
   const [adding, setAdding] = useState<{ node: string; handle: string } | null>(null);
+  const [testing, setTesting] = useState(false);
 
   const change = (next: FlowGraph) => {
     setGraph(next);
@@ -131,6 +133,10 @@ function FlowEditor({ flow }: { flow: Flow }) {
               setDirty(true);
             }}
           />
+          <Button variant="outline" onClick={() => setTesting(true)}>
+            <FlaskConical aria-hidden />
+            {t("test")}
+          </Button>
           {writable ? (
             <>
               <Button variant="outline" onClick={() => void onSave()} loading={save.isPending && !publish.isPending} disabled={busy || !dirty}>
@@ -257,6 +263,7 @@ function FlowEditor({ flow }: { flow: Flow }) {
           })}
         </div>
       </Dialog>
+      {testing ? <FlowTester flowId={flow.id} hasPublished={flow.publishedVersion !== null} dirty={dirty} open onClose={() => setTesting(false)} /> : null}
     </PageContainer>
   );
 }

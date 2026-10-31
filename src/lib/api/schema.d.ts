@@ -3192,12 +3192,15 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SettingsView"];
+                        "application/json": components["schemas"]["SettingsResponse"];
                     };
                 };
             };
         };
-        /** AI on or off, business hours (`sat`..`fri`: ["09:00-18:00"]), fallback message */
+        /**
+         * AI on or off, fallback message
+         * @description The outside-business-hours trigger and flow conditions use the workspace's business hours (`/workspaces/{workspaceId}/business-hours`).
+         */
         put: {
             parameters: {
                 query?: never;
@@ -3219,7 +3222,7 @@ export interface paths {
                         [name: string]: unknown;
                     };
                     content: {
-                        "application/json": components["schemas"]["SettingsView"];
+                        "application/json": components["schemas"]["SettingsResponse"];
                     };
                 };
                 /** @description Bad Request */
@@ -3243,6 +3246,160 @@ export interface paths {
             };
         };
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/automation/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dry-run the rules against a sample message or comment
+         * @description Shows which rule would answer (or the AI, the fallback, nothing) and what it would send, with variables filled in. Nothing is sent or stored, and cooldowns are ignored.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["RuleTestRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["RuleTestResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/automation/flows/{flowId}/test": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Dry-run a flow with sample answers
+         * @description Runs the draft (or `published`) from its start, then feeds `answers` one at a time while it waits for input. Delays end at once. An invalid draft is refused with 422 and the validation result.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    flowId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["FlowTestRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FlowTestResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -3680,6 +3837,201 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/catalog/products/{productId}/images": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Add an image to the end of a product's images
+         * @description `fileId` is a Files upload with purpose `product_image`. Adding an image the product already has changes nothing. At most 10 images.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    productId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProductImageRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProductResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/catalog/products/{productId}/images/{fileId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /** Remove an image from a product */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    productId: string;
+                    fileId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProductResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/catalog/products/{productId}/images/order": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        /**
+         * Reorder a product's images
+         * @description `fileIds` must list every image of the product exactly once; the first is the cover.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    productId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ProductImageOrderRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProductResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -4255,13 +4607,6 @@ export interface components {
             /** Format: date-time */
             completedAt: null | string;
         };
-        BusinessHours: {
-            timeZone: string;
-            days: {
-                [key: string]: string[];
-            };
-            isConfigured?: boolean;
-        };
         BusinessHoursDto: {
             days: components["schemas"]["DayHours"][];
             closedDates: string[];
@@ -4450,6 +4795,30 @@ export interface components {
             validation: components["schemas"]["FlowValidation"];
             /** Format: date-time */
             updatedAt: string;
+        };
+        FlowTestRequest: {
+            answers: null | components["schemas"]["SandboxMessage"][];
+            /** @default false */
+            published: boolean;
+            /** Format: date-time */
+            at?: null | string;
+            contact?: null | components["schemas"]["SandboxContact"];
+        };
+        FlowTestResponse: {
+            /** Format: uuid */
+            flowId: string;
+            /** Format: int32 */
+            version: null | number;
+            status: string;
+            currentNode: null | string;
+            variables: {
+                [key: string]: string;
+            };
+            turns: components["schemas"]["FlowTestTurn"][];
+        };
+        FlowTestTurn: {
+            input: null | components["schemas"]["SandboxMessage"];
+            steps: components["schemas"]["SandboxStep"][];
         };
         FlowValidation: {
             errors: components["schemas"]["FlowIssue"][];
@@ -4672,6 +5041,13 @@ export interface components {
             detail?: null | string;
             instance?: null | string;
         };
+        ProductImageOrderRequest: {
+            fileIds: null | string[];
+        };
+        ProductImageRequest: {
+            /** Format: uuid */
+            fileId: string;
+        };
         ProductImageResponse: {
             /** Format: uuid */
             fileId: string;
@@ -4834,6 +5210,61 @@ export interface components {
             perDay: components["schemas"]["RuleStatsDayResponse"][];
             latestBacklogRun: null | components["schemas"]["BacklogRunResponse"];
         };
+        RuleTestRequest: {
+            text: null | string;
+            payload?: null | string;
+            source?: null | string;
+            kind?: null | string;
+            /** Format: uuid */
+            channelAccountId?: null | string;
+            mediaId?: null | string;
+            /** @default false */
+            isNewConversation: boolean;
+            /** Format: date-time */
+            at?: null | string;
+            /** Format: uuid */
+            ruleId?: null | string;
+            contact?: null | components["schemas"]["SandboxContact"];
+        };
+        RuleTestResponse: {
+            outcome: string;
+            /** Format: uuid */
+            ruleId: null | string;
+            ruleName: null | string;
+            businessOpen: boolean;
+            otherMatches: string[];
+            steps: components["schemas"]["SandboxStep"][];
+            flow: null | components["schemas"]["FlowTestResponse"];
+        };
+        SandboxContact: {
+            name: null | string;
+            username: null | string;
+            tags: null | string[];
+            fields: null | {
+                [key: string]: string;
+            };
+        };
+        SandboxMessage: {
+            text: null | string;
+            payload: null | string;
+        };
+        SandboxStep: {
+            type: string;
+            message?: null | components["schemas"]["OutboundContent"];
+            replies?: null | string[];
+            /** Format: uuid */
+            cardSetId?: null | string;
+            tag?: null | string;
+            field?: null | string;
+            value?: null | string;
+            reason?: null | string;
+            title?: null | string;
+            /** Format: uuid */
+            flowId?: null | string;
+            /** Format: date-time */
+            until?: null | string;
+            goal?: null | string;
+        };
         SendMessageRequest: {
             text: string;
             quickReplies: null | components["schemas"]["QuickReplyOption"][];
@@ -4856,14 +5287,12 @@ export interface components {
         };
         SettingsRequest: {
             aiEnabled: boolean;
-            businessHours: null | components["schemas"]["BusinessHours"];
             fallbackText: null | string;
             /** Format: int32 */
             fallbackCooldownMinutes: null | number;
         };
-        SettingsView: {
+        SettingsResponse: {
             aiEnabled: boolean;
-            businessHours: components["schemas"]["BusinessHours"];
             fallbackText: null | string;
             /** Format: int32 */
             fallbackCooldownMinutes: number;

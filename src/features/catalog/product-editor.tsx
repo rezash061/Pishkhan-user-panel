@@ -25,7 +25,7 @@ import { formatNumber } from "@/lib/i18n/format";
 import { useCodeMessage, useErrorMessage } from "@/lib/i18n/use-error-message";
 import { moneyFromToman, tomanOf } from "@/lib/money";
 import { P } from "@/lib/permissions";
-import { categoryLabels, useCategories, useDeleteProduct, useProduct, useSaveProduct } from "./data";
+import { categoryLabels, useCategories, useDeleteProduct, useProduct, useProductImages, useSaveProduct } from "./data";
 import { MAX_OPTIONS, MAX_VARIANTS, optionsFromVariants, rowFromVariant, syncRows, variantLabel, variantRequest, type ProductOption, type VariantRow } from "./variants";
 
 const MAX_IMAGES = 10;
@@ -159,6 +159,7 @@ export function ProductEditor({ product }: { product?: Product }) {
     );
   };
 
+  const setImages = (images: Image[] | ((current: Image[]) => Image[])) => setForm((f) => ({ ...f, images: typeof images === "function" ? images(f.images) : images }));
   const setOptions = (options: ProductOption[]) => patch({ options, rows: syncRows(options, form.rows, { stockPolicy: form.simple.stockPolicy }) });
 
   return (
@@ -208,7 +209,12 @@ export function ProductEditor({ product }: { product?: Product }) {
                     {fieldError("imageFileIds")}
                   </p>
                 ) : null}
-                <ImagesField ws={ws} images={form.images} onChange={(images) => setForm((f) => ({ ...f, images: typeof images === "function" ? images(f.images) : images }))} disabled={!writable} />
+                {product ? <p className="mb-3 text-xs text-muted-foreground">{t("editor.imagesSaveAtOnce")}</p> : null}
+                {product ? (
+                  <SavedImagesField ws={ws} productId={product.id} images={form.images} onChange={setImages} disabled={!writable} />
+                ) : (
+                  <ImagesField ws={ws} images={form.images} onChange={setImages} disabled={!writable} />
+                )}
               </CardBody>
             </Card>
 
@@ -447,7 +453,36 @@ function VariantsMatrix({
   );
 }
 
-function ImagesField({ ws, images, onChange, disabled }: { ws: string; images: Image[]; onChange: (images: Image[] | ((current: Image[]) => Image[])) => void; disabled?: boolean }) {
+type ImagesProps = { ws: string; images: Image[]; onChange: (images: Image[] | ((current: Image[]) => Image[])) => void; disabled?: boolean };
+
+/** A saved product: each upload, removal and move is saved on its own, so images never wait for the form's Save. */
+function SavedImagesField({ productId, ...props }: ImagesProps & { productId: string }) {
+  const errorMessage = useErrorMessage();
+  const { add, remove, reorder } = useProductImages(props.ws, productId);
+  const fail = (e: unknown): never => {
+    toast.error(errorMessage(e));
+    throw e;
+  };
+  return (
+    <ImagesField
+      {...props}
+      persist={{
+        add: (fileId) => add.mutateAsync(fileId).then(() => undefined),
+        remove: (fileId) => remove.mutateAsync(fileId).then(() => undefined, fail),
+        reorder: (fileIds) => reorder.mutateAsync(fileIds).then(() => undefined, fail),
+      }}
+    />
+  );
+}
+
+/** Server writes for a saved product; a failed remove or move puts the list back. */
+interface Persist {
+  add: (fileId: string) => Promise<void>;
+  remove: (fileId: string) => Promise<void>;
+  reorder: (fileIds: string[]) => Promise<void>;
+}
+
+function ImagesField({ ws, images, onChange, disabled, persist }: ImagesProps & { persist?: Persist }) {
   const t = useTranslations("catalog.editor");
   const errorMessage = useErrorMessage();
 
@@ -461,6 +496,7 @@ function ImagesField({ ws, images, onChange, disabled }: { ws: string; images: I
         try {
           const uploaded = await uploadFile(ws, "product_image", file);
           const clean = await waitUntilScanned(ws, uploaded.id);
+          await persist?.add(clean.id);
           onChange((list) => list.map((i) => (i.key === key ? { ...i, fileId: clean.id, url: clean.thumbnailUrl ?? clean.url, uploading: false } : i)));
         } catch (e) {
           toast.error(`${file.name}: ${errorMessage(e)}`);
@@ -470,13 +506,18 @@ function ImagesField({ ws, images, onChange, disabled }: { ws: string; images: I
     }
   };
 
-  const move = (i: number, by: number) =>
-    onChange((list) => {
-      const next = [...list];
-      const [item] = next.splice(i, 1);
-      next.splice(i + by, 0, item!);
-      return next;
-    });
+  const move = (i: number, by: number) => {
+    const next = [...images];
+    const [item] = next.splice(i, 1);
+    next.splice(i + by, 0, item!);
+    onChange(next);
+    if (persist) void persist.reorder(next.flatMap((x) => (x.fileId ? [x.fileId] : []))).catch(() => onChange(images));
+  };
+
+  const drop = (img: Image) => {
+    onChange((list) => list.filter((x) => x.key !== img.key));
+    if (persist && img.fileId) void persist.remove(img.fileId).catch(() => onChange(images));
+  };
 
   return (
     <div className="grid grid-cols-3 gap-2 sm:grid-cols-5">
@@ -502,7 +543,7 @@ function ImagesField({ ws, images, onChange, disabled }: { ws: string; images: I
                   <ArrowLeft />
                 </IconChip>
               </div>
-              <IconChip label={t("removeImage")} onClick={() => onChange((list) => list.filter((x) => x.key !== img.key))}>
+              <IconChip label={t("removeImage")} onClick={() => drop(img)}>
                 <Trash2 />
               </IconChip>
             </div>

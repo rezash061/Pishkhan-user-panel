@@ -20,7 +20,7 @@ import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
 
 /** Iranian week: Saturday first. Values are .NET DayOfWeek (0 = Sunday). */
-const weekOrder = [6, 0, 1, 2, 3, 4, 5];
+export const weekOrder = [6, 0, 1, 2, 3, 4, 5];
 
 type Range = { from: string; to: string };
 type Week = Record<number, Range[]>;
@@ -34,14 +34,18 @@ function toWeek(hours: BusinessHours): Week {
   return week;
 }
 
-export function BusinessHoursSettings() {
-  const errorMessage = useErrorMessage();
-  const { workspace } = useWorkspace();
-  const ws = workspace.id;
-  const hours = useQuery({
+/** The workspace's business hours: the inbox, automations and flows all read this one set. */
+export function useBusinessHours(ws: string) {
+  return useQuery({
     queryKey: qk.businessHours(ws),
     queryFn: async () => unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/business-hours", { params: { path: { workspaceId: ws } } })),
   });
+}
+
+export function BusinessHoursSettings() {
+  const errorMessage = useErrorMessage();
+  const { workspace } = useWorkspace();
+  const hours = useBusinessHours(workspace.id);
   if (hours.isPending) return <Skeleton className="h-96" />;
   if (hours.isError) return <p className="text-sm text-danger">{errorMessage(hours.error)}</p>;
   return <BusinessHoursEditor initial={hours.data} />;

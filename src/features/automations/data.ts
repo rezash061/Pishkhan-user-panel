@@ -3,7 +3,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api/client";
 import { qk } from "@/lib/api/keys";
-import type { AutomationSettings, BacklogRun, Flow, FlowGraph, Rule, RuleRequest } from "@/lib/api/types";
+import type { AutomationSettings, BacklogRun, Flow, FlowGraph, Rule, RuleRequest, RuleTestRequest, SandboxMessage } from "@/lib/api/types";
 
 const path = (ws: string) => ({ params: { path: { workspaceId: ws } } });
 
@@ -152,7 +152,22 @@ export function useSaveAutomationSettings(ws: string) {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: async (body: AutomationSettings) =>
-      unwrap(await api.PUT("/api/v1/workspaces/{workspaceId}/automation/settings", { ...path(ws), body: { ...body, fallbackCooldownMinutes: Number(body.fallbackCooldownMinutes) } })),
+      unwrap(await api.PUT("/api/v1/workspaces/{workspaceId}/automation/settings", { ...path(ws), body })),
     onSuccess: (data) => qc.setQueryData(qk.automationSettings(ws), data),
+  });
+}
+
+/** Dry run of the rules (or one rule) against a sample DM or comment. Nothing is sent or stored. */
+export function useTestRules(ws: string) {
+  return useMutation({
+    mutationFn: async (body: RuleTestRequest) => unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/automation/test", { ...path(ws), body })),
+  });
+}
+
+/** Runs a flow's saved draft (or published version) from the start with the given answers. */
+export function useTestFlow(ws: string, flowId: string) {
+  return useMutation({
+    mutationFn: async (body: { answers: SandboxMessage[]; published: boolean }) =>
+      unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/automation/flows/{flowId}/test", { params: { path: { workspaceId: ws, flowId } }, body })),
   });
 }
