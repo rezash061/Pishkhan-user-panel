@@ -16,6 +16,34 @@ async function noHorizontalScroll(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 }
 
+const fakeToken = (sub: string) =>
+  `${Buffer.from('{"alg":"none"}').toString("base64url")}.${Buffer.from(JSON.stringify({ sub, exp: Math.floor(Date.now() / 1000) + 600 })).toString("base64url")}.x`;
+
+async function swapAccessToken(page: Page, sub: string) {
+  const cookies = await page.context().cookies();
+  const access = cookies.find((c) => /pk-at$/.test(c.name))!;
+  await page.context().addCookies([{ ...access, value: fakeToken(sub) }]);
+}
+
+test("a token the backend refuses ends at the login page, not in a redirect loop", async ({ page }) => {
+  await login(page);
+  await swapAccessToken(page, "revoked");
+  await page.goto("/workspaces?all=1");
+  await expect(page).toHaveURL(/\/login\?expired=1/);
+  await expect(page.getByText("نشست شما تمام شد. دوباره وارد شوید.")).toBeVisible();
+  // The dead cookies are gone, so signing in again works.
+  expect((await page.context().cookies()).some((c) => /pk-(at|rt)$/.test(c.name))).toBe(false);
+  await login(page);
+});
+
+test("a backend failure shows the error page instead of bouncing to login", async ({ page }) => {
+  await login(page);
+  await swapAccessToken(page, "broken");
+  await page.goto("/workspaces?all=1");
+  await expect(page.getByText("مشکلی پیش آمد")).toBeVisible();
+  expect(page.url()).toContain("/workspaces");
+});
+
 test("redirects to login and back to the requested page", async ({ page }) => {
   await page.goto(`/w/${workspaceId}/team`);
   await expect(page).toHaveURL(/\/login\?next=/);

@@ -1,5 +1,9 @@
 # Changelog
 
+## 0.5.1 — 2026-10-31
+
+- Fix: a redirect loop (ERR_TOO_MANY_REDIRECTS) after signing in when the backend answered a server-rendered page with an error. Only a 401 now sends the user to `/login?expired=1`, which clears the dead cookies instead of bouncing back into the app; any other backend answer shows the error page and logs the path and status in the panel's server log.
+
 ## 0.5.0 — 2026-10-31
 
 - Dashboard: live inbox numbers with the oldest waiting handoff, the overnight summary, and an activity card (today, 7 or 30 days) with who answered (rules, AI, team) as a share bar and daily stacked bars with a table for screen readers. Unhealthy channels are ringed in red. Viewers see analytics; agents keep the inbox counts.

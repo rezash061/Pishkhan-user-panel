@@ -695,6 +695,10 @@ const anonymous = [/^\/api\/v1\/public\//, /^\/api\/v1\/auth\/(otp|token)\//, /^
 createServer(async (req, res) => {
   const url = new URL(req.url, "http://mock");
   if (!anonymous.some((r) => r.test(url.pathname)) && !authed(req)) return problem(res, 401, "auth.unauthorized");
+  // e2e hooks: a token for user "revoked" is refused (401) and one for "broken" makes the backend fail (500).
+  const sub = (() => { try { return JSON.parse(Buffer.from((req.headers.authorization ?? "").split(".")[1] ?? "", "base64url").toString()).sub; } catch { return null; } })();
+  if (sub === "revoked") return problem(res, 401, "auth.unauthorized");
+  if (sub === "broken") return problem(res, 500, "common.unexpected");
   for (const [method, pattern, handler] of routes) {
     const match = req.method === method && url.pathname.match(pattern);
     if (match) return handler(req, res, url, match.slice(1));
