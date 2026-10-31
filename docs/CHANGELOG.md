@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.6.0 — 2026-10-31
+
+- Billing v1 (UP-1.15, backend #23): «اشتراک» shows the current plan (subscription, free plan or no limits), trial badge and days left, and this Jalali month's usage per meter with a bar that turns amber near the limit and red when full (named in text, not by colour alone). Upgrades go through support until online payment exists.
+- The plan-limit sheet names seats, Instagram accounts, AI conversations and the other meters; Instagram connect explains `reason=plan_limit`.
+- Fix: every dialog shared one title id, so a dialog opened over another (the plan-limit sheet over the invite form) was announced with the wrong name.
+- API refreshed from the backend billing branch.
+
 ## 0.5.1 — 2026-10-31
 
 - Settings: «گزارش فعالیت» for owners (`GET /workspaces/{id}/audit`): who changed what and when, with support access shown as «پشتیبانی پیشخوان» with its reason, a filter (support, team, workspace), changed fields per entry, and paging. The «support» notification links here.

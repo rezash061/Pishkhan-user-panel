@@ -26,6 +26,9 @@ export type Dashboard = Schemas["DashboardResponse"];
 export type DashboardDay = Schemas["DashboardDay"];
 export type AppNotification = Schemas["NotificationResponse"];
 export type AuditEntry = Schemas["AuditEntryResponse"];
+export type CurrentPlan = Schemas["CurrentPlanResponse"];
+export type Usage = Schemas["UsageResponse"];
+export type UsageMeter = Schemas["UsageMeter"];
 export type NotificationPreference = Schemas["PreferenceResponse"];
 
 // Automation (BE-1.3)
