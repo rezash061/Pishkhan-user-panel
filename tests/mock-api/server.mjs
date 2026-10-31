@@ -328,6 +328,20 @@ const routes = [
     x.readAt ??= iso(now());
     send(res, 204);
   }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/subscription$/, (req, res) => send(res, 200, {
+    source: "subscription", planId: randomUUID(), planCode: "growth", planName: "رشد", planVersion: 2, trial: true, endsAt: iso(new Date(Date.now() + 12 * 24 * H)),
+    limits: { seats: 3, channel_accounts: 1, ai_conversations: 500, sms: null },
+    subscription: null,
+  })],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/usage$/, (req, res) => send(res, 200, {
+    periodStart: "2026-10-22T20:30:00Z", periodEnd: "2026-11-21T20:30:00Z",
+    meters: [
+      { meter: "seats", used: 2, limit: 3 },
+      { meter: "channel_accounts", used: 1, limit: 1 },
+      { meter: "ai_conversations", used: 412, limit: 500 },
+      { meter: "sms", used: 37, limit: null },
+    ],
+  })],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/audit$/, (req, res, url) => {
     const action = url.searchParams.get("Action") ?? "";
     const pageNo = Math.max(1, Number(url.searchParams.get("Page") ?? 1));
@@ -358,6 +372,8 @@ const routes = [
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/members$/, (req, res) => send(res, 200, members)],
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/invitations$/, async (req, res) => {
     const body = await readBody(req);
+    // e2e hook: this number stands for "the plan's seats are full".
+    if (String(body.phone).replace(/\D/g, "").endsWith("9120009999")) return send(res, 402, { type: "about:blank", title: "billing.plan_limit", status: 402, detail: "seats", code: "billing.plan_limit" });
     const invitation = { id: randomUUID(), role: body.role, phone: `+98${String(body.phone).replace(/\D/g, "").slice(-10, -7)}***${String(body.phone).slice(-4)}`, invitedBy: me.id, createdAt: iso(now()), expiresAt: iso(new Date(Date.now() + 7 * 24 * H)) };
     invitations.push(invitation);
     send(res, 201, { id: invitation.id, role: invitation.role, expiresAt: invitation.expiresAt, status: "pending" });
