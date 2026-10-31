@@ -132,6 +132,29 @@ test("schedules the workspace for deletion and cancels it", async ({ page }) => 
   await expect(page.getByRole("heading", { name: "سلام پارسا" })).toBeVisible();
 });
 
+test("support session shows the red banner, hides security screens and ends cleanly", async ({ page }, info) => {
+  await page.goto(`/api/auth/impersonation?token=sup-${info.project.name}`);
+  await expect(page).toHaveURL(/\/w\/[0-9a-f-]{36}$/);
+  const banner = page.getByRole("region", { name: "نشست پشتیبانی" });
+  await expect(banner.getByText("نشست پشتیبانی — کارشناس support.ali")).toBeVisible();
+  await expect(page.getByRole("link", { name: /^اشتراک/ })).toHaveCount(0);
+  await noHorizontalScroll(page);
+
+  await page.goto("/account");
+  await expect(banner).toBeVisible();
+  await expect(page.getByText(/در نشست پشتیبانی، رمز عبور/)).toBeVisible();
+
+  await banner.getByRole("button", { name: "پایان نشست" }).click();
+  await expect(page).toHaveURL(/\/support-ended\?reason=ended$/);
+  await expect(page.getByRole("heading", { name: "نشست پشتیبانی تمام شد" })).toBeVisible();
+  await page.goto("/workspaces");
+  await expect(page).toHaveURL(/\/login/);
+
+  // The link works once.
+  await page.goto(`/api/auth/impersonation?token=sup-${info.project.name}`);
+  await expect(page.getByRole("heading", { name: "لینک پشتیبانی معتبر نیست" })).toBeVisible();
+});
+
 test("adds an internal note", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001001`);

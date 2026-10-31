@@ -12,6 +12,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { LogoutButton } from "@/features/auth/logout-button";
 import { RealtimeSync } from "@/features/inbox/realtime-sync";
 import { NotificationBell } from "@/features/notifications/bell";
+import { SupportBanner } from "@/features/support/support";
 import { WorkspaceProvider, useWorkspace } from "@/features/workspace/context";
 import type { Me, Workspace } from "@/lib/api/types";
 import { cn } from "@/lib/cn";
@@ -103,6 +104,7 @@ function Frame({ children }: { children: ReactNode }) {
           </Link>
         </header>
 
+        <SupportBanner inShell />
         <Banners />
 
         <main id="main" className="min-h-0 flex-1 overflow-y-auto">

@@ -4,6 +4,7 @@ import { cookieNames } from "@/lib/auth/cookies";
 import { checkMutation } from "@/lib/auth/guard";
 import { needsRefresh } from "@/lib/auth/jwt";
 import { clearTokens, writeTokens } from "@/lib/auth/respond";
+import { clearSupport, supportToken } from "@/lib/auth/support";
 import { refreshTokens, type TokenPair } from "@/lib/auth/tokens";
 import { apiBaseUrl } from "@/lib/env";
 
@@ -22,6 +23,18 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
   if (path[0] === "auth") return problem(404, "common.not_found");
 
   const target = `${apiBaseUrl}/api/v1/${path.map(encodeURIComponent).join("/")}${request.nextUrl.search}`;
+  const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
+  const clientIp = clientIpOf(request.headers);
+
+  // Support session: its own token, never refreshed. A 401 means it ended, so its cookies go.
+  const support = supportToken(request.cookies);
+  if (support) {
+    const response = await fetch(target, { method: request.method, headers: requestHeadersFor(request.headers, support, clientIp), body, cache: "no-store", redirect: "manual" });
+    const out = new NextResponse(response.status === 204 || response.status === 304 ? null : response.body, { status: response.status, headers: responseHeadersFrom(response.headers) });
+    if (response.status === 401) clearSupport(out.cookies);
+    return out;
+  }
+
   const refreshToken = request.cookies.get(cookieNames.refresh)?.value;
   let accessToken = request.cookies.get(cookieNames.access)?.value ?? null;
   if (!refreshToken) return problem(401, "auth.unauthorized");
@@ -41,8 +54,6 @@ async function handle(request: NextRequest, context: { params: Promise<{ path: s
 
   if (needsRefresh(accessToken ?? undefined, 30)) await refresh();
 
-  const body = request.method === "GET" || request.method === "HEAD" ? undefined : await request.arrayBuffer();
-  const clientIp = clientIpOf(request.headers);
   const send = () => fetch(target, { method: request.method, headers: requestHeadersFor(request.headers, accessToken, clientIp), body, cache: "no-store", redirect: "manual" });
 
   let response = await send();

@@ -210,6 +210,7 @@ const page = (items, cursor, limit) => {
   const slice = items.slice(start, start + limit);
   return { items: slice, nextCursor: start + limit < items.length ? String(start + limit) : null };
 };
+const usedSupportTokens = new Set();
 const authed = (req) => /^Bearer .+/.test(req.headers.authorization ?? "");
 const loginResponse = () => ({
   accessToken: token(me.id, 10),
@@ -244,6 +245,20 @@ const routes = [
     send(res, 200, tokens);
   }],
   ["POST", /^\/api\/v1\/auth\/logout$/, (req, res) => send(res, 204)],
+  // Support sessions (backend #18): tokens starting "sup-" work once; anything else is invalid.
+  ["POST", /^\/api\/v1\/auth\/support-session$/, async (req, res) => {
+    const body = await readBody(req);
+    if (typeof body.token !== "string" || !body.token.startsWith("sup-") || usedSupportTokens.has(body.token)) return problem(res, 401, "auth.support_session.invalid");
+    usedSupportTokens.add(body.token);
+    send(res, 200, {
+      accessToken: token(me.id, 30),
+      accessTokenExpiresAt: iso(new Date(Date.now() + 30 * 60_000)),
+      workspaceId: ws.id,
+      userId: me.id,
+      staffUsername: "support.ali",
+      reason: "تیکت ۴۲۱",
+    });
+  }],
   ["POST", /^\/api\/v1\/auth\/realtime-token$/, (req, res) => send(res, 200, { token: token(me.id, 5), expiresAt: iso(new Date(Date.now() + 5 * 60_000)) })],
   ["GET", /^\/api\/v1\/me$/, (req, res) => send(res, 200, me)],
   ["PATCH", /^\/api\/v1\/me$/, async (req, res) => {
@@ -675,7 +690,7 @@ const routes = [
   }],
 ];
 
-const anonymous = [/^\/api\/v1\/public\//, /^\/api\/v1\/auth\/(otp|token)\//];
+const anonymous = [/^\/api\/v1\/public\//, /^\/api\/v1\/auth\/(otp|token)\//, /^\/api\/v1\/auth\/support-session$/];
 
 createServer(async (req, res) => {
   const url = new URL(req.url, "http://mock");
