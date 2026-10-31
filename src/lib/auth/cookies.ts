@@ -7,6 +7,10 @@ export const cookieNames = {
   access: `${prefix}pk-at`,
   refresh: `${prefix}pk-rt`,
   csrf: `${prefix}pk-csrf`,
+  /** Support session (staff acting in a workspace): its own short-lived token, kept apart from the user's session. */
+  support: `${prefix}pk-sup`,
+  /** Who is supporting and until when, for the banner. HttpOnly; server components pass it down. */
+  supportInfo: `${prefix}pk-sup-info`,
   /** Last workspace the user opened; lets OAuth returns and "/" land in the right workspace. Not a secret. */
   lastWorkspace: "pk-ws",
 } as const;

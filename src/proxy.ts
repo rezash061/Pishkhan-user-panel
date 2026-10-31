@@ -2,6 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { cookieNames } from "@/lib/auth/cookies";
 import { needsRefresh } from "@/lib/auth/jwt";
 import { clearTokens, newCsrfToken, writeCsrf, writeTokens } from "@/lib/auth/respond";
+import { clearSupport, supportToken } from "@/lib/auth/support";
 import { refreshTokens } from "@/lib/auth/tokens";
 
 /** Routes that need a signed-in user. Everything else (login, invite, offline) is public. */
@@ -46,10 +47,13 @@ export async function proxy(request: NextRequest) {
 
   const refresh = request.cookies.get(cookieNames.refresh)?.value;
   const access = request.cookies.get(cookieNames.access)?.value;
-  let signedIn = Boolean(refresh);
+  // A support session carries its own token with no refresh; while it lasts it is the session.
+  const support = supportToken(request.cookies);
+  const staleSupport = !support && Boolean(request.cookies.get(cookieNames.support));
+  let signedIn = Boolean(refresh) || Boolean(support);
   let refreshed: Awaited<ReturnType<typeof refreshTokens>> | null = null;
 
-  if (refresh && needsRefresh(access)) {
+  if (!support && refresh && needsRefresh(access)) {
     refreshed = await refreshTokens(refresh);
     if (refreshed.ok) {
       request.cookies.set(cookieNames.access, refreshed.tokens.accessToken);
@@ -78,6 +82,7 @@ export async function proxy(request: NextRequest) {
   response.headers.set("content-security-policy", csp);
   if (refreshed?.ok) writeTokens(response.cookies, refreshed.tokens);
   else if (refreshed && refreshed.code !== "network") clearTokens(response.cookies);
+  if (staleSupport) clearSupport(response.cookies);
   if (!request.cookies.get(cookieNames.csrf)) writeCsrf(response.cookies, newCsrfToken());
   return response;
 }

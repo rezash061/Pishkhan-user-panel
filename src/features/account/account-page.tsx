@@ -12,6 +12,7 @@ import { Field, Input } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/misc";
 import { CodeInput } from "@/components/ui/phone-input";
 import { LogoutButton } from "@/features/auth/logout-button";
+import { useSupportSession } from "@/features/support/support";
 import { api, unwrap } from "@/lib/api/client";
 import { qk } from "@/lib/api/keys";
 import type { Me } from "@/lib/api/types";
@@ -21,13 +22,22 @@ import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { groupMobile } from "@/lib/phone";
 
 export function AccountPage({ initialMe }: { initialMe: Me }) {
+  const t = useTranslations("support");
+  const support = useSupportSession();
   const me = useQuery({ queryKey: qk.me, initialData: initialMe, queryFn: async () => unwrap(await api.GET("/api/v1/me")) });
   return (
     <div className="space-y-5">
       <Profile me={me.data} />
-      <Password me={me.data} />
-      <Totp me={me.data} />
-      <Sessions />
+      {support ? (
+        // The backend refuses password, two-step and session changes under a support session.
+        <p className="rounded-xl border bg-surface-muted p-4 text-sm text-muted-foreground">{t("securityHidden")}</p>
+      ) : (
+        <>
+          <Password me={me.data} />
+          <Totp me={me.data} />
+          <Sessions />
+        </>
+      )}
       <div className="flex justify-end">
         <LogoutButton />
       </div>

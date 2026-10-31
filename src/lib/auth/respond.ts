@@ -9,9 +9,17 @@ export function writeTokens(jar: CookieWriter, tokens: TokenPair): void {
   jar.set(cookieNames.refresh, tokens.refreshToken, tokenCookieOptions(new Date(tokens.refreshTokenExpiresAt)));
 }
 
+/**
+ * Expires a token cookie. A plain `delete` sends no `Secure` attribute, and browsers ignore a `__Host-` cookie set
+ * without it, so the old token would survive sign-out; expiring it with the same options it was set with works.
+ */
+export function expireCookie(jar: Pick<NextResponse["cookies"], "set">, name: string): void {
+  jar.set(name, "", tokenCookieOptions(new Date(0)));
+}
+
 export function clearTokens(jar: CookieWriter): void {
-  jar.delete(cookieNames.access);
-  jar.delete(cookieNames.refresh);
+  expireCookie(jar, cookieNames.access);
+  expireCookie(jar, cookieNames.refresh);
 }
 
 export function newCsrfToken(): string {
