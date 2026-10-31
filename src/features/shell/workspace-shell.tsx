@@ -11,6 +11,7 @@ import { Badge } from "@/components/ui/badge";
 import { Dialog } from "@/components/ui/dialog";
 import { LogoutButton } from "@/features/auth/logout-button";
 import { RealtimeSync } from "@/features/inbox/realtime-sync";
+import { NotificationBell } from "@/features/notifications/bell";
 import { WorkspaceProvider, useWorkspace } from "@/features/workspace/context";
 import type { Me, Workspace } from "@/lib/api/types";
 import { cn } from "@/lib/cn";
@@ -83,6 +84,7 @@ function Frame({ children }: { children: ReactNode }) {
             <UserRound className="size-4 shrink-0" aria-hidden />
             <span className="truncate">{me.displayName || t("nav.account")}</span>
           </Link>
+          <NotificationBell />
           <LogoutButton compact />
         </div>
       </aside>
@@ -95,6 +97,7 @@ function Frame({ children }: { children: ReactNode }) {
             <span className="truncate">{workspace.name}</span>
             <ChevronsUpDown className="size-3.5 shrink-0 text-muted-foreground" aria-hidden />
           </Link>
+          <NotificationBell />
           <Link href={`/account?ws=${workspace.id}`} aria-label={t("nav.account")} className="grid size-9 place-items-center rounded-full hover:bg-surface-muted">
             <UserRound className="size-5" aria-hidden />
           </Link>

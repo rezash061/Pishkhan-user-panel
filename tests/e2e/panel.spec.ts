@@ -90,6 +90,48 @@ test("lists a pending invitation and revokes it", async ({ page }) => {
   await expect(page.getByText(masked)).toHaveCount(0);
 });
 
+test("dashboard shows the overnight summary and who answered", async ({ page }) => {
+  await login(page);
+  await expect(page.getByText(/دیشب ۲۳ پیام رسید/)).toBeVisible();
+  await expect(page.getByText("پاسخ خودکار").filter({ visible: true }).first()).toBeVisible();
+  await page.getByRole("radio", { name: "۷ روز" }).click();
+  await expect(page.getByText("پاسخ‌ها در هر روز").first()).toBeVisible();
+  await noHorizontalScroll(page);
+});
+
+test("opens a notification and saves notification settings", async ({ page }) => {
+  await login(page);
+  await page.getByRole("button", { name: /^اعلان‌ها/ }).first().click();
+  const sheet = page.getByRole("dialog");
+  await sheet.getByRole("link", { name: /نیلوفر احمدی منتظر پاسخ شماست/ }).click();
+  await page.waitForURL(/\/inbox\/0199b000-0000-7000-8000-000000001000$/);
+
+  await page.goto(`/w/${workspaceId}/settings/notifications`);
+  await page.getByRole("switch", { name: "گفتگو به انسان سپرده شد: پیامک" }).click();
+  await page.getByRole("button", { name: "ذخیره" }).click();
+  await expect(page.getByText("تنظیم اعلان‌ها ذخیره شد")).toBeVisible();
+});
+
+test("schedules the workspace for deletion and cancels it", async ({ page }) => {
+  await login(page);
+  await page.goto(`/w/${workspaceId}/settings`);
+  await page.getByRole("button", { name: "حذف این کسب‌وکار" }).click();
+  const dialog = page.getByRole("dialog");
+  const confirm = dialog.getByRole("button", { name: "حذف کن" });
+  await dialog.getByLabel(/نام کسب‌وکار را بنویسید/).fill("گالری");
+  await expect(confirm).toBeDisabled();
+  await dialog.getByLabel(/نام کسب‌وکار را بنویسید/).fill("گالری نیلوفر");
+  await confirm.click();
+  await page.waitForURL(/\/workspaces\?all=1$/);
+  await expect(page.getByText(/حذف در/)).toBeVisible();
+
+  await page.getByRole("link", { name: /گالری نیلوفر/ }).click();
+  await expect(page.getByRole("heading", { name: "«گالری نیلوفر» در صف حذف است" })).toBeVisible();
+  await page.getByRole("button", { name: "لغو حذف و بازگرداندن" }).click();
+  await expect(page.getByText("کسب‌وکار برگشت.")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "سلام پارسا" })).toBeVisible();
+});
+
 test("adds an internal note", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001001`);

@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.5.0 — 2026-10-31
+
+- Dashboard: live inbox numbers with the oldest waiting handoff, the overnight summary, and an activity card (today, 7 or 30 days) with who answered (rules, AI, team) as a share bar and daily stacked bars with a table for screen readers. Unhealthy channels are ringed in red. Viewers see analytics; agents keep the inbox counts.
+- Notifications: a bell with unread count (polled every 60 s and refreshed on handoffs and channel changes), a sheet with the list, mark one or all read, and links into the panel; a settings tab for in-app and SMS per kind (push shows «به‌زودی»).
+- Workspace deletion: owners delete from General settings by typing the name; a pending workspace shows its date in the list and a restore page for the owner.
+- API refreshed from backend main plus the notifications branch (backend #17).
+
 ## 0.4.0 — 2026-10-31
 
 - Automations: «تست پاسخ‌ها» runs a sample DM or comment through the rules (or one rule) and shows the outcome, business-hours state, what would be sent with variables filled in, other rules that also matched, and the flow it starts. Nothing is sent.

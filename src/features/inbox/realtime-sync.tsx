@@ -59,11 +59,13 @@ export function RealtimeSync({ workspaceId }: { workspaceId: string }) {
     if ("vibrate" in navigator) navigator.vibrate?.(200);
     // The conversation now carries the handoff reason and suggested reply.
     void qc.invalidateQueries({ queryKey: qk.conversation(workspaceId, p.conversationId) });
+    void qc.invalidateQueries({ queryKey: qk.notifications(workspaceId) });
   });
 
   useHubEvent<{ channelAccountId: string; status: string; reason: string | null }>(HubEvents.channelStatus, (p) => {
     qc.setQueryData<Channel[]>(qk.channels(workspaceId), (old) => old?.map((c) => (c.id === p.channelAccountId ? { ...c, status: p.status, statusReason: p.reason } : c)));
     void qc.invalidateQueries({ queryKey: qk.channels(workspaceId) });
+    void qc.invalidateQueries({ queryKey: qk.notifications(workspaceId) });
   });
 
   return null;

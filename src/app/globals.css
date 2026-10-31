@@ -26,6 +26,10 @@
   --bubble-in: oklch(0.955 0.006 250);
   --bubble-out: #5f2ceb;
   --bubble-out-foreground: oklch(0.99 0 0);
+  /* Chart series (who answered: rule, AI, team), validated for colour-blind separation on both surfaces. */
+  --series-1: #2a78d6;
+  --series-2: #eb6834;
+  --series-3: #1baf7a;
   color-scheme: light;
 }
 
@@ -46,6 +50,9 @@
     --danger-soft: oklch(0.3 0.06 25);
     --bubble-in: oklch(0.27 0.018 265);
     --bubble-out: oklch(0.55 0.2 285);
+    --series-1: #3987e5;
+    --series-2: #d95926;
+    --series-3: #199e70;
     color-scheme: dark;
   }
 }
@@ -72,6 +79,9 @@
   --color-bubble-in: var(--bubble-in);
   --color-bubble-out: var(--bubble-out);
   --color-bubble-out-foreground: var(--bubble-out-foreground);
+  --color-series-1: var(--series-1);
+  --color-series-2: var(--series-2);
+  --color-series-3: var(--series-3);
 }
 
 @layer base {

@@ -7,6 +7,7 @@ import { Logo } from "@/components/logo";
 import { buttonVariants } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { loadWorkspaces } from "@/lib/api/server-data";
+import { formatDate } from "@/lib/i18n/format";
 import { LogoutButton } from "@/features/auth/logout-button";
 
 export async function generateMetadata(): Promise<Metadata> {
@@ -41,6 +42,11 @@ export default async function WorkspacesPage({ searchParams }: { searchParams: P
               <span className="block text-xs text-muted-foreground">
                 {t(`industries.${w.industry}` as "industries.other")} · {t("workspaces.role", { role: t(`roles.${w.role}` as "roles.owner") })}
               </span>
+              {w.status === "pending_deletion" ? (
+                <span className="mt-1 block text-xs font-medium text-danger">
+                  {w.deletionScheduledFor ? t("deletion.listBadge", { date: formatDate(w.deletionScheduledFor) }) : t("deletion.listBadgeNoDate")}
+                </span>
+              ) : null}
             </span>
           </Link>
         ))}
