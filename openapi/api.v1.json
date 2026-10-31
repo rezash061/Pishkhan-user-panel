@@ -263,7 +263,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -288,7 +288,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -321,7 +321,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -377,7 +377,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -425,7 +425,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -453,7 +453,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -492,7 +492,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -517,7 +517,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -565,7 +565,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -613,7 +613,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -694,7 +694,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -720,7 +720,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -775,7 +775,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -821,7 +821,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -895,7 +895,151 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/deletion": {
+      "post": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "Ask to delete the workspace (owner); its data is deleted after 30 days unless cancelled",
+        "description": "`confirmName` must equal the workspace name. Members lose access at once and automations stop; the workspace stays in `GET /workspaces` with status `pending_deletion` and `deletionScheduledFor`.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/RequestDeletionRequest"
+              },
+              "example": {
+                "confirmName": "گالری لباس ترمه"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "202": {
+            "description": "Accepted",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "delete": {
+        "tags": [
+          "Workspaces"
+        ],
+        "summary": "Cancel a pending deletion (owner); the workspace is active again",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/WorkspaceResponse"
+                }
+              }
+            }
+          },
+          "403": {
+            "description": "Forbidden",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "409": {
+            "description": "Conflict",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
           }
         ]
       }
@@ -931,7 +1075,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -1015,7 +1159,7 @@
                   },
                   {
                     "day": 5,
-                    "ranges": [ ]
+                    "ranges": []
                   }
                 ],
                 "closedDates": [
@@ -1060,7 +1204,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1099,7 +1243,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1184,7 +1328,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -1230,7 +1374,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1309,7 +1453,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -1346,7 +1490,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1394,7 +1538,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1489,7 +1633,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1544,7 +1688,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1583,7 +1727,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1640,7 +1784,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1731,7 +1875,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1779,7 +1923,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1867,7 +2011,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1921,7 +2065,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -1991,7 +2135,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -2094,7 +2238,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -2179,7 +2323,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -2265,7 +2409,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -2330,7 +2474,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -2378,7 +2522,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -2436,7 +2580,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -2519,7 +2663,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -2558,7 +2702,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -2631,7 +2775,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -2725,7 +2869,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -2770,7 +2914,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -2817,7 +2961,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -2882,7 +3026,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -2936,7 +3080,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -3018,7 +3162,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -3063,7 +3207,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -3139,7 +3283,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -3202,7 +3346,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -3240,7 +3384,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -3304,7 +3448,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -3358,7 +3502,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -3441,7 +3585,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -3486,7 +3630,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -3541,7 +3685,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -3607,7 +3751,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -3642,7 +3786,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -3707,7 +3851,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -3784,7 +3928,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -3880,7 +4024,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -3918,7 +4062,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -3991,7 +4135,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -4085,7 +4229,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -4131,7 +4275,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -4212,7 +4356,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -4285,7 +4429,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -4339,7 +4483,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -4432,7 +4576,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -4477,7 +4621,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -4563,7 +4707,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -4627,7 +4771,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -4713,7 +4857,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -4742,7 +4886,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -4771,7 +4915,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -4848,7 +4992,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -4902,7 +5046,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -4940,7 +5084,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -5004,7 +5148,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -5058,7 +5202,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -5140,7 +5284,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       },
@@ -5185,7 +5329,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -5240,7 +5384,7 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
           }
         ]
       }
@@ -5359,7 +5503,350 @@
         },
         "security": [
           {
-            "bearer": [ ]
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/dashboard": {
+      "get": {
+        "tags": [
+          "Dashboard"
+        ],
+        "summary": "Dashboard: activity over `range` (today, 7d, 30d), the overnight summary, the inbox now and channel health",
+        "description": "Period counts come from hourly rollups and may lag a few minutes; `inbox` and `channels` are live. Days are Tehran days.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "range",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/DashboardResponse"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/notifications": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "The caller's notifications (newest first) and the unread count",
+        "description": "`unread=true` lists only unread ones. Kinds: `handoff`, `automation`, `channel`; others may appear later.",
+        "parameters": [
+          {
+            "name": "unread",
+            "in": "query",
+            "schema": {
+              "type": "boolean"
+            }
+          },
+          {
+            "name": "cursor",
+            "in": "query",
+            "schema": {
+              "type": "string"
+            }
+          },
+          {
+            "name": "limit",
+            "in": "query",
+            "schema": {
+              "type": "integer",
+              "format": "int32"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/NotificationsPage"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/notifications/{notificationId}/read": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Mark one notification read",
+        "parameters": [
+          {
+            "name": "notificationId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          },
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/notifications/read-all": {
+      "post": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Mark all the caller's notifications in this workspace read",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "204": {
+            "description": "No Content"
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      }
+    },
+    "/api/v1/workspaces/{workspaceId}/notification-preferences": {
+      "get": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "The caller's notification settings, one entry per kind",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PreferenceResponse"
+                  }
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
+          }
+        ]
+      },
+      "put": {
+        "tags": [
+          "Notifications"
+        ],
+        "summary": "Change the caller's notification settings",
+        "description": "SMS can be turned on only for kinds with `smsAvailable`; at most one SMS per kind every 30 minutes is sent.",
+        "parameters": [
+          {
+            "name": "workspaceId",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/SetPreferencesRequest"
+              },
+              "example": {
+                "items": [
+                  {
+                    "kind": "handoff",
+                    "inApp": true,
+                    "push": true,
+                    "sms": true
+                  },
+                  {
+                    "kind": "automation",
+                    "inApp": true,
+                    "push": false,
+                    "sms": false
+                  }
+                ]
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/PreferenceResponse"
+                  }
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          },
+          "429": {
+            "description": "Too Many Requests",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "bearer": []
           }
         ]
       }
@@ -5754,6 +6241,37 @@
           }
         }
       },
+      "ChannelHealth": {
+        "required": [
+          "id",
+          "kind",
+          "username",
+          "status",
+          "healthy"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "username": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "status": {
+            "type": "string"
+          },
+          "healthy": {
+            "type": "boolean"
+          }
+        }
+      },
       "ChannelResponse": {
         "required": [
           "id",
@@ -5981,6 +6499,147 @@
           "IRR"
         ],
         "type": "string"
+      },
+      "DashboardDay": {
+        "required": [
+          "day",
+          "messagesReceived",
+          "newConversations",
+          "repliesByRule",
+          "repliesByAi",
+          "repliesByHuman",
+          "handoffs"
+        ],
+        "type": "object",
+        "properties": {
+          "day": {
+            "type": "string",
+            "format": "date"
+          },
+          "messagesReceived": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "newConversations": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repliesByRule": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repliesByAi": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repliesByHuman": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "handoffs": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "DashboardResponse": {
+        "required": [
+          "range",
+          "from",
+          "to",
+          "totals",
+          "days",
+          "overnight",
+          "inbox",
+          "channels"
+        ],
+        "type": "object",
+        "properties": {
+          "range": {
+            "type": "string"
+          },
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "totals": {
+            "$ref": "#/components/schemas/DashboardTotals"
+          },
+          "days": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/DashboardDay"
+            }
+          },
+          "overnight": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/OvernightSummary"
+              }
+            ]
+          },
+          "inbox": {
+            "$ref": "#/components/schemas/InboxNow"
+          },
+          "channels": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/ChannelHealth"
+            }
+          }
+        }
+      },
+      "DashboardTotals": {
+        "required": [
+          "messagesReceived",
+          "newConversations",
+          "repliesByRule",
+          "repliesByAi",
+          "repliesByHuman",
+          "handoffs",
+          "automatedShare"
+        ],
+        "type": "object",
+        "properties": {
+          "messagesReceived": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "newConversations": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repliesByRule": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repliesByAi": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "repliesByHuman": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "handoffs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "automatedShare": {
+            "type": [
+              "null",
+              "number"
+            ],
+            "format": "double"
+          }
+        }
       },
       "DayHours": {
         "required": [
@@ -6601,6 +7260,36 @@
           }
         }
       },
+      "InboxNow": {
+        "required": [
+          "open",
+          "handedOff",
+          "unread",
+          "oldestHandoffAt"
+        ],
+        "type": "object",
+        "properties": {
+          "open": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "handedOff": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "unread": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "oldestHandoffAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
       "InvitationResponse": {
         "required": [
           "id",
@@ -6641,7 +7330,7 @@
           }
         }
       },
-      "JsonElement": { },
+      "JsonElement": {},
       "LoginResponse": {
         "required": [
           "accessToken",
@@ -7101,6 +7790,46 @@
           },
           "isEmpty": {
             "type": "boolean"
+          }
+        }
+      },
+      "OvernightSummary": {
+        "required": [
+          "from",
+          "to",
+          "ongoing",
+          "messagesReceived",
+          "automatedReplies",
+          "handoffs",
+          "text"
+        ],
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "to": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "ongoing": {
+            "type": "boolean"
+          },
+          "messagesReceived": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "automatedReplies": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "handoffs": {
+            "type": "integer",
+            "format": "int32"
+          },
+          "text": {
+            "type": "string"
           }
         }
       },
@@ -7684,6 +8413,17 @@
               "string"
             ],
             "format": "uri"
+          }
+        }
+      },
+      "RequestDeletionRequest": {
+        "required": [
+          "confirmName"
+        ],
+        "type": "object",
+        "properties": {
+          "confirmName": {
+            "type": "string"
           }
         }
       },
@@ -8794,7 +9534,8 @@
           "timeZone",
           "status",
           "role",
-          "createdAt"
+          "createdAt",
+          "deletionScheduledFor"
         ],
         "type": "object",
         "properties": {
@@ -8823,6 +9564,154 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "deletionScheduledFor": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "NotificationResponse": {
+        "required": [
+          "id",
+          "kind",
+          "title",
+          "body",
+          "link",
+          "createdAt",
+          "readAt"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "title": {
+            "type": "string"
+          },
+          "body": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "link": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "createdAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "readAt": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "date-time"
+          }
+        }
+      },
+      "NotificationsPage": {
+        "required": [
+          "items",
+          "nextCursor",
+          "unreadCount"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/NotificationResponse"
+            }
+          },
+          "nextCursor": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "unreadCount": {
+            "type": "integer",
+            "format": "int32"
+          }
+        }
+      },
+      "PreferenceItem": {
+        "required": [
+          "kind",
+          "inApp",
+          "push",
+          "sms"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "inApp": {
+            "type": "boolean"
+          },
+          "push": {
+            "type": "boolean"
+          },
+          "sms": {
+            "type": "boolean"
+          }
+        }
+      },
+      "PreferenceResponse": {
+        "required": [
+          "kind",
+          "label",
+          "inApp",
+          "push",
+          "sms",
+          "smsAvailable"
+        ],
+        "type": "object",
+        "properties": {
+          "kind": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "inApp": {
+            "type": "boolean"
+          },
+          "push": {
+            "type": "boolean"
+          },
+          "sms": {
+            "type": "boolean"
+          },
+          "smsAvailable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SetPreferencesRequest": {
+        "required": [
+          "items"
+        ],
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/PreferenceItem"
+            }
           }
         }
       }
@@ -8866,6 +9755,9 @@
     },
     {
       "name": "Audit"
+    },
+    {
+      "name": "Dashboard"
     }
   ]
 }

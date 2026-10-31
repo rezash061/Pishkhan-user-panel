@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
 import { Field, Input, Select } from "@/components/ui/field";
 import { useWorkspace } from "@/features/workspace/context";
+import { DeleteWorkspaceCard } from "@/features/workspace/deletion";
 import { api, unwrap } from "@/lib/api/client";
 import { industries } from "@/lib/api/types";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
@@ -40,35 +41,38 @@ export function GeneralSettings() {
   };
 
   return (
-    <Card>
-      <CardBody>
-        <form onSubmit={submit} className="max-w-md space-y-4">
-          {!writable ? <p className="text-sm text-muted-foreground">{t("settings.readOnly")}</p> : null}
-          <Field label={t("settings.name")} htmlFor="ws-name">
-            <Input id="ws-name" maxLength={100} required disabled={!writable} value={name} onChange={(e) => setName(e.target.value)} />
-          </Field>
-          <Field label={t("settings.industry")} htmlFor="ws-industry">
-            <Select id="ws-industry" disabled={!writable} value={industry} onChange={(e) => setIndustry(e.target.value)}>
-              {industries.map((i) => (
-                <option key={i} value={i}>
-                  {t(`industries.${i}`)}
-                </option>
-              ))}
-            </Select>
-          </Field>
-          <Field label={t("settings.slug")} htmlFor="ws-slug">
-            <Input id="ws-slug" dir="ltr" disabled value={workspace.slug} readOnly />
-          </Field>
-          <Field label={t("settings.timeZone")} htmlFor="ws-tz">
-            <Input id="ws-tz" dir="ltr" disabled value={workspace.timeZone} readOnly />
-          </Field>
-          {writable ? (
-            <Button type="submit" loading={save.isPending} disabled={!name.trim()}>
-              {t("common.save")}
-            </Button>
-          ) : null}
-        </form>
-      </CardBody>
-    </Card>
+    <div className="space-y-5">
+      <Card>
+        <CardBody>
+          <form onSubmit={submit} className="max-w-md space-y-4">
+            {!writable ? <p className="text-sm text-muted-foreground">{t("settings.readOnly")}</p> : null}
+            <Field label={t("settings.name")} htmlFor="ws-name">
+              <Input id="ws-name" maxLength={100} required disabled={!writable} value={name} onChange={(e) => setName(e.target.value)} />
+            </Field>
+            <Field label={t("settings.industry")} htmlFor="ws-industry">
+              <Select id="ws-industry" disabled={!writable} value={industry} onChange={(e) => setIndustry(e.target.value)}>
+                {industries.map((i) => (
+                  <option key={i} value={i}>
+                    {t(`industries.${i}`)}
+                  </option>
+                ))}
+              </Select>
+            </Field>
+            <Field label={t("settings.slug")} htmlFor="ws-slug">
+              <Input id="ws-slug" dir="ltr" disabled value={workspace.slug} readOnly />
+            </Field>
+            <Field label={t("settings.timeZone")} htmlFor="ws-tz">
+              <Input id="ws-tz" dir="ltr" disabled value={workspace.timeZone} readOnly />
+            </Field>
+            {writable ? (
+              <Button type="submit" loading={save.isPending} disabled={!name.trim()}>
+                {t("common.save")}
+              </Button>
+            ) : null}
+          </form>
+        </CardBody>
+      </Card>
+      {can(P.workspaceDelete) ? <DeleteWorkspaceCard /> : null}
+    </div>
   );
 }

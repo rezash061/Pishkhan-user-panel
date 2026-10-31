@@ -28,9 +28,10 @@ Items marked ✅ were closed by backend PR #13 (`feature/user-panel-gaps`) and t
 
 ## Endpoints for planned panel features (Phase 1)
 
-8. Dashboard summary (`GET /workspaces/{id}/dashboard`: counts, answered by AI/rules/humans, overnight summary).
+8. ✅ Dashboard summary (`GET /workspaces/{id}/dashboard`: counts, answered by AI/rules/humans, overnight summary).
 9. ✅ Pending invitations list and revoke (`GET/DELETE /workspaces/{id}/invitations`).
-10. Notification preferences, workspace deletion with grace period, support-session (impersonation) token exchange.
+10. ✅ Notification preferences and workspace deletion with grace period. Support-session (impersonation) token exchange
+    is still open. Notification links point to `/settings/channels`; the panel's page is `/channels`, so the panel maps it.
 11. Modules not yet in the API: AI agent settings + test chat + traces, knowledge,
     contacts/CRM/forms, billing/plans/usage, web push (VAPID public key + subscription endpoint).
 

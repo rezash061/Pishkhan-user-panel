@@ -22,6 +22,10 @@ export type Invitation = Schemas["InvitationResponse"];
 export type PendingInvitation = Schemas["PendingInvitationResponse"];
 export type FileInfo = Schemas["FileResponse"];
 export type Page<T> = { items: T[]; nextCursor: string | null };
+export type Dashboard = Schemas["DashboardResponse"];
+export type DashboardDay = Schemas["DashboardDay"];
+export type AppNotification = Schemas["NotificationResponse"];
+export type NotificationPreference = Schemas["PreferenceResponse"];
 
 // Automation (BE-1.3)
 export type Rule = Schemas["RuleResponse"];

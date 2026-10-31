@@ -988,6 +988,132 @@ export interface paths {
         };
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/deletion": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask to delete the workspace (owner); its data is deleted after 30 days unless cancelled
+         * @description `confirmName` must equal the workspace name. Members lose access at once and automations stop; the workspace stays in `GET /workspaces` with status `pending_deletion` and `deletionScheduledFor`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "confirmName": "گالری لباس ترمه"
+                     *     }
+                     */
+                    "application/json": components["schemas"]["RequestDeletionRequest"];
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkspaceResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        /** Cancel a pending deletion (owner); the workspace is active again */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkspaceResponse"];
+                    };
+                };
+                /** @description Forbidden */
+                403: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/business-hours": {
         parameters: {
             query?: never;
@@ -4553,6 +4679,315 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/dashboard": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Dashboard: activity over `range` (today, 7d, 30d), the overnight summary, the inbox now and channel health
+         * @description Period counts come from hourly rollups and may lag a few minutes; `inbox` and `channels` are live. Days are Tehran days.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    range?: string;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["DashboardResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/notifications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The caller's notifications (newest first) and the unread count
+         * @description `unread=true` lists only unread ones. Kinds: `handoff`, `automation`, `channel`; others may appear later.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    unread?: boolean;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["NotificationsPage"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/notifications/{notificationId}/read": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark one notification read */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    notificationId: string;
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/notifications/read-all": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Mark all the caller's notifications in this workspace read */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/notification-preferences": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's notification settings, one entry per kind */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PreferenceResponse"][];
+                    };
+                };
+            };
+        };
+        /**
+         * Change the caller's notification settings
+         * @description SMS can be turned on only for kinds with `smsAvailable`; at most one SMS per kind every 30 minutes is sent.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "items": [
+                     *         {
+                     *           "kind": "handoff",
+                     *           "inApp": true,
+                     *           "push": true,
+                     *           "sms": true
+                     *         },
+                     *         {
+                     *           "kind": "automation",
+                     *           "inApp": true,
+                     *           "push": false,
+                     *           "sms": false
+                     *         }
+                     *       ]
+                     *     }
+                     */
+                    "application/json": components["schemas"]["SetPreferencesRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PreferenceResponse"][];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
 }
 export type webhooks = Record<string, never>;
 export interface components {
@@ -4659,6 +5094,14 @@ export interface components {
             status: string;
             reason: null | string;
         };
+        ChannelHealth: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            username: null | string;
+            status: string;
+            healthy: boolean;
+        };
         ChannelResponse: {
             /** Format: uuid */
             id: string;
@@ -4716,6 +5159,50 @@ export interface components {
         };
         /** @enum {string} */
         Currency: "IRR";
+        DashboardDay: {
+            /** Format: date */
+            day: string;
+            /** Format: int32 */
+            messagesReceived: number;
+            /** Format: int32 */
+            newConversations: number;
+            /** Format: int32 */
+            repliesByRule: number;
+            /** Format: int32 */
+            repliesByAi: number;
+            /** Format: int32 */
+            repliesByHuman: number;
+            /** Format: int32 */
+            handoffs: number;
+        };
+        DashboardResponse: {
+            range: string;
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            totals: components["schemas"]["DashboardTotals"];
+            days: components["schemas"]["DashboardDay"][];
+            overnight: null | components["schemas"]["OvernightSummary"];
+            inbox: components["schemas"]["InboxNow"];
+            channels: components["schemas"]["ChannelHealth"][];
+        };
+        DashboardTotals: {
+            /** Format: int32 */
+            messagesReceived: number;
+            /** Format: int32 */
+            newConversations: number;
+            /** Format: int32 */
+            repliesByRule: number;
+            /** Format: int32 */
+            repliesByAi: number;
+            /** Format: int32 */
+            repliesByHuman: number;
+            /** Format: int32 */
+            handoffs: number;
+            /** Format: double */
+            automatedShare: null | number;
+        };
         DayHours: {
             day: components["schemas"]["DayOfWeek"];
             ranges: components["schemas"]["TimeRange"][];
@@ -4864,6 +5351,16 @@ export interface components {
             column: string;
             code: string;
         };
+        InboxNow: {
+            /** Format: int32 */
+            open: number;
+            /** Format: int32 */
+            handedOff: number;
+            /** Format: int32 */
+            unread: number;
+            /** Format: date-time */
+            oldestHandoffAt: null | string;
+        };
         InvitationResponse: {
             /** Format: uuid */
             id: string;
@@ -4990,6 +5487,20 @@ export interface components {
             cards?: null | components["schemas"]["MessageCard"][];
             tag?: null | string;
             isEmpty?: boolean;
+        };
+        OvernightSummary: {
+            /** Format: date-time */
+            from: string;
+            /** Format: date-time */
+            to: string;
+            ongoing: boolean;
+            /** Format: int32 */
+            messagesReceived: number;
+            /** Format: int32 */
+            automatedReplies: number;
+            /** Format: int32 */
+            handoffs: number;
+            text: string;
         };
         PagedResultOfAuditEntryResponse: {
             items: components["schemas"]["AuditEntryResponse"][];
@@ -5123,6 +5634,9 @@ export interface components {
             payload: null | string;
             /** Format: uri */
             url: null | string;
+        };
+        RequestDeletionRequest: {
+            confirmName: string;
         };
         RequestOtpRequest: {
             phone: string;
@@ -5394,6 +5908,43 @@ export interface components {
             role: string;
             /** Format: date-time */
             createdAt: string;
+            /** Format: date-time */
+            deletionScheduledFor: null | string;
+        };
+        NotificationResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            title: string;
+            body: null | string;
+            link: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            readAt: null | string;
+        };
+        NotificationsPage: {
+            items: components["schemas"]["NotificationResponse"][];
+            nextCursor: null | string;
+            /** Format: int32 */
+            unreadCount: number;
+        };
+        PreferenceItem: {
+            kind: string;
+            inApp: boolean;
+            push: boolean;
+            sms: boolean;
+        };
+        PreferenceResponse: {
+            kind: string;
+            label: string;
+            inApp: boolean;
+            push: boolean;
+            sms: boolean;
+            smsAvailable: boolean;
+        };
+        SetPreferencesRequest: {
+            items: components["schemas"]["PreferenceItem"][];
         };
     };
     responses: never;

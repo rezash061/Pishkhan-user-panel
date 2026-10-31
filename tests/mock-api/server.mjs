@@ -18,7 +18,7 @@ const token = (sub, minutes) => `${b64url({ alg: "none" })}.${b64url({ sub, exp:
 
 const me = { id: "0199b000-0000-7000-8000-000000000001", displayName: "پارسا", phone: "09120001234", hasPassword: false, totpEnabled: false, createdAt: ago(40 * 24 * H) };
 const teammate = { userId: "0199b000-0000-7000-8000-000000000002", displayName: "نگار", phone: "09120005678", role: "agent", joinedAt: ago(20 * 24 * H) };
-const ws = { id: "0199b000-0000-7000-8000-0000000000aa", name: "گالری نیلوفر", slug: "niloofar", industry: "clothing", timeZone: "Asia/Tehran", status: "active", role: "owner", createdAt: ago(40 * 24 * H) };
+const ws = { id: "0199b000-0000-7000-8000-0000000000aa", name: "گالری نیلوفر", slug: "niloofar", industry: "clothing", timeZone: "Asia/Tehran", status: "active", role: "owner", createdAt: ago(40 * 24 * H), deletionScheduledFor: null };
 const channel = { id: "0199b000-0000-7000-8000-0000000000c1", kind: "instagram", externalId: "17841400000000001", username: "niloofar.gallery", displayName: "گالری نیلوفر", status: "active", statusReason: null, tokenExpiresAt: iso(new Date(Date.now() + 50 * 24 * H)), createdAt: ago(30 * 24 * H) };
 
 const previews = [
@@ -59,6 +59,17 @@ const conversations = Array.from({ length: 24 }, (_, i) => {
 });
 
 const invitations = [{ id: randomUUID(), role: "agent", phone: "+98912***4567", invitedBy: me.id, createdAt: ago(5 * H), expiresAt: iso(new Date(Date.now() + 6 * 24 * H)) }];
+
+const notifications = [
+  { id: randomUUID(), kind: "handoff", title: "نیلوفر احمدی منتظر پاسخ شماست", body: "مشتری درخواست تخفیف عمده دارد", link: `/inbox/${conversations[0].id}`, createdAt: ago(20 * 60_000), readAt: null },
+  { id: randomUUID(), kind: "automation", title: "قانون «قیمت زیر پست» به تیم خبر داد", body: "سفارش عمده", link: null, createdAt: ago(2 * H), readAt: null },
+  { id: randomUUID(), kind: "channel", title: "اتصال @niloofar.gallery به‌زودی منقضی می‌شود", body: null, link: "/settings/channels", createdAt: ago(26 * H), readAt: ago(20 * H) },
+];
+const preferences = [
+  { kind: "handoff", label: "Handoff", inApp: true, push: true, sms: false, smsAvailable: true },
+  { kind: "automation", label: "Automation", inApp: true, push: false, sms: false, smsAvailable: false },
+  { kind: "channel", label: "Channel", inApp: true, push: true, sms: true, smsAvailable: true },
+];
 
 const messages = new Map();
 for (const c of conversations) {
@@ -245,7 +256,62 @@ const routes = [
   ])],
   ["GET", /^\/api\/v1\/workspaces$/, (req, res) => send(res, 200, [ws])],
   ["POST", /^\/api\/v1\/workspaces$/, async (req, res) => send(res, 201, { ...ws, ...(await readBody(req)), slug: "new" })],
-  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/?$/, (req, res) => send(res, 200, ws)],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/?$/, (req, res) => (ws.status === "pending_deletion" ? problem(res, 404, "common.not_found") : send(res, 200, ws))],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/deletion$/, async (req, res) => {
+    const { confirmName } = await readBody(req);
+    if (confirmName !== ws.name) return problem(res, 400, "tenancy.deletion.confirm_mismatch", { confirmName: ["tenancy.deletion.confirm_mismatch"] });
+    Object.assign(ws, { status: "pending_deletion", deletionScheduledFor: iso(new Date(Date.now() + 30 * 24 * H)) });
+    send(res, 202, ws);
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/deletion$/, (req, res) => {
+    if (ws.status !== "pending_deletion") return problem(res, 409, "tenancy.deletion.not_pending");
+    Object.assign(ws, { status: "active", deletionScheduledFor: null });
+    send(res, 200, ws);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/dashboard$/, (req, res, url) => {
+    const range = url.searchParams.get("range") ?? "today";
+    const n = range === "30d" ? 30 : range === "7d" ? 7 : 1;
+    const days = Array.from({ length: n }, (_, i) => {
+      const day = new Date(Date.now() - (n - 1 - i) * 24 * H).toISOString().slice(0, 10);
+      const k = (i * 7) % 11;
+      return { day, messagesReceived: 40 + k * 6, newConversations: 8 + k, repliesByRule: 14 + k * 2, repliesByAi: 9 + (k % 5) * 3, repliesByHuman: 6 + (k % 4), handoffs: 1 + (k % 3) };
+    });
+    const sum = (key) => days.reduce((a, d) => a + d[key], 0);
+    const auto = sum("repliesByRule") + sum("repliesByAi");
+    send(res, 200, {
+      range, from: iso(new Date(Date.now() - n * 24 * H)), to: iso(now()),
+      totals: { messagesReceived: sum("messagesReceived"), newConversations: sum("newConversations"), repliesByRule: sum("repliesByRule"), repliesByAi: sum("repliesByAi"), repliesByHuman: sum("repliesByHuman"), handoffs: sum("handoffs"), automatedShare: auto / (auto + sum("repliesByHuman")) },
+      days,
+      overnight: { from: ago(14 * H), to: ago(5 * H), ongoing: false, messagesReceived: 23, automatedReplies: 19, handoffs: 2, text: "دیشب ۲۳ پیام رسید؛ ۱۹ تا را پاسخ خودکار جواب داد و ۲ گفتگو منتظر شماست." },
+      inbox: { open: conversations.filter((c) => c.status === "open").length, handedOff: conversations.filter((c) => c.status === "handed_off").length, unread: conversations.filter((c) => c.unreadCount > 0).length, oldestHandoffAt: ago(3 * H) },
+      channels: [{ id: channel.id, kind: "instagram", username: channel.username, status: channel.status, healthy: channel.status === "active" }],
+    });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/notifications$/, (req, res, url) => {
+    const items = url.searchParams.get("unread") === "true" ? notifications.filter((x) => !x.readAt) : notifications;
+    send(res, 200, { ...page(items, url.searchParams.get("cursor"), Number(url.searchParams.get("limit") ?? 20)), unreadCount: notifications.filter((x) => !x.readAt).length });
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/notifications\/read-all$/, (req, res) => {
+    for (const x of notifications) x.readAt ??= iso(now());
+    send(res, 204);
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/notifications\/([^/]+)\/read$/, (req, res, url, [id]) => {
+    const x = notifications.find((n) => n.id === id);
+    if (!x) return problem(res, 404, "common.not_found");
+    x.readAt ??= iso(now());
+    send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/notification-preferences$/, (req, res) => send(res, 200, preferences)],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/notification-preferences$/, async (req, res) => {
+    const { items } = await readBody(req);
+    for (const item of items) {
+      const p = preferences.find((x) => x.kind === item.kind);
+      if (!p) return problem(res, 400, "validation.failed", { kind: ["notifications.kind_unknown"] });
+      if (item.sms && !p.smsAvailable) return problem(res, 400, "validation.failed", { sms: ["notifications.sms_unavailable"] });
+      Object.assign(p, { inApp: item.inApp, push: item.push, sms: item.sms });
+    }
+    send(res, 200, preferences);
+  }],
   ["PATCH", /^\/api\/v1\/workspaces\/[^/]+\/?$/, async (req, res) => {
     Object.assign(ws, await readBody(req));
     send(res, 200, ws);
