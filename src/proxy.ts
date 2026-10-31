@@ -49,11 +49,14 @@ export async function proxy(request: NextRequest) {
   const access = request.cookies.get(cookieNames.access)?.value;
   // A support session carries its own token with no refresh; while it lasts it is the session.
   const support = supportToken(request.cookies);
+  // A page sent the user to /login?expired=1 because the backend refused the token (401). Those cookies are dead: they
+  // are dropped below, and the proxy must not treat the browser as signed in and bounce /login back (a redirect loop).
+  const expiredLogin = guestOnly.includes(pathname) && request.nextUrl.searchParams.get("expired") === "1";
   const staleSupport = !support && Boolean(request.cookies.get(cookieNames.support));
-  let signedIn = Boolean(refresh) || Boolean(support);
+  let signedIn = !expiredLogin && (Boolean(refresh) || Boolean(support));
   let refreshed: Awaited<ReturnType<typeof refreshTokens>> | null = null;
 
-  if (!support && refresh && needsRefresh(access)) {
+  if (!expiredLogin && !support && refresh && needsRefresh(access)) {
     refreshed = await refreshTokens(refresh);
     if (refreshed.ok) {
       request.cookies.set(cookieNames.access, refreshed.tokens.accessToken);
@@ -80,6 +83,10 @@ export async function proxy(request: NextRequest) {
   }
 
   response.headers.set("content-security-policy", csp);
+  if (expiredLogin) {
+    clearTokens(response.cookies);
+    clearSupport(response.cookies);
+  }
   if (refreshed?.ok) writeTokens(response.cookies, refreshed.tokens);
   else if (refreshed && refreshed.code !== "network") clearTokens(response.cookies);
   if (staleSupport) clearSupport(response.cookies);

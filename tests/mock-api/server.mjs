@@ -211,6 +211,18 @@ const page = (items, cursor, limit) => {
   return { items: slice, nextCursor: start + limit < items.length ? String(start + limit) : null };
 };
 const usedSupportTokens = new Set();
+const auditEntry = (minutesAgo, actorType, actorName, action, entityType, extra = {}) => ({
+  id: randomUUID(), occurredAt: ago(minutesAgo * 60_000), actorType, actorId: actorType === "user" ? me.id : null, actorName, onBehalfOf: null,
+  workspaceId: ws.id, action, entityType, entityId: null, reason: null, ip: null, before: null, after: null, ...extra,
+});
+const auditEntries = [
+  auditEntry(5, "staff", "support", "workspace.update", "workspace", { before: { name: "گالری نیلو" }, after: { name: "گالری نیلوفر" } }),
+  auditEntry(6, "staff", "support", "support_session.start", "support_session", { reason: "تیکت ۴۲۱: اتصال اینستاگرام" }),
+  auditEntry(7, "staff", "support", "support_session.grant", "support_session", { reason: "تیکت ۴۲۱: اتصال اینستاگرام" }),
+  auditEntry(60, "user", "پارسا", "member.role_change", "member", { before: { role: "viewer" }, after: { role: "agent" } }),
+  auditEntry(120, "user", "پارسا", "member.invite", "invitation"),
+  auditEntry(40 * 24 * 60, "user", "پارسا", "workspace.create", "workspace"),
+];
 const authed = (req) => /^Bearer .+/.test(req.headers.authorization ?? "");
 const loginResponse = () => ({
   accessToken: token(me.id, 10),
@@ -315,6 +327,13 @@ const routes = [
     if (!x) return problem(res, 404, "common.not_found");
     x.readAt ??= iso(now());
     send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/audit$/, (req, res, url) => {
+    const action = url.searchParams.get("Action") ?? "";
+    const pageNo = Math.max(1, Number(url.searchParams.get("Page") ?? 1));
+    const size = Number(url.searchParams.get("PageSize") ?? 20);
+    const items = auditEntries.filter((e) => e.action.includes(action));
+    send(res, 200, { items: items.slice((pageNo - 1) * size, pageNo * size), totalCount: items.length, page: pageNo, pageSize: size });
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/notification-preferences$/, (req, res) => send(res, 200, preferences)],
   ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/notification-preferences$/, async (req, res) => {
@@ -695,6 +714,10 @@ const anonymous = [/^\/api\/v1\/public\//, /^\/api\/v1\/auth\/(otp|token)\//, /^
 createServer(async (req, res) => {
   const url = new URL(req.url, "http://mock");
   if (!anonymous.some((r) => r.test(url.pathname)) && !authed(req)) return problem(res, 401, "auth.unauthorized");
+  // e2e hooks: a token for user "revoked" is refused (401) and one for "broken" makes the backend fail (500).
+  const sub = (() => { try { return JSON.parse(Buffer.from((req.headers.authorization ?? "").split(".")[1] ?? "", "base64url").toString()).sub; } catch { return null; } })();
+  if (sub === "revoked") return problem(res, 401, "auth.unauthorized");
+  if (sub === "broken") return problem(res, 500, "common.unexpected");
   for (const [method, pattern, handler] of routes) {
     const match = req.method === method && url.pathname.match(pattern);
     if (match) return handler(req, res, url, match.slice(1));

@@ -60,7 +60,7 @@ Built against the backend's current API (Phase 0 through BE-1.6, plus backend PR
 | Onboarding: workspace → Instagram connect (official OAuth) | Done; template, import, teach and test steps wait for their backend modules |
 | Inbox: filters, virtualized list, thread, optimistic send with retry, 24-hour/7-day window, quick replies (`/`), notes, assign, status, AI pause, live updates, keyboard shortcuts, customer names, search, handoff reason and suggested reply, attachments and story replies | Done |
 | Channels: status, reconnect, disconnect, recent posts; banners for disconnected/expiring accounts | Done |
-| Settings: general, business hours with Jalali closed dates, quick replies | Done |
+| Settings: general, business hours with Jalali closed dates, quick replies, notifications, activity log (owner) | Done |
 | PWA: manifest, icons, service worker with offline page, install prompt | Done; web push waits for backend VAPID keys |
 | Automations: rules by trigger with priority order, rule editor (Persian keyword preview and tester, message builder with buttons/quick replies/variables and a live DM preview, post picker, actions), comment-to-DM wizard with old-comment backlog, rule stats, rule and flow dry-run testers, flows (list-based builder, server validation, publish), fallback reply (hours come from the workspace business hours) | Done; canvas flow builder is a follow-up |
 | Catalog: products with filters, editor with images, option/variant matrix, Toman prices and stock; categories; storefront card sets with preview; Excel export, template and import job | Done |

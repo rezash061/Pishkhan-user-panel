@@ -16,6 +16,36 @@ async function noHorizontalScroll(page: Page) {
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 }
 
+const fakeToken = (sub: string) =>
+  `${Buffer.from('{"alg":"none"}').toString("base64url")}.${Buffer.from(JSON.stringify({ sub, exp: Math.floor(Date.now() / 1000) + 600 })).toString("base64url")}.x`;
+
+async function swapAccessToken(page: Page, sub: string) {
+  // Leave the app first, so its own background calls cannot refresh the session behind the test's back.
+  await page.goto("about:blank");
+  const cookies = await page.context().cookies();
+  const access = cookies.find((c) => /pk-at$/.test(c.name))!;
+  await page.context().addCookies([{ ...access, value: fakeToken(sub) }]);
+}
+
+test("a token the backend refuses ends at the login page, not in a redirect loop", async ({ page }) => {
+  await login(page);
+  await swapAccessToken(page, "revoked");
+  await page.goto("/workspaces?all=1");
+  await expect(page).toHaveURL(/\/login\?expired=1/);
+  await expect(page.getByText("نشست شما تمام شد. دوباره وارد شوید.")).toBeVisible();
+  // The dead cookies are gone, so signing in again works.
+  expect((await page.context().cookies()).some((c) => /pk-(at|rt)$/.test(c.name))).toBe(false);
+  await login(page);
+});
+
+test("a backend failure shows the error page instead of bouncing to login", async ({ page }) => {
+  await login(page);
+  await swapAccessToken(page, "broken");
+  await page.goto("/workspaces?all=1");
+  await expect(page.getByText("مشکلی پیش آمد")).toBeVisible();
+  expect(page.url()).toContain("/workspaces");
+});
+
 test("redirects to login and back to the requested page", async ({ page }) => {
   await page.goto(`/w/${workspaceId}/team`);
   await expect(page).toHaveURL(/\/login\?next=/);
@@ -153,6 +183,22 @@ test("support session shows the red banner, hides security screens and ends clea
   // The link works once.
   await page.goto(`/api/auth/impersonation?token=sup-${info.project.name}`);
   await expect(page.getByRole("heading", { name: "لینک پشتیبانی معتبر نیست" })).toBeVisible();
+});
+
+test("owner reads the activity log, with support access and its reason", async ({ page }) => {
+  await login(page);
+  await page.goto(`/w/${workspaceId}/settings/audit`);
+  await expect(page.getByRole("heading", { name: "گزارش فعالیت" })).toBeVisible();
+  await expect(page.getByText("پشتیبانی پیشخوان دسترسی پشتیبانی به این کسب‌وکار گرفت.")).toBeVisible();
+  await expect(page.getByText("دلیل: تیکت ۴۲۱: اتصال اینستاگرام").first()).toBeVisible();
+  await page.getByText("۱ تغییر").first().click();
+  await expect(page.getByRole("insertion").filter({ hasText: "گالری نیلوفر" })).toBeVisible();
+  await page.getByLabel("نمایش").selectOption("team");
+  await expect(page.getByText("پارسا نقش یک هم‌تیمی را تغییر داد.")).toBeVisible();
+  await expect(page.getByText(/دسترسی پشتیبانی به این کسب‌وکار گرفت/)).toHaveCount(0);
+  await noHorizontalScroll(page);
+  const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(axe.violations).toEqual([]);
 });
 
 test("adds an internal note", async ({ page }) => {

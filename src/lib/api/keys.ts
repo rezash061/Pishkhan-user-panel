@@ -10,6 +10,7 @@ export const qk = {
   dashboard: (ws: string, range: string) => ["dashboard", ws, range] as const,
   notifications: (ws: string) => ["notifications", ws] as const,
   notificationCount: (ws: string) => ["notifications", ws, "count"] as const,
+  audit: (ws: string, filter: object) => ["audit", ws, filter] as const,
   notificationPreferences: (ws: string) => ["notification-preferences", ws] as const,
   businessHours: (ws: string) => ["business-hours", ws] as const,
   quickReplies: (ws: string) => ["quick-replies", ws] as const,

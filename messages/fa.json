@@ -695,7 +695,8 @@
       "year": "سال"
     },
     "readOnly": "شما اجازهٔ تغییر این بخش را ندارید.",
-    "notifications": "اعلان‌ها"
+    "notifications": "اعلان‌ها",
+    "audit": "گزارش فعالیت"
   },
   "account": {
     "title": "حساب کاربری",
@@ -1456,7 +1457,8 @@
         "automation": "وقتی یک قانون یا سناریو «اعلان به تیم» می‌فرستد.",
         "channel": "وقتی اتصال صفحه قطع می‌شود یا نیاز به اتصال دوباره دارد."
       }
-    }
+    },
+    "kinds": {}
   },
   "deletion": {
     "title": "حذف کسب‌وکار",
@@ -1505,6 +1507,44 @@
         "title": "این کسب‌وکار در دسترس نیست",
         "body": "کاربر دیگر عضو این کسب‌وکار نیست یا کسب‌وکار در صف حذف است."
       }
+    }
+  },
+  "audit": {
+    "title": "گزارش فعالیت",
+    "subtitle": "تغییرهای مهم این کسب‌وکار: چه کسی، چه کاری، کِی. ورود کارشناس پشتیبانی و هر کاری که انجام دهد هم اینجا ثبت می‌شود. فقط مالک این صفحه را می‌بیند.",
+    "filter": "نمایش",
+    "groups": {
+      "all": "همهٔ فعالیت‌ها",
+      "support": "پشتیبانی پیشخوان",
+      "team": "تیم و دعوت‌ها",
+      "workspace": "تنظیمات کسب‌وکار"
+    },
+    "empty": "فعالیتی ثبت نشده است",
+    "emptyBody": "از این به بعد تغییرهای مهم اینجا دیده می‌شوند.",
+    "pages": "صفحه‌های گزارش",
+    "newer": "جدیدتر",
+    "older": "قدیمی‌تر",
+    "pageOf": "صفحهٔ {page} از {pages} ({total} مورد)",
+    "supportActor": "پشتیبانی پیشخوان",
+    "supportBadge": "پشتیبانی",
+    "system": "سیستم",
+    "reason": "دلیل: {reason}",
+    "details": "{count, plural, other {# تغییر}}",
+    "unknown": "{actor}: {action}",
+    "actions": {
+      "workspace_create": "{actor} کسب‌وکار را ساخت.",
+      "workspace_update": "{actor} تنظیمات کسب‌وکار را تغییر داد.",
+      "workspace_business_hours_update": "{actor} ساعت کاری را تغییر داد.",
+      "workspace_deletion_request": "{actor} درخواست حذف کسب‌وکار داد.",
+      "workspace_deletion_cancel": "{actor} حذف کسب‌وکار را لغو کرد.",
+      "member_invite": "{actor} یک هم‌تیمی دعوت کرد.",
+      "member_join": "{actor} به تیم پیوست.",
+      "member_role_change": "{actor} نقش یک هم‌تیمی را تغییر داد.",
+      "member_remove": "{actor} یک هم‌تیمی را از تیم حذف کرد.",
+      "member_leave": "{actor} از تیم خارج شد.",
+      "member_invitation_revoke": "{actor} یک دعوت را لغو کرد.",
+      "support_session_grant": "{actor} دسترسی پشتیبانی به این کسب‌وکار گرفت.",
+      "support_session_start": "{actor} وارد پنل شد."
     }
   }
 }
