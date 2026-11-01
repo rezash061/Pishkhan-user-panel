@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.7.0 — 2026-11-01
+
+- Contacts / CRM part 1 (UP-1.11, backend #25): «مشتری‌ها» lists customers with search and filters by tag, segment, channel and phone, synced to the URL. Each customer has a profile: name (edit or clear), tags that save at once, custom fields by type (text, number, Jalali date, yes/no, email, phone, list) with per-field errors, and their conversations linked to the inbox.
+- Tags: list with customer counts, colour, description, rename, and merge by renaming onto an existing tag.
+- Custom fields: create with a suggested key (fixed once saved), edit label and options, delete.
+- Segments: an editor with all/any matching, up to 20 conditions, and a live count of matching customers; the list links to the filtered contacts.
+- Inbox side panel links to the customer's profile for users with CRM access.
+- API refreshed from the backend CRM branch.
+
 ## 0.6.0 — 2026-10-31
 
 - Billing v1 (UP-1.15, backend #23): «اشتراک» shows the current plan (subscription, free plan or no limits), trial badge and days left, and this Jalali month's usage per meter with a bar that turns amber near the limit and red when full (named in text, not by colour alone). Upgrades go through support until online payment exists.

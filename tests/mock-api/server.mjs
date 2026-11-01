@@ -58,6 +58,50 @@ const conversations = Array.from({ length: 24 }, (_, i) => {
   };
 });
 
+// CRM (BE-1.7): one contact per conversation contact, plus tags, field definitions and segments.
+const crmContacts = [...new Map(conversations.map((c, i) => [c.contactId, {
+  id: c.contactId, displayName: c.contact.displayName, username: c.contact.username,
+  tags: i === 0 ? ["مشتری ویژه"] : i % 5 === 2 ? ["سفارش عمده"] : [],
+  fields: i === 0 ? { city: "شیراز" } : {},
+  channels: [channel.id], lastSeenAt: c.lastInboundAt, createdAt: ago((30 - i) * 24 * H),
+}])).values()];
+const crmFields = [
+  { id: randomUUID(), key: "city", label: "شهر", type: "text", options: [], sortOrder: 10 },
+  { id: randomUUID(), key: "orders", label: "تعداد سفارش", type: "number", options: [], sortOrder: 20 },
+  { id: randomUUID(), key: "birthday", label: "تاریخ تولد", type: "date", options: [], sortOrder: 30 },
+];
+const crmTagDefs = new Map([["مشتری ویژه", { color: "purple", description: "خرید بالای ۵ میلیون" }]]);
+const crmSegments = [];
+const tagList = () => {
+  const names = new Set([...crmTagDefs.keys(), ...crmContacts.flatMap((c) => c.tags)]);
+  return [...names].map((name) => ({ name, color: crmTagDefs.get(name)?.color ?? null, description: crmTagDefs.get(name)?.description ?? null, defined: crmTagDefs.has(name), contactCount: crmContacts.filter((c) => c.tags.includes(name)).length }));
+};
+const matchesCondition = (c, cond) => {
+  switch (cond.field) {
+    case "tag": return cond.op === "has" ? c.tags.includes(cond.value) : !c.tags.includes(cond.value);
+    case "name": return cond.op === "contains" ? (c.displayName ?? "").includes(cond.value) : (cond.op === "exists") === Boolean(c.displayName);
+    case "username": return cond.op === "contains" ? (c.username ?? "").includes(cond.value) : (cond.op === "exists") === Boolean(c.username);
+    case "field": {
+      const v = c.fields[cond.key];
+      if (cond.op === "exists" || cond.op === "not_exists") return (cond.op === "exists") === (v !== undefined);
+      if (cond.op === "eq") return v === String(cond.value);
+      if (cond.op === "neq") return v !== String(cond.value);
+      if (cond.op === "contains") return (v ?? "").includes(cond.value);
+      return v !== undefined && (cond.op === "gt" ? Number(v) > Number(cond.value) : Number(v) < Number(cond.value));
+    }
+    case "has_phone": return cond.value === false;
+    default: return true;
+  }
+};
+const segmentMatches = (rule, c) => rule.match === "any" ? rule.conditions.some((x) => matchesCondition(c, x)) : rule.conditions.every((x) => matchesCondition(c, x));
+const validRule = (rule) => {
+  const errors = {};
+  if (!rule || !Array.isArray(rule.conditions) || rule.conditions.length === 0) errors["rule.conditions"] = ["validation.segment.conditions"];
+  (rule?.conditions ?? []).forEach((c, i) => { if (c.field === "tag" && !String(c.value ?? "").trim()) errors[`rule.conditions[${i}].value`] = ["validation.segment.value"]; });
+  return errors;
+};
+const toSegment = (s) => ({ ...s, contactCount: crmContacts.filter((c) => segmentMatches(s.rule, c)).length });
+
 const invitations = [{ id: randomUUID(), role: "agent", phone: "+98912***4567", invitedBy: me.id, createdAt: ago(5 * H), expiresAt: iso(new Date(Date.now() + 6 * 24 * H)) }];
 
 const notifications = [
@@ -326,6 +370,107 @@ const routes = [
     const x = notifications.find((n) => n.id === id);
     if (!x) return problem(res, 404, "common.not_found");
     x.readAt ??= iso(now());
+    send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/contacts$/, (req, res, url) => {
+    const q = url.searchParams.get("q") ?? "";
+    const tag = url.searchParams.get("tag");
+    const segment = crmSegments.find((x) => x.id === url.searchParams.get("segmentId"));
+    const hasPhone = url.searchParams.get("hasPhone");
+    const items = crmContacts.filter((c) => (!q || `${c.displayName ?? ""} ${c.username ?? ""}`.includes(q)) && (!tag || c.tags.includes(tag)) && (!segment || segmentMatches(segment.rule, c)) && hasPhone !== "true");
+    send(res, 200, page(items, url.searchParams.get("cursor"), Number(url.searchParams.get("limit") ?? 30)));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/contacts\/([^/]+)$/, (req, res, url, [id]) => {
+    const contact = crmContacts.find((c) => c.id === id);
+    if (!contact) return problem(res, 404, "common.not_found");
+    send(res, 200, { contact, conversations: conversations.filter((c) => c.contactId === id).map((c) => ({ id: c.id, channelAccountId: c.channelAccountId, channelKind: "instagram", status: c.status, lastInboundAt: c.lastInboundAt, lastMessagePreview: c.lastMessagePreview })) });
+  }],
+  ["PATCH", /^\/api\/v1\/workspaces\/[^/]+\/contacts\/([^/]+)$/, async (req, res, url, [id]) => {
+    const contact = crmContacts.find((c) => c.id === id);
+    if (!contact) return problem(res, 404, "common.not_found");
+    const body = await readBody(req);
+    const errors = {};
+    for (const [k, v] of Object.entries(body.fields ?? {})) {
+      const def = crmFields.find((f) => f.key === k);
+      if (v !== null && def?.type === "number" && !/^-?\d+(\.\d+)?$/.test(v)) errors[`fields.${k}`] = ["validation.contact.field_value"];
+    }
+    if (Object.keys(errors).length) return problem(res, 400, "validation.failed", errors);
+    if (body.clearDisplayName) contact.displayName = null;
+    else if (body.displayName) contact.displayName = body.displayName.trim();
+    if (body.tags) contact.tags = [...new Set(body.tags.map((t) => t.trim()).filter(Boolean))];
+    for (const [k, v] of Object.entries(body.fields ?? {})) { if (v === null) delete contact.fields[k]; else contact.fields[k] = v; }
+    const conv = conversations.find((c) => c.contactId === id);
+    if (conv) conv.contact.displayName = contact.displayName;
+    send(res, 200, contact);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/crm\/tags$/, (req, res) => send(res, 200, tagList())],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/crm\/tags\/([^/]+)$/, async (req, res, url, [raw]) => {
+    const name = decodeURIComponent(raw).trim();
+    const body = await readBody(req);
+    if (!name || name.length > 50) return problem(res, 400, "validation.failed", { name: ["validation.tag.name"] });
+    crmTagDefs.set(name, { color: body.color ?? null, description: body.description ?? null });
+    send(res, 200, tagList().find((t) => t.name === name));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/crm\/tags\/([^/]+)\/rename$/, async (req, res, url, [raw]) => {
+    const name = decodeURIComponent(raw);
+    const { newName } = await readBody(req);
+    if (!tagList().some((t) => t.name === name)) return problem(res, 404, "crm.tag.not_found");
+    for (const c of crmContacts) if (c.tags.includes(name)) c.tags = [...new Set(c.tags.map((t) => (t === name ? newName : t)))];
+    if (!crmTagDefs.has(newName) && crmTagDefs.has(name)) crmTagDefs.set(newName, crmTagDefs.get(name));
+    crmTagDefs.delete(name);
+    send(res, 200, tagList().find((t) => t.name === newName));
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/crm\/tags\/([^/]+)$/, (req, res, url, [raw]) => {
+    const name = decodeURIComponent(raw);
+    crmTagDefs.delete(name);
+    for (const c of crmContacts) c.tags = c.tags.filter((t) => t !== name);
+    send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/crm\/fields$/, (req, res) => send(res, 200, [...crmFields].sort((a, b) => a.sortOrder - b.sortOrder))],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/crm\/fields$/, async (req, res) => {
+    const body = await readBody(req);
+    if (!/^[a-z][a-z0-9_]{0,39}$/.test(body.key ?? "")) return problem(res, 400, "validation.failed", { key: ["validation.field.key"] });
+    if (crmFields.some((f) => f.key === body.key)) return problem(res, 409, "crm.field.key_taken");
+    const field = { id: randomUUID(), key: body.key, label: body.label, type: body.type, options: body.options ?? [], sortOrder: body.sortOrder };
+    crmFields.push(field);
+    send(res, 201, field);
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/crm\/fields\/([^/]+)$/, async (req, res, url, [id]) => {
+    const field = crmFields.find((f) => f.id === id);
+    if (!field) return problem(res, 404, "common.not_found");
+    const body = await readBody(req);
+    Object.assign(field, { label: body.label, type: body.type, options: body.options ?? [], sortOrder: body.sortOrder });
+    send(res, 200, field);
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/crm\/fields\/([^/]+)$/, (req, res, url, [id]) => {
+    const i = crmFields.findIndex((f) => f.id === id);
+    if (i >= 0) crmFields.splice(i, 1);
+    send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/crm\/segments$/, (req, res) => send(res, 200, crmSegments.map(toSegment))],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/crm\/segments\/preview$/, async (req, res) => {
+    const rule = await readBody(req);
+    const errors = validRule(rule);
+    if (Object.keys(errors).length) return problem(res, 400, "validation.failed", errors);
+    send(res, 200, { contactCount: crmContacts.filter((c) => segmentMatches(rule, c)).length });
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/crm\/segments$/, async (req, res) => {
+    const body = await readBody(req);
+    if (crmSegments.some((x) => x.name === body.name)) return problem(res, 409, "crm.segment.name_taken");
+    const segment = { id: randomUUID(), name: body.name, rule: body.rule, updatedAt: iso(now()) };
+    crmSegments.push(segment);
+    send(res, 201, toSegment(segment));
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/crm\/segments\/([^/]+)$/, async (req, res, url, [id]) => {
+    const segment = crmSegments.find((x) => x.id === id);
+    if (!segment) return problem(res, 404, "crm.segment.not_found");
+    const body = await readBody(req);
+    Object.assign(segment, { name: body.name, rule: body.rule, updatedAt: iso(now()) });
+    send(res, 200, toSegment(segment));
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/crm\/segments\/([^/]+)$/, (req, res, url, [id]) => {
+    const i = crmSegments.findIndex((x) => x.id === id);
+    if (i >= 0) crmSegments.splice(i, 1);
     send(res, 204);
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/subscription$/, (req, res) => send(res, 200, {
