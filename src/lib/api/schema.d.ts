@@ -6413,6 +6413,179 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/agent/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The AI agent's persona, guardrails and handoff rules (defaults until saved) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AgentProfileResponse"];
+                    };
+                };
+            };
+        };
+        /** Save the AI agent's settings */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AgentProfileDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AgentProfileResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/agent/traces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the agent did for each customer turn, newest first; filter by conversation or outcome */
+        get: {
+            parameters: {
+                query?: {
+                    conversationId?: string;
+                    outcome?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PageOfTraceSummary"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/agent/traces/{traceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One trace: classification, retrieved facts, tool calls, guard issues, confidence and usage */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    traceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TraceDetail"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/audit": {
         parameters: {
             query?: never;
@@ -6797,6 +6970,24 @@ export interface components {
             /** Format: uuid */
             workspaceId: string;
             role: string;
+        };
+        AgentProfileDto: {
+            name: string;
+            tone: string;
+            brandVoice: null | string;
+            replyInCustomerLanguage: boolean;
+            neverSay: string[];
+            /** Format: double */
+            confidenceThreshold: number;
+            handoff: components["schemas"]["HandoffRulesDto"];
+            handoffMessage: null | string;
+            allowedDomains: string[];
+        };
+        AgentProfileResponse: {
+            profile: components["schemas"]["AgentProfileDto"];
+            isDefault: boolean;
+            /** Format: date-time */
+            updatedAt: null | string;
         };
         AiPauseRequest: {
             paused: boolean;
@@ -7267,6 +7458,14 @@ export interface components {
             /** Format: date-time */
             at: null | string;
         };
+        HandoffRulesDto: {
+            humanRequest: boolean;
+            complaint: boolean;
+            discountRequest: boolean;
+            repeatedLowConfidence: boolean;
+            keywords: string[];
+            vipTags: string[];
+        };
         /** Format: binary */
         IFormFile: string;
         ImportRequest: {
@@ -7524,6 +7723,10 @@ export interface components {
         };
         PageOfSourceResponse: {
             items: components["schemas"]["SourceResponse"][];
+            nextCursor: null | string;
+        };
+        PageOfTraceSummary: {
+            items: components["schemas"]["TraceSummary"][];
             nextCursor: null | string;
         };
         PasswordLoginRequest: {
@@ -7977,6 +8180,92 @@ export interface components {
         TotpSetupResponse: {
             secret: string;
             otpAuthUri: string;
+        };
+        TraceDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            /** Format: uuid */
+            messageId: string;
+            /** Format: uuid */
+            flowRunId: null | string;
+            goal: null | string;
+            input: string;
+            intent: null | string;
+            language: null | string;
+            sentiment: null | string;
+            /** Format: double */
+            classifierConfidence: null | number;
+            facts: components["schemas"]["TraceFact"][];
+            toolCalls: components["schemas"]["TraceToolCall"][];
+            guardIssues: components["schemas"]["TraceGuardIssue"][];
+            reply: null | string;
+            /** Format: double */
+            selfConfidence: null | number;
+            /** Format: double */
+            confidence: null | number;
+            /** Format: double */
+            threshold: number;
+            outcome: string;
+            handoffReason: null | string;
+            prompts: null | string;
+            models: null | string;
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            outputTokens: number;
+            /** Format: double */
+            costIrr: number;
+            /** Format: int32 */
+            latencyMs: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        TraceFact: {
+            /** Format: uuid */
+            chunkId: string;
+            /** Format: uuid */
+            sourceId: string;
+            sourceKind: string;
+            title: string;
+            /** Format: double */
+            score: number;
+            /** Format: double */
+            similarity: null | number;
+        };
+        TraceGuardIssue: {
+            /** Format: int32 */
+            attempt: number;
+            kind: string;
+            detail: string;
+        };
+        TraceSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            /** Format: uuid */
+            messageId: string;
+            input: string;
+            intent: null | string;
+            outcome: string;
+            handoffReason: null | string;
+            reply: null | string;
+            /** Format: double */
+            confidence: null | number;
+            /** Format: double */
+            threshold: number;
+            /** Format: int32 */
+            latencyMs: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        TraceToolCall: {
+            name: string;
+            arguments: string;
+            result: null | string;
+            error: null | string;
         };
         TriggerConfig: {
             match?: null | string;

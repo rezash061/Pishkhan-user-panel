@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.10.0 — 2026-11-01
+
+- AI agent (backend #28, BE-1.4 part 2): «دستیار هوشمند» replaces its placeholder.
+  - Settings: the AI on/off switch (shared with the automation settings), name, tone, brand voice, reply in the customer's language, the minimum confidence to send a reply, never-say phrases, allowed link domains, the handoff rules (human request, complaint, discount request, two unsure answers, keywords, VIP tags) and the handoff message (or none).
+  - «گزارش پاسخ‌ها»: every turn the AI handled, filtered by outcome or conversation, with a detail page: the customer's message, the reply or unsent draft, combined/model/classifier confidence against the threshold, intent, sentiment, the knowledge it used, tool calls, safety-check failures per attempt, models, tokens, cost and latency.
+- Inbox: AI handoffs (`ai:<reason>`) read in Persian, the AI's unsure draft is labelled as such, and «چرا؟» opens that conversation's traces.
+- API refreshed from backend main.
+
 ## 0.9.0 — 2026-11-01
 
 - Knowledge base (backend #27, BE-1.4 part 1): «دانش کسب‌وکار» replaces its placeholder. Owners and admins add FAQ entries (question and answer) and text sources (title and body), edit, switch off and delete them. Active catalog products appear on their own; they can only be switched off, with a link to the product.

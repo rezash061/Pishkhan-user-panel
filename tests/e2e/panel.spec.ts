@@ -375,6 +375,44 @@ test("knowledge: add a FAQ, watch it index, test a question, switch a product of
   await expect(page.getByText("منبع حذف شد.")).toBeVisible();
 });
 
+test("AI agent: save the persona and rules, read the reply log, and follow an AI handoff to its trace", async ({ page }, info) => {
+  await login(page);
+  const p = info.project.name;
+  await page.goto(`/w/${workspaceId}/agent`);
+  await page.getByLabel("نام دستیار").fill(`پیشخوان ${p}`);
+  await page.getByRole("radio", { name: "رسمی" }).click();
+  await page.getByLabel("عبارت‌های ممنوع").fill("ارسال رایگان");
+  await page.getByLabel("عبارت‌های ممنوع").press("Enter");
+  await page.getByLabel("سایت‌های مجاز برای لینک").fill("https://www.shop.example.ir/sale");
+  await page.getByLabel("سایت‌های مجاز برای لینک").press("Enter");
+  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(results.violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+  await page.getByRole("button", { name: "ذخیرهٔ تنظیمات دستیار" }).click();
+  await expect(page.getByText("تنظیمات دستیار ذخیره شد.")).toBeVisible();
+  // The backend keeps only the host of a link.
+  await expect(page.getByText("shop.example.ir", { exact: true })).toBeVisible();
+  await expect(page.getByLabel("نام دستیار")).toHaveValue(`پیشخوان ${p}`);
+  await noHorizontalScroll(page);
+
+  await page.getByRole("link", { name: "گزارش پاسخ‌ها" }).click();
+  await page.getByRole("radio", { name: "به تیم سپرد" }).click();
+  await expect(page).toHaveURL(/outcome=handed_off/);
+  await expect(page.getByText("ارسال به شیراز چند روز طول می‌کشه؟")).toHaveCount(0);
+  await page.getByRole("link", { name: /مانتو کتان چنده؟/ }).click();
+  await expect(page.getByText("جواب دستیار قیمتی داشت که در اطلاعات فروشگاه نبود.")).toBeVisible();
+  await expect(page.getByText("get_product")).toBeVisible();
+  await noHorizontalScroll(page);
+
+  await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001008`);
+  const banner = page.getByRole("note");
+  await expect(banner).toContainText("دستیار از جوابش مطمئن نبود.");
+  await expect(banner).toContainText("پیش‌نویس دستیار (مطمئن نبود)");
+  await banner.getByRole("link", { name: "چرا؟" }).click();
+  await expect(page).toHaveURL(/agent\/log\?conversation=/);
+  await expect(page.getByRole("link", { name: /قدم ۱۶۵ه/ })).toBeVisible();
+  await expect(page.getByRole("link", { name: /مانتو کتان چنده؟/ })).toHaveCount(0);
+});
+
 test("adds an internal note", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001001`);

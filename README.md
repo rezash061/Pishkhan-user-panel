@@ -67,5 +67,5 @@ Built against the backend's current API (Phase 0 through BE-1.6, plus backend PR
 | Billing v1: current plan, trial, usage meters, plan-limit sheet | Done; online payment is Phase 2 |
 | Contacts: list with filters, profile with tags, custom fields, consent and form answers; tags, custom fields, segments with live count, forms, Excel export | Done |
 | Knowledge base: FAQ and text sources, product sources on/off, indexing status with retry, test search | Done; file and URL sources wait for the backend |
-| AI agent | Placeholder page until the backend module exists |
+| AI agent: settings (persona, safety, handoff rules), reply log with trace details, AI handoff reasons in the inbox | Done; test chat and unanswered questions wait for the backend |
 | Dashboard (live inbox, overnight summary, who answered by day), notifications (bell, list, preferences), workspace deletion with restore, support sessions with banner | Done; web push waits for the backend |

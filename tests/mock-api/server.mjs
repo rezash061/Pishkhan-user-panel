@@ -54,7 +54,10 @@ const conversations = Array.from({ length: 24 }, (_, i) => {
     humanAgentUntil: iso(new Date(lastInbound.getTime() + 7 * 24 * H)),
     unreadCount: i < 5 ? (i % 3) + 1 : 0,
     lastMessagePreview: previews[i % previews.length],
-    handoff: statuses[i % statuses.length] === "handed_off" ? { reason: "مشتری درخواست تخفیف عمده دارد", suggestedReply: "سلام! برای خرید عمده ۱۰٪ تخفیف داریم، چند عدد لازم دارید؟", at: iso(lastInbound) } : null,
+    handoff: statuses[i % statuses.length] !== "handed_off" ? null
+      // Conversation 8 was handed off by the AI agent (BE-1.4 part 2), with its unsure draft as the suggestion.
+      : i === 8 ? { reason: "ai:low_confidence", suggestedReply: "سلام! سایز M برای قد ۱۶۵ مناسب است.", at: iso(lastInbound) }
+      : { reason: "مشتری درخواست تخفیف عمده دارد", suggestedReply: "سلام! برای خرید عمده ۱۰٪ تخفیف داریم، چند عدد لازم دارید؟", at: iso(lastInbound) },
   };
 });
 
@@ -192,6 +195,18 @@ let rules = [
 ];
 const backlogRuns = new Map();
 let flows = [];
+// AI agent (BE-1.4 part 2): profile (defaults until saved) and reply traces.
+let agentProfile = null;
+const agentDefaults = { name: "دستیار", tone: "friendly", brandVoice: null, replyInCustomerLanguage: false, neverSay: [], confidenceThreshold: 0.6, handoff: { humanRequest: true, complaint: true, discountRequest: true, repeatedLowConfidence: true, keywords: [], vipTags: ["vip"] }, handoffMessage: "سؤالتون رو به همکارم سپردم، به‌زودی جوابتون رو می‌ده 🙏", allowedDomains: [] };
+let agentProfileUpdatedAt = null;
+const traceBase = { messageId: randomUUID(), flowRunId: null, goal: null, language: "fa", sentiment: "neutral", classifierConfidence: 0.9, toolCalls: [], guardIssues: [], selfConfidence: 0.8, threshold: 0.6, prompts: "intent.classify@2, agent.reply@1", models: "gpt-4o-mini", inputTokens: 1840, outputTokens: 96, costIrr: 41_000, latencyMs: 2300 };
+const agentTraces = [
+  { ...traceBase, id: randomUUID(), conversationId: "0199b000-0000-7000-8000-000000001001", input: "ارسال به شیراز چند روز طول می‌کشه؟", intent: "shipping", outcome: "sent", handoffReason: null, reply: "سلام! ارسال به شهرستان‌ها با پست پیشتاز دو تا چهار روز کاری است 🌸", confidence: 0.88, facts: [{ chunkId: randomUUID(), sourceId: randomUUID(), sourceKind: "faq", title: "ارسال به شهرستان چند روز طول می‌کشد؟", score: 0.03, similarity: 0.91 }], createdAt: ago(40 * 60_000) },
+  { ...traceBase, id: randomUUID(), conversationId: "0199b000-0000-7000-8000-000000001008", input: "قدم ۱۶۵ه، کدوم سایز رو بگیرم؟", intent: "other", outcome: "handed_off", handoffReason: "low_confidence", reply: "سلام! سایز M برای قد ۱۶۵ مناسب است.", selfConfidence: 0.5, classifierConfidence: 0.4, confidence: 0.45, facts: [], createdAt: ago(25 * H) },
+  { ...traceBase, id: randomUUID(), conversationId: "0199b000-0000-7000-8000-000000001003", input: "مانتو کتان چنده؟", intent: "price_question", outcome: "handed_off", handoffReason: "guard_price", reply: null, confidence: null, toolCalls: [{ name: "get_product", arguments: "{\"query\":\"مانتو کتان\"}", result: "{\"title\":\"مانتو کتان تابستانه\",\"price\":\"۸۹۰٬۰۰۰ تومان\"}", error: null }], guardIssues: [{ attempt: 1, kind: "price", detail: "۷۹۰ هزار" }, { attempt: 2, kind: "price", detail: "۷۹۰ هزار" }], facts: [], createdAt: ago(30 * H) },
+];
+const traceSummary = ({ id, conversationId, messageId, input, intent, outcome, handoffReason, reply, confidence, threshold, latencyMs, createdAt }) => ({ id, conversationId, messageId, input, intent, outcome, handoffReason, reply, confidence, threshold, latencyMs, createdAt });
+
 let automationSettings = { aiEnabled: true, fallbackText: null, fallbackCooldownMinutes: 720 };
 let categories = [
   { id: randomUUID(), name: "مانتو", parentId: null, sortOrder: 0 },
@@ -727,6 +742,31 @@ const routes = [
     if (!validation.isValid) return send(res, 422, validation);
     Object.assign(flow, { status: "published", publishedVersion: (flow.publishedVersion ?? 0) + 1, publishedAt: iso(new Date(Date.now() + 1000)), updatedAt: iso(now()) });
     send(res, 200, flowView(flow));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/agent\/profile$/, (req, res) => send(res, 200, { profile: agentProfile ?? agentDefaults, isDefault: agentProfile === null, updatedAt: agentProfileUpdatedAt })],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/agent\/profile$/, async (req, res) => {
+    const b = await readBody(req);
+    const errors = {};
+    if (!b.name?.trim() || b.name.trim().length > 60) errors.name = ["validation.agent.name"];
+    if (!["friendly", "formal", "playful"].includes(b.tone)) errors.tone = ["validation.agent.tone"];
+    if (!(b.confidenceThreshold >= 0.3 && b.confidenceThreshold <= 0.95)) errors.confidenceThreshold = ["validation.agent.threshold"];
+    const domains = (b.allowedDomains ?? []).map((d) => d.trim().toLowerCase().replace(/^https?:\/\//, "").replace(/\/.*$/, "").replace(/^www\./, ""));
+    if (domains.some((d) => !/^[a-z0-9-]+(\.[a-z0-9-]+)+$/.test(d))) errors.allowedDomains = ["validation.agent.domain"];
+    if (Object.keys(errors).length) return problem(res, 400, "validation.failed", errors);
+    agentProfile = { ...b, name: b.name.trim(), allowedDomains: [...new Set(domains)] };
+    agentProfileUpdatedAt = iso(now());
+    send(res, 200, { profile: agentProfile, isDefault: false, updatedAt: agentProfileUpdatedAt });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/agent\/traces$/, (req, res, url) => {
+    const outcome = url.searchParams.get("outcome");
+    const conversationId = url.searchParams.get("conversationId");
+    if (outcome && !["sent", "handed_off", "failed"].includes(outcome)) return problem(res, 400, "validation.failed", { outcome: ["validation.agent.outcome"] });
+    const items = agentTraces.filter((x) => (!outcome || x.outcome === outcome) && (!conversationId || x.conversationId === conversationId)).map(traceSummary);
+    send(res, 200, page(items, url.searchParams.get("cursor"), Number(url.searchParams.get("limit") ?? 30)));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/agent\/traces\/([^/]+)$/, (req, res, url, [id]) => {
+    const x = agentTraces.find((t) => t.id === id);
+    return x ? send(res, 200, x) : problem(res, 404, "common.not_found");
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/settings$/, (req, res) => send(res, 200, automationSettings)],
   ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/automation\/settings$/, async (req, res) => {
