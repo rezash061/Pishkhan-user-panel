@@ -1,11 +1,15 @@
-import { ComingSoon } from "@/features/shell/coming-soon";
-import { RequirePermission } from "@/features/workspace/require-permission";
-import { P } from "@/lib/permissions";
+import { Suspense } from "react";
+import { PageContainer } from "@/components/ui/page";
+import { ContactsHeader } from "@/features/contacts/header";
+import { ContactsPage } from "@/features/contacts/contacts-page";
 
 export default function Page() {
   return (
-    <RequirePermission permission={P.crmRead}>
-      <ComingSoon feature="contacts" />
-    </RequirePermission>
+    <PageContainer>
+      <ContactsHeader />
+      <Suspense>
+        <ContactsPage />
+      </Suspense>
+    </PageContainer>
   );
 }

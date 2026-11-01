@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
@@ -12,6 +13,7 @@ import { useWorkspace } from "@/features/workspace/context";
 import type { Conversation, Member } from "@/lib/api/types";
 import { formatCountdown, formatDateTime, formatRelative } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
+import { P } from "@/lib/permissions";
 import { contactName } from "./contact";
 import { useAddNote, useNotes } from "./data";
 import { messagingWindow } from "./window";
@@ -28,7 +30,7 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
 /** Context next to the thread: contact, channel, assignment, window, and internal notes (plan 3.3 side panel). */
 export function SidePanel({ conversation: c, members, canReply, onAssign, idPrefix }: { conversation: Conversation; members: Member[]; canReply: boolean; onAssign: (userId: string | null) => void; idPrefix: string }) {
   const t = useTranslations("inbox");
-  const { workspace, me } = useWorkspace();
+  const { workspace, me, can } = useWorkspace();
   const channels = useChannels(workspace.id);
   const channel = channels.data?.find((ch) => ch.id === c.channelAccountId);
   const win = messagingWindow(c);
@@ -60,6 +62,11 @@ export function SidePanel({ conversation: c, members, canReply, onAssign, idPref
             {win.kind === "open" ? formatCountdown(win.until) : win.kind === "human" ? t("side.windowHuman", { time: formatCountdown(win.until) ?? "" }) : win.kind === "closed" ? t("side.windowClosed") : "—"}
           </Row>
         </dl>
+        {can(P.crmRead) ? (
+          <Link href={`/w/${workspace.id}/contacts/${c.contactId}`} className="mt-2 inline-block text-sm text-primary hover:underline">
+            {t("side.profile")}
+          </Link>
+        ) : null}
       </section>
 
       <section>

@@ -225,6 +225,87 @@ test("billing shows the plan and this month's usage; a full plan opens the upgra
   await expect(page).toHaveURL(new RegExp(`/w/${workspaceId}/billing$`));
 });
 
+test("contacts: filter by tag, edit tags and fields on the contact page", async ({ page }, info) => {
+  await login(page);
+  await page.goto(`/w/${workspaceId}/contacts`);
+  await expect(page.getByRole("heading", { name: "مشتریان" })).toBeVisible();
+  await page.getByLabel("برچسب", { exact: true }).selectOption("مشتری ویژه");
+  await expect(page).toHaveURL(/tag=/);
+  const rows = page.getByRole("main").getByRole("link", { name: /نیلوفر احمدی/ });
+  await expect(rows).toHaveCount(1);
+  await expect(page.getByRole("link", { name: /سارا|sara_style/ })).toHaveCount(0);
+  await noHorizontalScroll(page);
+  await rows.click();
+
+  await expect(page.getByRole("heading", { name: "نیلوفر احمدی" })).toBeVisible();
+  await expect(page.getByLabel("شهر")).toHaveValue("شیراز");
+  const tag = `خوش‌قول ${info.project.name}`;
+  await page.getByLabel("برچسب جدید").fill(tag);
+  await page.getByRole("button", { name: "افزودن" }).click();
+  await expect(page.getByRole("list", { name: "برچسب‌ها" }).getByText(tag)).toBeVisible();
+
+  const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(axe.violations).toEqual([]);
+
+  await page.getByLabel("تعداد سفارش").fill("x");
+  await page.getByRole("button", { name: "ذخیرهٔ اطلاعات" }).click();
+  await expect(page.getByText("این مقدار با نوع فیلد جور نیست.")).toBeVisible();
+  await page.getByLabel("تعداد سفارش").fill(info.project.name === "mobile" ? "۳" : "۴");
+  await page.getByRole("button", { name: "ذخیرهٔ اطلاعات" }).click();
+  await expect(page.getByText("ذخیره شد.")).toBeVisible();
+});
+
+test("contacts: tags, custom fields and a segment with a live count", async ({ page }, info) => {
+  await login(page);
+  const p = info.project.name;
+  await page.goto(`/w/${workspaceId}/contacts/tags`);
+  await page.getByRole("button", { name: "برچسب جدید" }).click();
+  await page.getByLabel("نام برچسب").fill(`تست ${p}`);
+  await page.getByRole("radio", { name: "سبز" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "ذخیره" }).click();
+  await expect(page.getByText("برچسب ذخیره شد.")).toBeVisible();
+  await page.getByRole("button", { name: `حذف تست ${p}` }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "حذف برچسب" }).click();
+  await expect(page.getByText("برچسب حذف شد.")).toBeVisible();
+
+  await page.getByRole("link", { name: "فیلدهای سفارشی" }).click();
+  await page.getByRole("button", { name: "فیلد جدید" }).click();
+  await page.getByLabel("عنوان").fill(`سایز ${p}`);
+  await page.getByLabel("کلید (انگلیسی)").fill(`size_${p}`);
+  await page.getByLabel("نوع").selectOption("select");
+  await page.getByLabel("گزینه‌ها").fill("S");
+  await page.getByLabel("گزینه‌ها").press("Enter");
+  await page.getByRole("dialog").getByRole("button", { name: "ذخیره" }).click();
+  await expect(page.getByText(`size_${p}`)).toBeVisible();
+  await page.getByRole("button", { name: "فیلد جدید" }).click();
+  await page.getByLabel("عنوان").fill("تکراری");
+  await page.getByLabel("کلید (انگلیسی)").fill(`size_${p}`);
+  await page.getByRole("dialog").getByRole("button", { name: "ذخیره" }).click();
+  await expect(page.getByText("این کلید قبلاً استفاده شده است.")).toBeVisible();
+  await page.getByRole("dialog").getByRole("button", { name: "انصراف" }).click();
+
+  await page.getByRole("link", { name: "بخش‌ها" }).click();
+  await page.getByRole("link", { name: "بخش جدید" }).click();
+  await page.getByLabel("نام بخش").fill(`ویژه‌ها ${p}`);
+  await page.getByLabel("مقدار شرط ۱").fill("مشتری ویژه");
+  await expect(page.getByText("۱ مشتری با این شرط‌ها جور است.")).toBeVisible();
+  await page.getByRole("button", { name: "افزودن شرط" }).click();
+  await page.getByLabel("موضوع شرط ۲").selectOption("last_seen");
+  await page.getByRole("radio", { name: "دست‌کم یک شرط" }).click();
+  await expect(page.getByText(/مشتری با این شرط‌ها جور است/)).toBeVisible();
+  await page.getByRole("button", { name: "حذف شرط ۲" }).click();
+  await page.getByRole("button", { name: "ذخیرهٔ بخش" }).click();
+  await expect(page.getByText("بخش ذخیره شد.")).toBeVisible();
+  await expect(page).toHaveURL(/\/segments\/[0-9a-f-]{36}$/);
+  await noHorizontalScroll(page);
+
+  await page.getByRole("link", { name: "همهٔ بخش‌ها" }).click();
+  const row = page.getByRole("link", { name: `ویژه‌ها ${p}` }).locator("xpath=../..");
+  await row.getByRole("link", { name: "۱ مشتری" }).click();
+  await expect(page).toHaveURL(/segment=/);
+  await expect(page.getByRole("main").getByRole("link", { name: /نیلوفر احمدی/ })).toHaveCount(1);
+});
+
 test("adds an internal note", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001001`);

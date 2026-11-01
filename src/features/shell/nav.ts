@@ -19,7 +19,7 @@ export const navItems: NavItem[] = [
   { key: "agent", href: "/agent", icon: Bot, permission: P.agentWrite, soon: true },
   { key: "knowledge", href: "/knowledge", icon: BookOpen, permission: P.knowledgeWrite, soon: true },
   { key: "catalog", href: "/catalog", icon: Package, permission: P.catalogRead },
-  { key: "contacts", href: "/contacts", icon: UsersRound, permission: P.crmRead, soon: true },
+  { key: "contacts", href: "/contacts", icon: UsersRound, permission: P.crmRead },
   { key: "channels", href: "/channels", icon: Radio, permission: P.settingsRead, tab: true },
   { key: "team", href: "/team", icon: Users, permission: P.membersRead },
   { key: "billing", href: "/billing", icon: CreditCard, permission: P.billingManage },
