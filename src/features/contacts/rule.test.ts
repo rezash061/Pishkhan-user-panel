@@ -40,4 +40,11 @@ describe("segment rules", () => {
       ],
     });
   });
+
+  it("consent conditions take a known channel", () => {
+    const c = newCondition("consent");
+    expect(c).toEqual({ field: "consent", op: "granted", key: null, value: "sms" });
+    expect(isComplete({ ...c, value: "bale" })).toBe(true);
+    expect(isComplete({ ...c, value: "email" })).toBe(false);
+  });
 });

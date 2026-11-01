@@ -306,6 +306,38 @@ test("contacts: tags, custom fields and a segment with a live count", async ({ p
   await expect(page.getByRole("main").getByRole("link", { name: /نیلوفر احمدی/ })).toHaveCount(1);
 });
 
+test("contacts: form answers, consent and an Excel export", async ({ page }) => {
+  await login(page);
+  await page.goto(`/w/${workspaceId}/contacts`);
+  await page.getByLabel("رضایت", { exact: true }).selectOption("sms");
+  await expect(page).toHaveURL(/consent=sms/);
+  await expect(page.getByRole("main").getByRole("link", { name: /نیلوفر احمدی/ })).toHaveCount(1);
+
+  await page.getByRole("link", { name: "فرم‌ها" }).click();
+  await page.getByRole("link", { name: /فرم سفارش/ }).click();
+  await expect(page.getByText("شیراز")).toBeVisible();
+  await page.getByRole("link", { name: "نیلوفر احمدی" }).click();
+  await expect(page.getByRole("heading", { name: "پاسخ‌های فرم" })).toBeVisible();
+  await expect(page.getByText("رضایت داده").first()).toBeVisible();
+  // Mobile and desktop share the mock, so toggle whatever the phone-call consent is now.
+  await page.getByRole("button", { name: /^(ثبت رضایت|ثبت لغو رضایت) برای تماس تلفنی$/ }).click();
+  await page.getByLabel("توضیح یا مدرک (اختیاری)").fill("تلفنی تأیید کرد");
+  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(results.violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+  await page.getByRole("dialog").getByRole("button", { name: /^ثبت/ }).click();
+  await expect(page.getByText("رضایت ثبت شد.")).toBeVisible();
+  await expect(page.getByText("تلفنی تأیید کرد").first()).toBeVisible();
+  await noHorizontalScroll(page);
+
+  await page.goto(`/w/${workspaceId}/contacts`);
+  await page.getByRole("button", { name: "خروجی اکسل" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "ساخت فایل" }).click();
+  await expect(page.getByText("ساخت فایل شروع شد؛ وقتی آماده شد خبرتان می‌کنیم.")).toBeVisible();
+  const download = page.waitForEvent("download");
+  await page.getByRole("dialog").getByRole("button", { name: "دانلود" }).first().click({ timeout: 15_000 });
+  expect((await download).suggestedFilename()).toMatch(/\.xlsx$/);
+});
+
 test("adds an internal note", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001001`);

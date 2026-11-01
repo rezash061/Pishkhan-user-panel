@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.8.0 — 2026-11-01
+
+- Contacts / CRM part 2 (backend #26): «فرم‌ها» lists the flows that collected answers and each form's submissions (customer, time, conversation, answers in question order); the customer profile shows their answers too.
+- Consent for promotional messages per channel (SMS, phone call, Bale) on the profile, with an optional note as evidence and the history (who and when). «ثبت نشده» is kept apart from a refusal. The list filters by consent and segments take a consent condition.
+- Excel export of the filtered list: built in the background, polled while pending, and announced by a «crm_export» notification that opens the exports sheet on that file. Each file downloads once through a short link.
+- API refreshed from the backend CRM part 2 branch.
+
 ## 0.7.0 — 2026-11-01
 
 - Contacts / CRM part 1 (UP-1.11, backend #25): «مشتری‌ها» lists customers with search and filters by tag, segment, channel and phone, synced to the URL. Each customer has a profile: name (edit or clear), tags that save at once, custom fields by type (text, number, Jalali date, yes/no, email, phone, list) with per-field errors, and their conversations linked to the inbox.
