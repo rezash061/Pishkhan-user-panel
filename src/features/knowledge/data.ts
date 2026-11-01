@@ -88,3 +88,34 @@ export function useKnowledgeSearch(ws: string) {
     mutationFn: async (query: string) => unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/knowledge/search", { params: ws$(ws), body: { query, limit: 5 } })),
   });
 }
+
+export const unansweredStatuses = ["open", "answered", "dismissed"] as const;
+
+/** Questions the agent could not answer from the knowledge base, most recently asked first. */
+export function useUnanswered(ws: string, status: string) {
+  return useInfiniteQuery({
+    queryKey: qk.unanswered(ws, status),
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }) =>
+      unwrap(
+        await api.GET("/api/v1/workspaces/{workspaceId}/knowledge/unanswered", {
+          params: { path: { workspaceId: ws }, query: { status, limit: 30, ...(pageParam ? { cursor: pageParam } : {}) } },
+        }),
+      ),
+    getNextPageParam: (last) => last.nextCursor ?? null,
+    placeholderData: keepPreviousData,
+  });
+}
+
+/** Turns the question into a FAQ (indexed in the background like any source). */
+export function useAnswerUnanswered(ws: string) {
+  return useKnowledgeMutation(ws, async ({ id, answer, question }: { id: string; answer: string; question: string | null }) =>
+    unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/knowledge/unanswered/{questionId}/answer", { params: { path: { workspaceId: ws, questionId: id } }, body: { answer, question } })),
+  );
+}
+
+export function useDismissUnanswered(ws: string) {
+  return useKnowledgeMutation(ws, async (id: string) =>
+    unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/knowledge/unanswered/{questionId}/dismiss", { params: { path: { workspaceId: ws, questionId: id } } })),
+  );
+}

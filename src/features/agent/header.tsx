@@ -16,6 +16,7 @@ export function AgentHeader() {
         className="mb-5"
         tabs={[
           { href: base, label: t("tabs.settings") },
+          { href: `${base}/test`, label: t("tabs.test") },
           { href: `${base}/log`, label: t("tabs.log"), prefix: true },
         ]}
       />

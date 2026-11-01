@@ -205,6 +205,12 @@ const agentTraces = [
   { ...traceBase, id: randomUUID(), conversationId: "0199b000-0000-7000-8000-000000001008", input: "قدم ۱۶۵ه، کدوم سایز رو بگیرم؟", intent: "other", outcome: "handed_off", handoffReason: "low_confidence", reply: "سلام! سایز M برای قد ۱۶۵ مناسب است.", selfConfidence: 0.5, classifierConfidence: 0.4, confidence: 0.45, facts: [], createdAt: ago(25 * H) },
   { ...traceBase, id: randomUUID(), conversationId: "0199b000-0000-7000-8000-000000001003", input: "مانتو کتان چنده؟", intent: "price_question", outcome: "handed_off", handoffReason: "guard_price", reply: null, confidence: null, toolCalls: [{ name: "get_product", arguments: "{\"query\":\"مانتو کتان\"}", result: "{\"title\":\"مانتو کتان تابستانه\",\"price\":\"۸۹۰٬۰۰۰ تومان\"}", error: null }], guardIssues: [{ attempt: 1, kind: "price", detail: "۷۹۰ هزار" }, { attempt: 2, kind: "price", detail: "۷۹۰ هزار" }], facts: [], createdAt: ago(30 * H) },
 ];
+// Unanswered questions (BE-1.4 part 3), counted by repeats.
+const kbUnanswered = [
+  { id: randomUUID(), question: "برای کیش هم ارسال دارید؟", count: 4, status: "open", firstAskedAt: ago(6 * 24 * H), lastAskedAt: ago(3 * H), lastConversationId: "0199b000-0000-7000-8000-000000001002", answerSourceId: null },
+  { id: randomUUID(), question: "جنس آستر مانتو چیه؟", count: 1, status: "open", firstAskedAt: ago(2 * 24 * H), lastAskedAt: ago(2 * 24 * H), lastConversationId: "0199b000-0000-7000-8000-000000001004", answerSourceId: null },
+  { id: randomUUID(), question: "شماره کارت بدید", count: 2, status: "dismissed", firstAskedAt: ago(9 * 24 * H), lastAskedAt: ago(8 * 24 * H), lastConversationId: "0199b000-0000-7000-8000-000000001005", answerSourceId: null },
+];
 const traceSummary = ({ id, conversationId, messageId, input, intent, outcome, handoffReason, reply, confidence, threshold, latencyMs, createdAt }) => ({ id, conversationId, messageId, input, intent, outcome, handoffReason, reply, confidence, threshold, latencyMs, createdAt });
 
 let automationSettings = { aiEnabled: true, fallbackText: null, fallbackCooldownMinutes: 720 };
@@ -742,6 +748,43 @@ const routes = [
     if (!validation.isValid) return send(res, 422, validation);
     Object.assign(flow, { status: "published", publishedVersion: (flow.publishedVersion ?? 0) + 1, publishedAt: iso(new Date(Date.now() + 1000)), updatedAt: iso(now()) });
     send(res, 200, flowView(flow));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/agent\/sandbox$/, async (req, res) => {
+    const b = await readBody(req);
+    if (!b.text?.trim()) return problem(res, 400, "validation.failed", { text: ["validation.agent.text"] });
+    const text = b.text.trim();
+    const words = text.replace(/[؟?!.،]/g, " ").split(/\s+/).filter((w) => w.length > 2);
+    const hit = kbSources.filter((x) => x.enabled && x.status === "indexed").map((x) => ({ x, n: words.filter((w) => `${x.title} ${x.body}`.includes(w)).length })).sort((a, c) => c.n - a.n)[0];
+    const profile = agentProfile ?? agentDefaults;
+    const vip = (b.tags ?? []).some((tag) => profile.handoff.vipTags.includes(tag));
+    const reason = vip ? "vip" : text.includes("تخفیف") ? "discount_request" : hit?.n ? null : "missing_knowledge";
+    const facts = hit?.n ? [{ chunkId: randomUUID(), sourceId: hit.x.id, sourceKind: hit.x.kind, title: hit.x.title, score: 0.03, similarity: 0.88 }] : [];
+    const reply = reason ? null : hit.x.body;
+    const trace = { ...traceBase, id: randomUUID(), conversationId: "00000000-0000-0000-0000-000000000000", input: text, intent: reason === "discount_request" ? "discount_request" : hit?.n ? "shipping" : "other", outcome: reason ? "handed_off" : "sent", handoffReason: reason, reply, confidence: reason ? null : 0.86, threshold: profile.confidenceThreshold, facts, createdAt: iso(now()) };
+    send(res, 200, { outcome: trace.outcome, messages: reply ? [reply] : profile.handoffMessage ? [profile.handoffMessage] : [], handoffReason: reason, suggestedReply: null, unansweredQuestion: reason === "missing_knowledge" ? text : null, trace });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/unanswered$/, (req, res, url) => {
+    const status = url.searchParams.get("status") ?? "open";
+    const items = kbUnanswered.filter((q) => q.status === status).sort((a, c) => c.lastAskedAt.localeCompare(a.lastAskedAt));
+    send(res, 200, page(items, url.searchParams.get("cursor"), Number(url.searchParams.get("limit") ?? 30)));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/unanswered\/([^/]+)\/answer$/, async (req, res, url, [id]) => {
+    const q = kbUnanswered.find((x) => x.id === id);
+    if (!q) return problem(res, 404, "common.not_found");
+    if (q.status === "answered") return problem(res, 409, "knowledge.unanswered.already_answered");
+    const b = await readBody(req);
+    if (!b.answer?.trim()) return problem(res, 400, "validation.failed", { answer: ["validation.knowledge.answer"] });
+    const src = kbSource("faq", (b.question ?? q.question).trim(), b.answer.trim(), { revision: 0, createdAt: iso(now()) });
+    kbSources.unshift(src);
+    kbIndex(src);
+    Object.assign(q, { status: "answered", answerSourceId: src.id });
+    send(res, 201, { question: q, source: src });
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/unanswered\/([^/]+)\/dismiss$/, (req, res, url, [id]) => {
+    const q = kbUnanswered.find((x) => x.id === id);
+    if (!q) return problem(res, 404, "common.not_found");
+    q.status = "dismissed";
+    send(res, 200, q);
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/agent\/profile$/, (req, res) => send(res, 200, { profile: agentProfile ?? agentDefaults, isDefault: agentProfile === null, updatedAt: agentProfileUpdatedAt })],
   ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/agent\/profile$/, async (req, res) => {

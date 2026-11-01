@@ -3,7 +3,7 @@
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api/client";
 import { qk } from "@/lib/api/keys";
-import type { AgentProfile } from "@/lib/api/types";
+import type { AgentProfile, SandboxTurn } from "@/lib/api/types";
 
 export const tones = ["friendly", "formal", "playful"] as const;
 export const outcomes = ["sent", "handed_off", "failed"] as const;
@@ -60,5 +60,13 @@ export function useTrace(ws: string, id: string) {
   return useQuery({
     queryKey: qk.agentTrace(ws, id),
     queryFn: async () => unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/agent/traces/{traceId}", { params: { path: { workspaceId: ws, traceId: id } } })),
+  });
+}
+
+/** Test mode: the real pipeline on a made-up conversation. Nothing is sent or stored; the panel keeps the history. */
+export function useSandbox(ws: string) {
+  return useMutation({
+    mutationFn: async (body: { text: string; history: SandboxTurn[]; tags: string[] }) =>
+      unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/agent/sandbox", { params: path(ws), body: { ...body, goal: null } })),
   });
 }

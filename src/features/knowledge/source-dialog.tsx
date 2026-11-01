@@ -14,7 +14,7 @@ import { useCodeMessage, useErrorMessage } from "@/lib/i18n/use-error-message";
 import { limits, useSaveSource } from "./data";
 
 /** Add or edit a FAQ entry (question + answer) or a text source (title + body). Saving re-indexes it. */
-export function SourceDialog({ kind, source, onClose }: { kind: "faq" | "text"; source: KnowledgeSource | null; onClose: () => void }) {
+export function SourceDialog({ kind, source, prefill, onClose }: { kind: "faq" | "text"; source: KnowledgeSource | null; prefill?: { first: string; second: string }; onClose: () => void }) {
   const t = useTranslations("knowledge.editor");
   const tc = useTranslations("common");
   const errorMessage = useErrorMessage();
@@ -23,8 +23,8 @@ export function SourceDialog({ kind, source, onClose }: { kind: "faq" | "text"; 
   const save = useSaveSource(workspace.id);
   const faq = kind === "faq";
   // A FAQ's answer comes back as the source body; its title is the question.
-  const [first, setFirst] = useState(faq ? (source?.question ?? source?.title ?? "") : (source?.title ?? ""));
-  const [second, setSecond] = useState(source?.body ?? "");
+  const [first, setFirst] = useState(prefill?.first ?? (faq ? (source?.question ?? source?.title ?? "") : (source?.title ?? "")));
+  const [second, setSecond] = useState(prefill?.second ?? source?.body ?? "");
   const [errors, setErrors] = useState<Record<string, string>>({});
   const firstMax = faq ? limits.question : limits.title;
   const secondMax = faq ? limits.answer : limits.body;
