@@ -142,6 +142,55 @@ test("opens a notification and saves notification settings", async ({ page }) =>
   await expect(page.getByText("تنظیم اعلان‌ها ذخیره شد")).toBeVisible();
 });
 
+test("turns on push for this browser and removes another one", async ({ page }, info) => {
+  const endpoint = `https://fcm.googleapis.com/fcm/send/e2e-${info.project.name}`;
+  // Headless Chromium has no push service: stand in for the permission prompt and the PushManager.
+  await page.addInitScript((endpoint) => {
+    let permission: NotificationPermission = "default";
+    let subscribed = false;
+    Object.defineProperty(Notification, "permission", { get: () => permission });
+    Notification.requestPermission = async () => (permission = "granted");
+    const sub = {
+      endpoint,
+      toJSON: () => ({ endpoint, keys: { p256dh: "BHf3", auth: "e2e" } }),
+      unsubscribe: async () => !(subscribed = false),
+    };
+    PushManager.prototype.getSubscription = async function () {
+      return (subscribed ? sub : null) as unknown as PushSubscription;
+    };
+    PushManager.prototype.subscribe = async function () {
+      subscribed = true;
+      return sub as unknown as PushSubscription;
+    };
+  }, endpoint);
+  await login(page);
+  await page.goto(`/w/${workspaceId}/settings/notifications`);
+
+  await expect(page.getByText("اعلان روی این دستگاه خاموش است.")).toBeVisible();
+  await page.getByRole("button", { name: "روشن کردن" }).click();
+  await expect(page.getByText("اعلان روی این دستگاه روشن شد")).toBeVisible();
+  await expect(page.getByText("اعلان روی این دستگاه روشن است.")).toBeVisible();
+  await expect(page.getByRole("switch", { name: "گفتگو به انسان سپرده شد: پوش" })).toBeEnabled();
+
+  // Each project removes its own seeded browser, so the shared mock stays consistent.
+  const other = info.project.name === "desktop" ? "Firefox روی Windows" : "Safari روی iOS";
+  const remove = page.getByRole("button", { name: `حذف ${other}` });
+  // A retry finds it already gone.
+  if (await remove.count()) {
+    await remove.click();
+    await expect(page.getByText("دستگاه حذف شد")).toBeVisible();
+  }
+  await expect(remove).toHaveCount(0);
+
+  const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).exclude("[data-sonner-toaster]").analyze();
+  expect(axe.violations).toEqual([]);
+  await noHorizontalScroll(page);
+
+  await page.getByRole("button", { name: "خاموش کردن" }).click();
+  await expect(page.getByText("اعلان روی این دستگاه خاموش شد")).toBeVisible();
+  await expect(page.getByText("اعلان روی این دستگاه خاموش است.")).toBeVisible();
+});
+
 test("schedules the workspace for deletion and cancels it", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/settings`);

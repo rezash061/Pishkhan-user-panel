@@ -121,6 +121,10 @@ const toSegment = (s) => ({ ...s, contactCount: crmContacts.filter((c) => segmen
 
 const invitations = [{ id: randomUUID(), role: "agent", phone: "+98912***4567", invitedBy: me.id, createdAt: ago(5 * H), expiresAt: iso(new Date(Date.now() + 6 * 24 * H)) }];
 
+const pushSubscriptions = [
+  { id: randomUUID(), endpoint: "https://updates.push.services.mozilla.com/wpush/v2/e2e-firefox", userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:132.0) Gecko/20100101 Firefox/132.0", createdAt: iso(new Date(Date.now() - 86_400_000 * 3)), lastDeliveredAt: iso(new Date(Date.now() - 3_600_000)) },
+  { id: randomUUID(), endpoint: "https://web.push.apple.com/e2e-iphone", userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 18_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.1 Mobile/15E148 Safari/604.1", createdAt: iso(new Date(Date.now() - 86_400_000 * 9)), lastDeliveredAt: null },
+];
 const notifications = [
   { id: randomUUID(), kind: "handoff", title: "نیلوفر احمدی منتظر پاسخ شماست", body: "مشتری درخواست تخفیف عمده دارد", link: `/inbox/${conversations[0].id}`, createdAt: ago(20 * 60_000), readAt: null },
   { id: randomUUID(), kind: "automation", title: "قانون «قیمت زیر پست» به تیم خبر داد", body: "سفارش عمده", link: null, createdAt: ago(2 * H), readAt: null },
@@ -577,6 +581,21 @@ const routes = [
     const size = Number(url.searchParams.get("PageSize") ?? 20);
     const items = auditEntries.filter((e) => e.action.includes(action));
     send(res, 200, { items: items.slice((pageNo - 1) * size, pageNo * size), totalCount: items.length, page: pageNo, pageSize: size });
+  }],
+  // Web push (BE-1.14): per user, one row per browser.
+  ["GET", /^\/api\/v1\/me\/push\/key$/, (req, res) => send(res, 200, { publicKey: "BNbxGYNMhEIi9zrneh7mqV4EUanjLUK3m-mYZBc62frMKrEoMk88r3Lk596T0ck9xlT-mWHVbdkB_3zPxTzBO0E" })],
+  ["GET", /^\/api\/v1\/me\/push-subscriptions$/, (req, res) => send(res, 200, pushSubscriptions)],
+  ["PUT", /^\/api\/v1\/me\/push-subscriptions$/, async (req, res) => {
+    const body = await readBody(req);
+    if (!/^https:\/\//.test(body.endpoint ?? "")) return problem(res, 400, "validation.failed", { endpoint: ["validation.push.endpoint"] });
+    let row = pushSubscriptions.find((x) => x.endpoint === body.endpoint);
+    if (!row) pushSubscriptions.push((row = { id: randomUUID(), endpoint: body.endpoint, userAgent: req.headers["user-agent"] ?? null, createdAt: iso(now()), lastDeliveredAt: null }));
+    send(res, 200, row);
+  }],
+  ["DELETE", /^\/api\/v1\/me\/push-subscriptions$/, (req, res, url) => {
+    const i = pushSubscriptions.findIndex((x) => x.endpoint === url.searchParams.get("endpoint"));
+    if (i >= 0) pushSubscriptions.splice(i, 1);
+    send(res, 204);
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/notification-preferences$/, (req, res) => send(res, 200, preferences)],
   ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/notification-preferences$/, async (req, res) => {
