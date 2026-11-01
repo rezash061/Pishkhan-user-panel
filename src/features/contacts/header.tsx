@@ -19,6 +19,7 @@ export function ContactsHeader({ action }: { action?: React.ReactNode }) {
           { href: `${base}/segments`, label: t("tabs.segments"), prefix: true },
           { href: `${base}/tags`, label: t("tabs.tags") },
           { href: `${base}/fields`, label: t("tabs.fields") },
+          { href: `${base}/forms`, label: t("tabs.forms"), prefix: true },
         ]}
       />
     </>

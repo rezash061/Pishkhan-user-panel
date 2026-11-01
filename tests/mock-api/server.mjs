@@ -90,6 +90,7 @@ const matchesCondition = (c, cond) => {
       return v !== undefined && (cond.op === "gt" ? Number(v) > Number(cond.value) : Number(v) < Number(cond.value));
     }
     case "has_phone": return cond.value === false;
+    case "consent": return (consentState(c.id).current[cond.value] === true) === (cond.op === "granted");
     default: return true;
   }
 };
@@ -100,6 +101,19 @@ const validRule = (rule) => {
   (rule?.conditions ?? []).forEach((c, i) => { if (c.field === "tag" && !String(c.value ?? "").trim()) errors[`rule.conditions[${i}].value`] = ["validation.segment.value"]; });
   return errors;
 };
+// BE-1.7 part 2: consents (history per contact), form submissions from one flow, and the caller's exports.
+const crmConsents = new Map([[crmContacts[0].id, [{ id: randomUUID(), channel: "sms", granted: true, source: "manual", evidence: "در دایرکت گفت پیامک تخفیف بفرستید", recordedBy: me.id, createdAt: ago(3 * 24 * H) }]]]);
+const consentState = (id) => {
+  const current = {};
+  for (const h of [...(crmConsents.get(id) ?? [])].reverse()) current[h.channel] = h.granted;
+  return { current, history: crmConsents.get(id) ?? [] };
+};
+const orderFlowId = randomUUID();
+const crmSubmissions = crmContacts.slice(0, 3).map((c, i) => ({
+  id: randomUUID(), flowId: orderFlowId, flowName: "فرم سفارش", flowVersion: 2, contactId: c.id, contactName: c.displayName, contactUsername: c.username,
+  conversationId: conversations.find((v) => v.contactId === c.id).id, answers: { size: ["M", "L", "S"][i], city: ["شیراز", "تهران", "رشت"][i], phone: `0912000${i}${i}${i}${i}` }, submittedAt: ago((i + 1) * 5 * H),
+}));
+const crmExports = [];
 const toSegment = (s) => ({ ...s, contactCount: crmContacts.filter((c) => segmentMatches(s.rule, c)).length });
 
 const invitations = [{ id: randomUUID(), role: "agent", phone: "+98912***4567", invitedBy: me.id, createdAt: ago(5 * H), expiresAt: iso(new Date(Date.now() + 6 * 24 * H)) }];
@@ -377,9 +391,45 @@ const routes = [
     const tag = url.searchParams.get("tag");
     const segment = crmSegments.find((x) => x.id === url.searchParams.get("segmentId"));
     const hasPhone = url.searchParams.get("hasPhone");
-    const items = crmContacts.filter((c) => (!q || `${c.displayName ?? ""} ${c.username ?? ""}`.includes(q)) && (!tag || c.tags.includes(tag)) && (!segment || segmentMatches(segment.rule, c)) && hasPhone !== "true");
+    const consent = url.searchParams.get("consent");
+    const items = crmContacts.filter((c) => (!q || `${c.displayName ?? ""} ${c.username ?? ""}`.includes(q)) && (!tag || c.tags.includes(tag)) && (!segment || segmentMatches(segment.rule, c)) && hasPhone !== "true" && (!consent || consentState(c.id).current[consent] === true));
     send(res, 200, page(items, url.searchParams.get("cursor"), Number(url.searchParams.get("limit") ?? 30)));
   }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/contacts\/exports$/, (req, res) => send(res, 200, [...crmExports].reverse())],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/contacts\/exports$/, async (req, res) => {
+    await readBody(req);
+    if (crmExports.filter((x) => x.status === "pending").length >= 3) return problem(res, 409, "crm.export.too_many");
+    const x = { id: randomUUID(), status: "pending", rowCount: null, error: null, createdAt: iso(now()), completedAt: null, expiresAt: null };
+    crmExports.push(x);
+    // The worker: ready after a moment, with an in-app notification that links back to the list.
+    setTimeout(() => {
+      Object.assign(x, { status: "ready", rowCount: crmContacts.length, completedAt: iso(now()), expiresAt: iso(new Date(Date.now() + 24 * H)) });
+      notifications.unshift({ id: randomUUID(), kind: "crm_export", title: "خروجی اکسل مشتری‌ها آماده است", body: `${crmContacts.length} مشتری`, link: `/contacts?export=${x.id}`, createdAt: iso(now()), readAt: null });
+    }, 1500);
+    send(res, 202, x);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/contacts\/exports\/([^/]+)$/, (req, res, url, [id]) => {
+    const x = crmExports.find((e) => e.id === id);
+    return x ? send(res, 200, x) : problem(res, 404, "common.not_found");
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/contacts\/exports\/([^/]+)\/download$/, (req, res, url, [id]) => {
+    const x = crmExports.find((e) => e.id === id);
+    if (!x) return problem(res, 404, "common.not_found");
+    if (x.status === "pending") return problem(res, 409, "crm.export.not_ready");
+    if (x.status !== "ready") return problem(res, 409, "crm.export.gone");
+    x.status = "downloaded";
+    send(res, 200, { url: `http://localhost:${port}/files/exports/${id}.xlsx` });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/contacts\/([^/]+)\/consents$/, (req, res, url, [id]) => send(res, 200, consentState(id))],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/contacts\/([^/]+)\/consents$/, async (req, res, url, [id]) => {
+    const body = await readBody(req);
+    if (!["sms", "phone", "bale"].includes(body.channel)) return problem(res, 400, "validation", { channel: ["validation.consent.channel"] });
+    crmConsents.set(id, [{ id: randomUUID(), channel: body.channel, granted: Boolean(body.granted), source: "manual", evidence: body.evidence ?? null, recordedBy: me.id, createdAt: iso(now()) }, ...(crmConsents.get(id) ?? [])]);
+    send(res, 201, consentState(id));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/contacts\/([^/]+)\/submissions$/, (req, res, url, [id]) => send(res, 200, crmSubmissions.filter((x) => x.contactId === id))],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/crm\/forms$/, (req, res) => send(res, 200, [{ flowId: orderFlowId, flowName: "فرم سفارش", submissionCount: crmSubmissions.length, lastSubmittedAt: crmSubmissions[0].submittedAt, fields: ["size", "city", "phone"] }])],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/crm\/forms\/([^/]+)\/submissions$/, (req, res, url, [flowId]) => send(res, 200, page(crmSubmissions.filter((x) => x.flowId === flowId), url.searchParams.get("cursor"), Number(url.searchParams.get("limit") ?? 30)))],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/contacts\/([^/]+)$/, (req, res, url, [id]) => {
     const contact = crmContacts.find((c) => c.id === id);
     if (!contact) return problem(res, 404, "common.not_found");
@@ -868,9 +918,14 @@ const routes = [
     cardSets = cardSets.filter((x) => x.id !== id);
     send(res, 204);
   }],
+  // Stands in for the presigned object-store link of a contacts export.
+  ["GET", /^\/files\/exports\/([^/]+)$/, (req, res, url, [name]) => {
+    res.writeHead(200, { "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "content-disposition": `attachment; filename="${name}"` });
+    res.end("mock");
+  }],
 ];
 
-const anonymous = [/^\/api\/v1\/public\//, /^\/api\/v1\/auth\/(otp|token)\//, /^\/api\/v1\/auth\/support-session$/];
+const anonymous = [/^\/files\/exports\//, /^\/api\/v1\/public\//, /^\/api\/v1\/auth\/(otp|token)\//, /^\/api\/v1\/auth\/support-session$/];
 
 createServer(async (req, res) => {
   const url = new URL(req.url, "http://mock");

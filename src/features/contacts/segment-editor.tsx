@@ -22,7 +22,7 @@ import { formatNumber } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
 import { useDeleteSegment, useFields, useSaveSegment, useSegmentPreview, useSegments, useTags } from "./data";
-import { cleanRule, conditionFields, MAX_CONDITIONS, newCondition, opsByField, ruleIsComplete, valueKind, withField, withOp, type ConditionField } from "./rule";
+import { cleanRule, conditionFields, consentValues, MAX_CONDITIONS, newCondition, opsByField, ruleIsComplete, valueKind, withField, withOp, type ConditionField } from "./rule";
 
 export function SegmentEditorPage({ segmentId }: { segmentId: string | null }) {
   const t = useTranslations("contacts.segments");
@@ -226,6 +226,7 @@ function ConditionRow({
   const tags = useTags(workspace.id);
   const channels = useChannels(workspace.id);
   const kind = valueKind(c);
+  const tc = useTranslations("contacts.consent");
   const n = toPersianDigits(index + 1);
   const field = c.field as ConditionField;
   const valueLabel = t("valueLabel", { n });
@@ -295,6 +296,14 @@ function ConditionRow({
           <Select aria-label={valueLabel} className="w-32" value={c.value === false ? "false" : "true"} disabled={disabled} onChange={(e) => onChange({ ...c, value: e.target.value === "true" })}>
             <option value="true">{t("yes")}</option>
             <option value="false">{t("no")}</option>
+          </Select>
+        ) : kind === "consent" ? (
+          <Select aria-label={valueLabel} className="w-36" value={String(c.value ?? "sms")} disabled={disabled} onChange={(e) => onChange({ ...c, value: e.target.value })}>
+            {consentValues.map((v) => (
+              <option key={v} value={v}>
+                {tc(`channels.${v}`)}
+              </option>
+            ))}
           </Select>
         ) : kind === "text" ? (
           <Input aria-label={valueLabel} className="min-w-32 flex-1" dir="auto" maxLength={500} value={String(c.value ?? "")} disabled={disabled} onChange={(e) => onChange({ ...c, value: e.target.value })} />

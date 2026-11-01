@@ -18,9 +18,11 @@ import type { ContactDetail, FieldDefinition } from "@/lib/api/types";
 import { formatDate, formatRelative } from "@/lib/i18n/format";
 import { useCodeMessage, useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
+import { ConsentCard } from "./consent-card";
 import { contactLabel } from "./contacts-page";
 import { useContact, useFields, useTags, useUpdateContact } from "./data";
 import { FieldInput } from "./field-input";
+import { ContactSubmissionsCard } from "./forms";
 import { TagChip, tagColorMap } from "./tag";
 
 export function ContactPage({ contactId }: { contactId: string }) {
@@ -58,6 +60,8 @@ function Loaded({ detail }: { detail: ContactDetail }) {
       <NameHeader key={c.displayName ?? ""} detail={detail} title={title} handle={handle} writable={writable} />
       <TagsCard key={c.tags.join("\u0000")} detail={detail} writable={writable} />
       <FieldsCard key={JSON.stringify(c.fields)} detail={detail} writable={writable} />
+      <ConsentCard contactId={c.id} writable={writable} />
+      <ContactSubmissionsCard contactId={c.id} />
       <ConversationsCard detail={detail} />
     </>
   );

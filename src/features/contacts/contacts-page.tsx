@@ -1,6 +1,6 @@
 "use client";
 
-import { Search, UsersRound } from "lucide-react";
+import { FileSpreadsheet, Search, UsersRound } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -16,7 +16,8 @@ import { cn } from "@/lib/cn";
 import { toPersianDigits } from "@/lib/i18n/digits";
 import { formatRelative } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
-import { useContacts, useSegments, useTags } from "./data";
+import { consentChannels, useContacts, useSegments, useTags, type ContactFilter } from "./data";
+import { ExportsDialog } from "./exports";
 import { TagChip, tagColorMap } from "./tag";
 
 /** Name to show: their name, else @username, else «مشتری ۱a2b» from the end of the id (same rule as the inbox). */
@@ -43,6 +44,10 @@ export function ContactsPage() {
   const segmentId = params.get("segment") ?? "";
   const channelAccountId = params.get("channel") ?? "";
   const phone = params.get("phone") ?? "";
+  const consent = params.get("consent") ?? "";
+  // A «crm_export» notification links to ?export={id}: open the exports sheet on that file.
+  const exportId = params.get("export") ?? "";
+  const [exportsOpen, setExportsOpen] = useState(false);
 
   // Filters live in the URL so the tags and segments pages can link straight to a filtered list.
   const setParam = (key: string, value: string) => {
@@ -52,13 +57,14 @@ export function ContactsPage() {
     router.replace(`${pathname}${next.size ? `?${next}` : ""}`, { scroll: false });
   };
 
-  const contacts = useContacts(ws, { q: query, tag, segmentId, channelAccountId, hasPhone: phone === "yes" ? true : phone === "no" ? false : undefined });
+  const filter: ContactFilter = { q: query, tag, segmentId, channelAccountId, hasPhone: phone === "yes" ? true : phone === "no" ? false : undefined, consent };
+  const contacts = useContacts(ws, filter);
   const tags = useTags(ws);
   const segments = useSegments(ws);
   const channels = useChannels(ws);
   const colors = tagColorMap(tags.data);
   const items = contacts.data?.pages.flatMap((p) => p.items) ?? [];
-  const filtered = Boolean(query || tag || segmentId || channelAccountId || phone);
+  const filtered = Boolean(query || tag || segmentId || channelAccountId || phone || consent);
   const channelName = new Map((channels.data ?? []).map((c) => [c.id, c.username ? `@${c.username}` : (c.displayName ?? "")]));
 
   return (
@@ -99,7 +105,29 @@ export function ContactsPage() {
           <option value="yes">{t("filters.withPhone")}</option>
           <option value="no">{t("filters.withoutPhone")}</option>
         </Select>
+        <Select aria-label={t("filters.consent")} className="w-40" value={consent} onChange={(e) => setParam("consent", e.target.value)}>
+          <option value="">{t("filters.anyConsent")}</option>
+          {consentChannels.map((c) => (
+            <option key={c} value={c}>
+              {t("filters.consentTo", { channel: t(`consent.channels.${c}`) })}
+            </option>
+          ))}
+        </Select>
+        <Button variant="outline" onClick={() => setExportsOpen(true)}>
+          <FileSpreadsheet aria-hidden />
+          {t("exports.open")}
+        </Button>
       </div>
+      <ExportsDialog
+        open={exportsOpen || Boolean(exportId)}
+        onClose={() => {
+          setExportsOpen(false);
+          if (exportId) setParam("export", "");
+        }}
+        filter={filter}
+        filtered={filtered}
+        highlight={exportId}
+      />
 
       <Card className={cn("divide-y overflow-hidden", contacts.isPlaceholderData && "opacity-60")}>
         {contacts.isPending ? (

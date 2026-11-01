@@ -2747,7 +2747,7 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** Contacts, newest first; filter by text (name, username, phone, email), tag, segment, channel account or phone */
+        /** Contacts, newest first; filter by text (name, username, phone, email), tag, segment, channel account, phone or consent */
         get: {
             parameters: {
                 query?: {
@@ -2756,6 +2756,7 @@ export interface paths {
                     segmentId?: string;
                     channelAccountId?: string;
                     hasPhone?: boolean;
+                    consent?: string;
                     cursor?: string;
                     limit?: number;
                 };
@@ -3547,6 +3548,431 @@ export interface paths {
                 };
             };
         };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/contacts/{contactId}/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The contact's form submissions, newest first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    contactId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FormSubmissionResponse"][];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/contacts/{contactId}/consents": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The contact's consent per channel and its history */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    contactId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ContactConsents"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Record that the contact granted or withdrew consent for a channel */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    contactId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ConsentRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ContactConsents"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/contacts/exports": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The caller's exports, newest first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ExportResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Export the contacts matching the filters to Excel, in the background */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ExportRequest"];
+                };
+            };
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ExportResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/contacts/exports/{exportId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    exportId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ExportResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/contacts/exports/{exportId}/download": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** A download URL for a ready export, valid 5 minutes and issued once (409 crm.export.not_ready or crm.export.gone otherwise) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    exportId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ExportDownload"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/crm/forms": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Flows that collected answers, most recently submitted first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FormResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/crm/forms/{flowId}/submissions": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A flow's submissions, newest first */
+        get: {
+            parameters: {
+                query?: {
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    flowId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PageOfFormSubmissionResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
         options?: never;
         head?: never;
         patch?: never;
@@ -6150,6 +6576,29 @@ export interface components {
             /** Format: uri */
             authorizeUrl: string;
         };
+        ConsentRequest: {
+            channel: string;
+            granted: boolean;
+            evidence: null | string;
+        };
+        ConsentResponse: {
+            /** Format: uuid */
+            id: string;
+            channel: string;
+            granted: boolean;
+            source: string;
+            evidence: null | string;
+            /** Format: uuid */
+            recordedBy: null | string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        ContactConsents: {
+            current: {
+                [key: string]: boolean;
+            };
+            history: components["schemas"]["ConsentResponse"][];
+        };
         ContactConversation: {
             /** Format: uuid */
             id: string;
@@ -6287,6 +6736,34 @@ export interface components {
         ExchangeSupportSessionRequest: {
             token: string;
         };
+        ExportDownload: {
+            /** Format: uri */
+            url: string;
+        };
+        ExportRequest: {
+            q: null | string;
+            tag: null | string;
+            /** Format: uuid */
+            segmentId: null | string;
+            /** Format: uuid */
+            channelAccountId: null | string;
+            hasPhone: null | boolean;
+            consent: null | string;
+        };
+        ExportResponse: {
+            /** Format: uuid */
+            id: string;
+            status: string;
+            /** Format: int32 */
+            rowCount: null | number;
+            error: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+            /** Format: date-time */
+            expiresAt: null | string;
+        };
         FieldDefinitionRequest: {
             key: null | string;
             label: string;
@@ -6408,6 +6885,36 @@ export interface components {
             errors: components["schemas"]["FlowIssue"][];
             warnings: components["schemas"]["FlowIssue"][];
             isValid?: boolean;
+        };
+        FormResponse: {
+            /** Format: uuid */
+            flowId: string;
+            flowName: string;
+            /** Format: int32 */
+            submissionCount: number;
+            /** Format: date-time */
+            lastSubmittedAt: string;
+            fields: string[];
+        };
+        FormSubmissionResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            flowId: string;
+            flowName: string;
+            /** Format: int32 */
+            flowVersion: number;
+            /** Format: uuid */
+            contactId: string;
+            contactName: null | string;
+            contactUsername: null | string;
+            /** Format: uuid */
+            conversationId: string;
+            answers: {
+                [key: string]: string;
+            };
+            /** Format: date-time */
+            submittedAt: string;
         };
         HandoffInfo: {
             reason: string;
@@ -6632,6 +7139,10 @@ export interface components {
         };
         PageOfConversationResponse: {
             items: components["schemas"]["ConversationResponse"][];
+            nextCursor: null | string;
+        };
+        PageOfFormSubmissionResponse: {
+            items: components["schemas"]["FormSubmissionResponse"][];
             nextCursor: null | string;
         };
         PageOfMediaResponse: {

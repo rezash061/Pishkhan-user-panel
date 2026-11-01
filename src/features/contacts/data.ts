@@ -3,7 +3,7 @@
 import { keepPreviousData, useInfiniteQuery, useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { api, unwrap } from "@/lib/api/client";
 import { qk } from "@/lib/api/keys";
-import type { FieldDefinitionInput, SegmentRule } from "@/lib/api/types";
+import type { ContactExport, FieldDefinitionInput, SegmentRule } from "@/lib/api/types";
 
 export interface ContactFilter {
   q?: string;
@@ -11,6 +11,7 @@ export interface ContactFilter {
   segmentId?: string;
   channelAccountId?: string;
   hasPhone?: boolean;
+  consent?: string;
 }
 
 const path = (ws: string) => ({ path: { workspaceId: ws } });
@@ -32,6 +33,7 @@ export function useContacts(ws: string, filter: ContactFilter) {
               ...(filter.segmentId ? { segmentId: filter.segmentId } : {}),
               ...(filter.channelAccountId ? { channelAccountId: filter.channelAccountId } : {}),
               ...(filter.hasPhone !== undefined ? { hasPhone: filter.hasPhone } : {}),
+              ...(filter.consent ? { consent: filter.consent } : {}),
             },
           },
         }),
@@ -171,5 +173,99 @@ export function useSegmentPreview(ws: string, rule: SegmentRule | null) {
     enabled: rule !== null,
     placeholderData: keepPreviousData,
     retry: false,
+  });
+}
+
+/** Flows that collected answers (form questions in a flow), newest submission first. */
+export function useForms(ws: string) {
+  return useQuery({
+    queryKey: qk.crmForms(ws),
+    queryFn: async () => unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/crm/forms", { params: path(ws) })),
+  });
+}
+
+export function useFormSubmissions(ws: string, flowId: string) {
+  return useInfiniteQuery({
+    queryKey: qk.formSubmissions(ws, flowId),
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }) =>
+      unwrap(
+        await api.GET("/api/v1/workspaces/{workspaceId}/crm/forms/{flowId}/submissions", {
+          params: { path: { workspaceId: ws, flowId }, query: { limit: 30, ...(pageParam ? { cursor: pageParam } : {}) } },
+        }),
+      ),
+    getNextPageParam: (last) => last.nextCursor ?? null,
+  });
+}
+
+export function useContactSubmissions(ws: string, id: string) {
+  return useQuery({
+    queryKey: qk.contactSubmissions(ws, id),
+    queryFn: async () => unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/contacts/{contactId}/submissions", { params: { path: { workspaceId: ws, contactId: id } } })),
+  });
+}
+
+export const consentChannels = ["sms", "phone", "bale"] as const;
+export type ConsentChannel = (typeof consentChannels)[number];
+
+export function useConsents(ws: string, id: string) {
+  return useQuery({
+    queryKey: qk.contactConsents(ws, id),
+    queryFn: async () => unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/contacts/{contactId}/consents", { params: { path: { workspaceId: ws, contactId: id } } })),
+  });
+}
+
+export function useRecordConsent(ws: string, id: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { channel: ConsentChannel; granted: boolean; evidence: string | null }) =>
+      unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/contacts/{contactId}/consents", { params: { path: { workspaceId: ws, contactId: id } }, body })),
+    onSuccess: (data) => {
+      qc.setQueryData(qk.contactConsents(ws, id), data);
+      void qc.invalidateQueries({ queryKey: ["contacts", ws, "list"] });
+    },
+  });
+}
+
+const pendingExport = (e: ContactExport) => e.status === "pending";
+
+/** The caller's own exports; polls while one is still being written. */
+export function useExports(ws: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.contactExports(ws),
+    queryFn: async () => unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/contacts/exports", { params: path(ws) })),
+    enabled,
+    refetchInterval: (q) => (q.state.data?.some(pendingExport) ? 4000 : false),
+  });
+}
+
+export function useStartExport(ws: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (filter: ContactFilter) =>
+      unwrap(
+        await api.POST("/api/v1/workspaces/{workspaceId}/contacts/exports", {
+          params: path(ws),
+          body: {
+            q: filter.q || null,
+            tag: filter.tag || null,
+            segmentId: filter.segmentId || null,
+            channelAccountId: filter.channelAccountId || null,
+            hasPhone: filter.hasPhone ?? null,
+            consent: filter.consent || null,
+          },
+        }),
+      ),
+    onSuccess: () => qc.invalidateQueries({ queryKey: qk.contactExports(ws) }),
+  });
+}
+
+/** One-time, five-minute link. The list is refreshed after, since the export is then «downloaded». */
+export function useDownloadExport(ws: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) =>
+      unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/contacts/exports/{exportId}/download", { params: { path: { workspaceId: ws, exportId: id } } })),
+    onSettled: () => qc.invalidateQueries({ queryKey: qk.contactExports(ws) }),
   });
 }

@@ -1,7 +1,7 @@
 import type { SegmentCondition, SegmentRule } from "@/lib/api/types";
 
 /** Condition fields and their operators, mirroring the backend's segment SQL builder (BE-1.7). */
-export const conditionFields = ["tag", "field", "name", "username", "channel_account", "last_seen", "created", "has_phone"] as const;
+export const conditionFields = ["tag", "field", "name", "username", "channel_account", "last_seen", "created", "has_phone", "consent"] as const;
 export type ConditionField = (typeof conditionFields)[number];
 
 export const opsByField: Record<ConditionField, readonly string[]> = {
@@ -13,12 +13,16 @@ export const opsByField: Record<ConditionField, readonly string[]> = {
   last_seen: ["within_days", "not_within_days"],
   created: ["within_days", "not_within_days"],
   has_phone: ["is"],
+  consent: ["granted", "not_granted"],
 };
 
 export const MAX_CONDITIONS = 20;
 
-/** What the value box needs: nothing, text, a number of days, a yes/no, a tag or a channel. */
-export type ValueKind = "none" | "text" | "days" | "boolean" | "tag" | "channel";
+/** What the value box needs: nothing, text, a number of days, a yes/no, a tag, a channel or a consent channel. */
+export type ValueKind = "none" | "text" | "days" | "boolean" | "tag" | "channel" | "consent";
+
+/** Consent channels the backend records (sms, phone call, Bale). */
+export const consentValues = ["sms", "phone", "bale"] as const;
 
 export function valueKind(c: Pick<SegmentCondition, "field" | "op">): ValueKind {
   if (c.op === "exists" || c.op === "not_exists") return "none";
@@ -32,6 +36,8 @@ export function valueKind(c: Pick<SegmentCondition, "field" | "op">): ValueKind 
       return "days";
     case "has_phone":
       return "boolean";
+    case "consent":
+      return "consent";
     default:
       return "text";
   }
@@ -41,7 +47,7 @@ export function valueKind(c: Pick<SegmentCondition, "field" | "op">): ValueKind 
 export function newCondition(field: ConditionField = "tag"): SegmentCondition {
   const op = opsByField[field][0]!;
   const kind = valueKind({ field, op });
-  return { field, op, key: null, value: kind === "days" ? 30 : kind === "boolean" ? true : "" };
+  return { field, op, key: null, value: kind === "days" ? 30 : kind === "boolean" ? true : kind === "consent" ? "sms" : "" };
 }
 
 /** Switching the field keeps the operator when it still applies, and resets the value when its kind changes. */
@@ -68,6 +74,8 @@ export function isComplete(c: SegmentCondition): boolean {
       return Number.isInteger(c.value) && (c.value as number) >= 1 && (c.value as number) <= 3650;
     case "boolean":
       return typeof c.value === "boolean";
+    case "consent":
+      return (consentValues as readonly unknown[]).includes(c.value);
     default:
       return typeof c.value === "string" && c.value.trim().length > 0;
   }
