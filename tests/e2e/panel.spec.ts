@@ -338,6 +338,43 @@ test("contacts: form answers, consent and an Excel export", async ({ page }) => 
   expect((await download).suggestedFilename()).toMatch(/\.xlsx$/);
 });
 
+test("knowledge: add a FAQ, watch it index, test a question, switch a product off", async ({ page }, info) => {
+  await login(page);
+  const p = info.project.name;
+  await page.goto(`/w/${workspaceId}/knowledge`);
+  await expect(page.getByRole("heading", { name: "دانش کسب‌وکار" })).toBeVisible();
+  // The failed source is retried once (on whichever project runs first) and comes back ready.
+  await expect(page.getByText("راهنمای سایز", { exact: true })).toBeVisible();
+  const retry = page.getByRole("button", { name: "آماده‌سازی دوبارهٔ «راهنمای سایز»" });
+  if (await retry.count()) await retry.click();
+  await expect(page.getByRole("button", { name: "آماده‌سازی دوبارهٔ «راهنمای سایز»" })).toHaveCount(0, { timeout: 10_000 });
+
+  await page.getByRole("button", { name: "پرسش و پاسخ", exact: true }).click();
+  const dialog = page.getByRole("dialog");
+  await dialog.getByLabel("پرسش").fill(`ساعت کاری فروشگاه ${p}؟`);
+  await dialog.getByLabel("پاسخ").fill("هر روز از ۱۰ صبح تا ۱۰ شب جواب می‌دهیم.");
+  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(results.violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+  await dialog.getByRole("button", { name: "ذخیره" }).click();
+  await expect(page.getByText("ذخیره شد؛ دستیار به‌زودی از آن استفاده می‌کند.")).toBeVisible();
+  const row = page.getByText(`ساعت کاری فروشگاه ${p}؟`).locator("xpath=ancestor::div[contains(@class,'items-start')][1]");
+  await expect(row.getByText("در حال آماده‌سازی", { exact: true })).toBeVisible();
+  await expect(row.getByText("آماده", { exact: true })).toBeVisible({ timeout: 10_000 });
+
+  await page.getByLabel("سؤال آزمایشی").fill("ارسال به شهرستان چقدر طول می‌کشد؟");
+  await page.getByRole("button", { name: "جستجو", exact: true }).click();
+  await expect(page.getByRole("listitem").filter({ hasText: "ارسال به شهرستان چند روز طول می‌کشد؟" })).toBeVisible();
+
+  await expect(page.getByRole("button", { name: "حذف «مانتو کتان تابستانه»" })).toHaveCount(0);
+  await page.getByRole("switch", { name: "استفادهٔ دستیار از «مانتو کتان تابستانه»" }).click();
+  await expect(page.getByText(/دستیار (دیگر )?از این منبع استفاده (نمی‌کند|می‌کند)\./)).toBeVisible();
+  await noHorizontalScroll(page);
+
+  await page.getByRole("button", { name: `حذف «ساعت کاری فروشگاه ${p}؟»` }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "حذف" }).click();
+  await expect(page.getByText("منبع حذف شد.")).toBeVisible();
+});
+
 test("adds an internal note", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001001`);

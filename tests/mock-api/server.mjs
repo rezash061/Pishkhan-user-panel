@@ -224,6 +224,19 @@ let products = [
   { id: randomUUID(), title: "شومیز حریر", description: null, categoryId: null, tags: ["حراج"], status: "draft", price: null, imageFileIds: [], linkUrl: null, variants: [], revision: 1, createdAt: ago(3 * 24 * H), updatedAt: ago(3 * 24 * H) },
 ];
 let cardSets = [];
+
+// Knowledge (BE-1.4 part 1): FAQ and text sources, plus one source per active product. Indexing finishes after a moment.
+const kbSource = (kind, title, body, extra = {}) => ({ id: randomUUID(), kind, title, question: kind === "faq" ? title : null, body, productId: null, enabled: true, status: "indexed", revision: 1, indexedRevision: 1, chunkCount: 1, error: null, indexedAt: ago(2 * H), createdAt: ago(5 * 24 * H), updatedAt: ago(2 * H), ...extra });
+let kbSources = [
+  kbSource("faq", "ارسال به شهرستان چند روز طول می‌کشد؟", "ارسال به شهرستان‌ها با پست پیشتاز دو تا چهار روز کاری است."),
+  kbSource("faq", "امکان مرجوعی هست؟", "تا هفت روز پس از تحویل، اگر برچسب کالا جدا نشده باشد، مرجوعی رایگان است."),
+  kbSource("text", "راهنمای سایز", "سایز S برای قد تا ۱۶۰، M تا ۱۶۸ و L تا ۱۷۵ سانتی‌متر مناسب است.", { chunkCount: 2, status: "failed", error: "knowledge.embedding_failed", revision: 2 }),
+  ...products.filter((p) => p.status === "active").map((p) => kbSource("product", p.title, `${p.title}. ${p.description ?? ""} قیمت ${p.price ? p.price.amount / 10 : "—"} تومان.`, { productId: p.id })),
+];
+const kbIndex = (src) => {
+  Object.assign(src, { status: "pending", revision: src.revision + 1, error: null, updatedAt: iso(now()) });
+  setTimeout(() => Object.assign(src, { status: "indexed", indexedRevision: src.revision, chunkCount: Math.max(1, Math.ceil(src.body.length / 400)), indexedAt: iso(now()) }), 1200);
+};
 const imports = new Map();
 
 /** A small stand-in for backend `FlowValidator`: enough for the editor to show errors and warnings. */
@@ -917,6 +930,67 @@ const routes = [
   ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/storefront-cards\/([^/]+)$/, (req, res, url, [id]) => {
     cardSets = cardSets.filter((x) => x.id !== id);
     send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/sources$/, (req, res, url) => {
+    const q = url.searchParams.get("q") ?? "";
+    const kind = url.searchParams.get("kind");
+    const status = url.searchParams.get("status");
+    const items = kbSources.filter((x) => (!q || `${x.title} ${x.body}`.includes(q)) && (!kind || x.kind === kind) && (!status || x.status === status));
+    send(res, 200, page(items, url.searchParams.get("cursor"), Number(url.searchParams.get("limit") ?? 30)));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/sources$/, async (req, res) => {
+    const b = await readBody(req);
+    const faq = b.kind === "faq";
+    const errors = {};
+    if (faq && !b.question?.trim()) errors.question = ["validation.knowledge.question"];
+    if (faq && !b.answer?.trim()) errors.answer = ["validation.knowledge.answer"];
+    if (!faq && !b.title?.trim()) errors.title = ["validation.knowledge.title"];
+    if (!faq && !b.body?.trim()) errors.body = ["validation.knowledge.body"];
+    if (Object.keys(errors).length) return problem(res, 400, "validation.failed", errors);
+    const src = kbSource(b.kind, faq ? b.question.trim() : b.title.trim(), faq ? b.answer.trim() : b.body.trim(), { revision: 0, createdAt: iso(now()) });
+    kbSources.unshift(src);
+    kbIndex(src);
+    send(res, 201, src);
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/sources\/([^/]+)$/, async (req, res, url, [id]) => {
+    const src = kbSources.find((x) => x.id === id);
+    if (!src) return problem(res, 404, "common.not_found");
+    const b = await readBody(req);
+    const edits = b.title ?? b.question ?? b.answer ?? b.body;
+    if (src.kind === "product" && edits != null) return problem(res, 400, "validation.failed", { kind: ["validation.knowledge.product_managed"] });
+    if (b.enabled != null) src.enabled = b.enabled;
+    if (edits != null) {
+      if (src.kind === "faq") Object.assign(src, { title: b.question ?? src.title, question: b.question ?? src.question, body: b.answer ?? src.body });
+      else Object.assign(src, { title: b.title ?? src.title, body: b.body ?? src.body });
+      kbIndex(src);
+    } else src.updatedAt = iso(now());
+    send(res, 200, src);
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/sources\/([^/]+)$/, (req, res, url, [id]) => {
+    const src = kbSources.find((x) => x.id === id);
+    if (!src) return problem(res, 404, "common.not_found");
+    if (src.kind === "product") return problem(res, 409, "knowledge.product_managed");
+    kbSources = kbSources.filter((x) => x.id !== id);
+    send(res, 204);
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/sources\/([^/]+)\/reindex$/, (req, res, url, [id]) => {
+    const src = kbSources.find((x) => x.id === id);
+    if (!src) return problem(res, 404, "common.not_found");
+    kbIndex(src);
+    send(res, 202, src);
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/search$/, async (req, res) => {
+    const b = await readBody(req);
+    if (!b.query?.trim()) return problem(res, 400, "validation.failed", { query: ["validation.knowledge.query"] });
+    const words = b.query.replace(/[؟?!.،]/g, " ").split(/\s+/).filter((w) => w.length > 2);
+    const hits = kbSources
+      .filter((x) => x.enabled && x.status === "indexed")
+      .map((x) => ({ x, n: words.filter((w) => `${x.title} ${x.body}`.includes(w)).length }))
+      .filter((h) => h.n > 0)
+      .sort((a, b2) => b2.n - a.n)
+      .slice(0, b.limit ?? 5)
+      .map(({ x, n }) => ({ chunkId: randomUUID(), sourceId: x.id, sourceKind: x.kind, title: x.title, text: x.body, score: n / 10, similarity: Math.min(0.95, 0.5 + n / 10), productId: x.productId }));
+    send(res, 200, hits);
   }],
   // Stands in for the presigned object-store link of a contacts export.
   ["GET", /^\/files\/exports\/([^/]+)$/, (req, res, url, [name]) => {

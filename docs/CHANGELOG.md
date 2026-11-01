@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.9.0 — 2026-11-01
+
+- Knowledge base (backend #27, BE-1.4 part 1): «دانش کسب‌وکار» replaces its placeholder. Owners and admins add FAQ entries (question and answer) and text sources (title and body), edit, switch off and delete them. Active catalog products appear on their own; they can only be switched off, with a link to the product.
+- Each source shows its indexing state (preparing, ready with its chunk count, or failed with the reason and a retry). The list polls while something is still being prepared, and filters by kind, status and text.
+- «از دانش بپرسید» runs the agent's search on a sample question and shows the matching passages with their similarity.
+- API refreshed from the backend knowledge branch.
+
 ## 0.8.0 — 2026-11-01
 
 - Contacts / CRM part 2 (backend #26): «فرم‌ها» lists the flows that collected answers and each form's submissions (customer, time, conversation, answers in question order); the customer profile shows their answers too.
