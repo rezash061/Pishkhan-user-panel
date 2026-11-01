@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.14.0 — 2026-11-01
+
+- Orders (backend #36, BE-2.1, plan 3.8): «سفارش‌ها» in the menu and the mobile tab bar (it takes the channels tab's place; channels moves under «بیشتر»).
+  - List: status tabs (all, draft, awaiting payment, to ship, shipped, delivered, cancelled and returns), search by order number or the customer's mobile, AI and flow orders marked. `?contact=` lists one customer's orders.
+  - Detail: lines, totals, customer and address, what is still missing for shipping, links to the conversation and the contact. The allowed next statuses are buttons, each confirmed with an optional note; a timeline shows who did what (team, AI or system) and takes internal notes.
+  - Create and edit drafts: catalog products (priced by the backend, with a variant per line) or custom lines with a title and price, shipping and discount in Toman, an estimated total, and a pasted address split into province, city, postal code and mobile. Line errors show on their line. Only drafts can be edited.
+  - Printable invoice from the backend's Persian invoice; the panel shell hides itself when printing.
+  - The inbox side panel and the contact page list the customer's orders with «سفارش جدید» prefilled.
+- New permissions `workspace.orders.read` and `workspace.orders.write`.
+- API refreshed from the backend orders branch.
+
 ## 0.13.0 — 2026-11-01
 
 - Knowledge documents and web pages (backend #35): «سند» uploads a PDF, Word (docx) or text file up to 20 MB, which is virus-scanned and then read in the background; «صفحهٔ وب» adds a public https page, titled from the page unless a title is given. Their rows show the extracted text, a page's address and, on failure, why (scanned PDF with no text, unreadable file, page not reachable, too large or not a text page). Editing changes the title and a page's address; «خواندن دوبارهٔ صفحه» reads a page again.

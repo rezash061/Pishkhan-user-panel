@@ -12,6 +12,7 @@ import { Field, Input } from "@/components/ui/field";
 import { Avatar, EmptyState, Skeleton } from "@/components/ui/misc";
 import { PageContainer } from "@/components/ui/page";
 import { useChannels } from "@/features/channels/data";
+import { OrdersMini } from "@/features/orders/orders-mini";
 import { useWorkspace } from "@/features/workspace/context";
 import { ApiError } from "@/lib/api/errors";
 import type { ContactDetail, FieldDefinition } from "@/lib/api/types";
@@ -62,6 +63,7 @@ function Loaded({ detail }: { detail: ContactDetail }) {
       <FieldsCard key={JSON.stringify(c.fields)} detail={detail} writable={writable} />
       <ConsentCard contactId={c.id} writable={writable} />
       <ContactSubmissionsCard contactId={c.id} />
+      <ContactOrdersCard contactId={c.id} />
       <ConversationsCard detail={detail} />
     </>
   );
@@ -321,6 +323,19 @@ function ConversationsCard({ detail }: { detail: ContactDetail }) {
             })}
           </ul>
         )}
+      </CardBody>
+    </Card>
+  );
+}
+
+function ContactOrdersCard({ contactId }: { contactId: string }) {
+  const t = useTranslations("contacts");
+  const { can } = useWorkspace();
+  if (!can(P.ordersRead)) return null;
+  return (
+    <Card>
+      <CardBody>
+        <OrdersMini contactId={contactId} heading={() => <h2 className="text-base font-semibold">{t("ordersTitle")}</h2>} />
       </CardBody>
     </Card>
   );

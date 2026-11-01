@@ -5962,6 +5962,564 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/orders": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Orders, newest first
+         * @description Filters: `status` (repeatable), `contactId`, `conversationId`, `number`, `phone` (exact mobile). Cursor pagination.
+         */
+        get: {
+            parameters: {
+                query?: {
+                    status?: string[];
+                    contactId?: string;
+                    conversationId?: string;
+                    number?: number;
+                    phone?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PageOfOrderResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Create a draft order
+         * @description Catalog lines are priced from the catalog (active products, in stock). Custom lines need `title` and `unitPrice`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description UUID; retries with the same key return the first response. */
+                    "Idempotency-Key"?: string;
+                };
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OrderRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrderResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/orders/provinces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The provinces of Iran with their larger cities (the capital first) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ProvinceResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/orders/parse-address": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Split a pasted address into province, city, postal code and mobile */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["ParseAddressRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["ParsedAddress"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/orders/{orderId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrderResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        /**
+         * Replace a draft order's lines, fees and details
+         * @description Only a draft can be edited (409 `orders.not_editable`); move an order awaiting payment back to `draft` to change it.
+         */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OrderRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrderResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/orders/{orderId}/status": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Move an order to another status
+         * @description Allowed moves are the order's `nextStatuses` (409 `orders.status_move_invalid` otherwise). `awaiting_payment` needs items and a total above zero. Paying takes stock; cancelling, refunding or returning a paid order puts it back.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OrderStatusRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrderResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/orders/{orderId}/notes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Add a note to the order's timeline */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OrderNoteRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrderEventResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/orders/{orderId}/timeline": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Everything that happened to the order, oldest first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OrderEventResponse"][];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/orders/{orderId}/invoice": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The order as an invoice: Jalali dates, Persian digits, amounts in Toman */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    orderId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["InvoiceResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/billing/subscription": {
         parameters: {
             query?: never;
@@ -7388,6 +7946,14 @@ export interface components {
             workspaceId: string;
             role: string;
         };
+        AddressRequest: {
+            recipient: null | string;
+            province: null | string;
+            city: null | string;
+            line: null | string;
+            postalCode: null | string;
+            text?: null | string;
+        };
         AgentProfileDto: {
             name: string;
             tone: string;
@@ -7942,6 +8508,35 @@ export interface components {
             phone: string;
             role: string;
         };
+        InvoiceLine: {
+            title: string;
+            variantLabel: null | string;
+            quantity: string;
+            unitPrice: string;
+            lineTotal: string;
+        };
+        InvoiceResponse: {
+            /** Format: uuid */
+            orderId: string;
+            /** Format: int64 */
+            number: number;
+            numberText: string;
+            date: string;
+            dateLong: string;
+            status: string;
+            statusText: string;
+            customerName: null | string;
+            phone: null | string;
+            address: null | string;
+            postalCode: null | string;
+            lines: components["schemas"]["InvoiceLine"][];
+            subtotal: string;
+            shippingFee: string;
+            discount: string;
+            total: string;
+            totalAmount: components["schemas"]["Money"];
+            paidDate: null | string;
+        };
         JsonElement: unknown;
         KnowledgeHit: {
             /** Format: uuid */
@@ -8081,6 +8676,103 @@ export interface components {
             /** Format: int32 */
             unreadCount: number;
         };
+        OrderAddress: {
+            recipient: null | string;
+            provinceCode: null | string;
+            province: null | string;
+            city: null | string;
+            line: string;
+            postalCode: null | string;
+        };
+        OrderEventResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            fromStatus: null | string;
+            toStatus: null | string;
+            actorType: string;
+            /** Format: uuid */
+            actorId: null | string;
+            note: null | string;
+            /** Format: date-time */
+            at: string;
+        };
+        OrderLineRequest: {
+            /** Format: uuid */
+            productId: null | string;
+            /** Format: uuid */
+            variantId: null | string;
+            /** Format: int32 */
+            quantity: number;
+            title?: null | string;
+            unitPrice?: null | components["schemas"]["Money"];
+        };
+        OrderLineResponse: {
+            /** Format: uuid */
+            productId: null | string;
+            /** Format: uuid */
+            variantId: null | string;
+            title: string;
+            variantLabel: null | string;
+            sku: null | string;
+            unitPrice: components["schemas"]["Money"];
+            /** Format: int32 */
+            quantity: number;
+            lineTotal: components["schemas"]["Money"];
+        };
+        OrderNoteRequest: {
+            note: string;
+        };
+        OrderRequest: {
+            /** Format: uuid */
+            contactId: null | string;
+            /** Format: uuid */
+            conversationId: null | string;
+            items: null | components["schemas"]["OrderLineRequest"][];
+            shippingFee: null | components["schemas"]["Money"];
+            discount: null | components["schemas"]["Money"];
+            customerName: null | string;
+            phone: null | string;
+            address: null | components["schemas"]["AddressRequest"];
+            note: null | string;
+        };
+        OrderResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: int64 */
+            number: number;
+            source: string;
+            status: string;
+            nextStatuses: string[];
+            /** Format: uuid */
+            contactId: null | string;
+            /** Format: uuid */
+            conversationId: null | string;
+            customerName: null | string;
+            phone: null | string;
+            address: null | components["schemas"]["OrderAddress"];
+            items: components["schemas"]["OrderLineResponse"][];
+            subtotal: components["schemas"]["Money"];
+            shippingFee: components["schemas"]["Money"];
+            discount: components["schemas"]["Money"];
+            total: components["schemas"]["Money"];
+            note: null | string;
+            missing: string[];
+            /** Format: int32 */
+            revision: number;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+            /** Format: date-time */
+            paidAt: null | string;
+            /** Format: date-time */
+            closedAt: null | string;
+        };
+        OrderStatusRequest: {
+            status: string;
+            note: null | string;
+        };
         OutboundAttachment: {
             type: string;
             /** Format: uri */
@@ -8138,6 +8830,10 @@ export interface components {
             items: components["schemas"]["MessageResponse"][];
             nextCursor: null | string;
         };
+        PageOfOrderResponse: {
+            items: components["schemas"]["OrderResponse"][];
+            nextCursor: null | string;
+        };
         PageOfProductResponse: {
             items: components["schemas"]["ProductResponse"][];
             nextCursor: null | string;
@@ -8153,6 +8849,17 @@ export interface components {
         PageOfUnansweredResponse: {
             items: components["schemas"]["UnansweredResponse"][];
             nextCursor: null | string;
+        };
+        ParseAddressRequest: {
+            text: string;
+        };
+        ParsedAddress: {
+            provinceCode: null | string;
+            province: null | string;
+            city: null | string;
+            postalCode: null | string;
+            mobile: null | string;
+            line: string;
         };
         PasswordLoginRequest: {
             phone: string;
@@ -8241,6 +8948,11 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+        };
+        ProvinceResponse: {
+            code: string;
+            name: string;
+            cities: string[];
         };
         PushKeyResponse: {
             publicKey: string;

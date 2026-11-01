@@ -68,4 +68,5 @@ Built against the backend's current API (Phase 0 through BE-1.6, plus backend PR
 | Contacts: list with filters, profile with tags, custom fields, consent and form answers; tags, custom fields, segments with live count, forms, Excel export | Done |
 | Knowledge base: FAQ, text, document and web page sources, product sources on/off, indexing status with retry, test search, unanswered questions | Done; documents (PDF, Word, text) and web pages too |
 | AI agent: settings (persona, safety, handoff rules), test chat with corrections, reply log with trace details, AI handoff reasons in the inbox | Done |
+| Orders (Phase 2): list with status tabs and search, detail with status changes, notes and timeline, create and edit drafts (catalog or custom lines, pasted address split), printable invoice, orders in the inbox side panel and on the contact page | Done; payment links and the receipts queue come next |
 | Dashboard (live inbox, overnight summary, who answered by day), notifications (bell, list, preferences), workspace deletion with restore, support sessions with banner | Done; the bell updates live from the inbox connection; web push per browser |
