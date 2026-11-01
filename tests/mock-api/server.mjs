@@ -36,6 +36,7 @@ const statuses = ["handed_off", "open", "open", "pending", "open", "closed", "op
 const svgThumb = (hue, label) =>
   `data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="320" height="320"><rect width="320" height="320" fill="hsl(${hue} 70% 85%)"/><text x="160" y="175" font-size="40" text-anchor="middle" fill="hsl(${hue} 60% 30%)">${label}</text></svg>`)}`;
 const contacts = [["نیلوفر احمدی", "niloo.ahmadi"], [null, "sara_style"], ["مریم کاظمی", "maryam.k"], [null, null], ["زهرا رضایی", null], ["Ali Moradi", "ali.moradi"]];
+const profilePic = svgThumb(330, "ن");
 
 const conversations = Array.from({ length: 24 }, (_, i) => {
   const lastInbound = new Date(Date.now() - (i * 3 + 0.2) * H);
@@ -44,7 +45,8 @@ const conversations = Array.from({ length: 24 }, (_, i) => {
     channelAccountId: channel.id,
     channelKind: "instagram",
     contactId: `0199b000-0000-7000-9000-${String(5000 + i * 7).padStart(12, "0")}`,
-    contact: { id: `0199b000-0000-7000-9000-${String(5000 + i * 7).padStart(12, "0")}`, displayName: contacts[i % contacts.length][0], username: contacts[i % contacts.length][1] },
+    // The first customer has an Instagram photo (BE contact profiles); the rest fall back to initials.
+    contact: { id: `0199b000-0000-7000-9000-${String(5000 + i * 7).padStart(12, "0")}`, displayName: contacts[i % contacts.length][0], username: contacts[i % contacts.length][1], profilePicUrl: i % contacts.length === 0 ? profilePic : null },
     status: statuses[i % statuses.length],
     assigneeId: i % 4 === 1 ? me.id : i % 4 === 2 ? teammate.userId : null,
     aiPaused: statuses[i % statuses.length] === "handed_off",
@@ -63,7 +65,7 @@ const conversations = Array.from({ length: 24 }, (_, i) => {
 
 // CRM (BE-1.7): one contact per conversation contact, plus tags, field definitions and segments.
 const crmContacts = [...new Map(conversations.map((c, i) => [c.contactId, {
-  id: c.contactId, displayName: c.contact.displayName, username: c.contact.username,
+  id: c.contactId, displayName: c.contact.displayName, username: c.contact.username, profilePicUrl: c.contact.profilePicUrl,
   tags: i === 0 ? ["مشتری ویژه"] : i % 5 === 2 ? ["سفارش عمده"] : [],
   fields: i === 0 ? { city: "شیراز" } : {},
   channels: [channel.id], lastSeenAt: c.lastInboundAt, createdAt: ago((30 - i) * 24 * H),
@@ -251,16 +253,25 @@ let products = [
 let cardSets = [];
 
 // Knowledge (BE-1.4 part 1): FAQ and text sources, plus one source per active product. Indexing finishes after a moment.
-const kbSource = (kind, title, body, extra = {}) => ({ id: randomUUID(), kind, title, question: kind === "faq" ? title : null, body, productId: null, enabled: true, status: "indexed", revision: 1, indexedRevision: 1, chunkCount: 1, error: null, indexedAt: ago(2 * H), createdAt: ago(5 * 24 * H), updatedAt: ago(2 * H), ...extra });
+const kbSource = (kind, title, body, extra = {}) => ({ id: randomUUID(), kind, title, question: kind === "faq" ? title : null, body, productId: null, fileId: null, url: null, enabled: true, status: "indexed", revision: 1, indexedRevision: 1, chunkCount: 1, error: null, indexedAt: ago(2 * H), createdAt: ago(5 * 24 * H), updatedAt: ago(2 * H), ...extra });
 let kbSources = [
   kbSource("faq", "ارسال به شهرستان چند روز طول می‌کشد؟", "ارسال به شهرستان‌ها با پست پیشتاز دو تا چهار روز کاری است."),
   kbSource("faq", "امکان مرجوعی هست؟", "تا هفت روز پس از تحویل، اگر برچسب کالا جدا نشده باشد، مرجوعی رایگان است."),
   kbSource("text", "راهنمای سایز", "سایز S برای قد تا ۱۶۰، M تا ۱۶۸ و L تا ۱۷۵ سانتی‌متر مناسب است.", { chunkCount: 2, status: "failed", error: "knowledge.embedding_failed", revision: 2 }),
   ...products.filter((p) => p.status === "active").map((p) => kbSource("product", p.title, `${p.title}. ${p.description ?? ""} قیمت ${p.price ? p.price.amount / 10 : "—"} تومان.`, { productId: p.id })),
 ];
+const kbPages = { "https://niloofar.example/shipping": { title: "قوانین ارسال", body: "ارسال رایگان برای خرید بالای یک میلیون تومان. تهران یک روزه." } };
 const kbIndex = (src) => {
   Object.assign(src, { status: "pending", revision: src.revision + 1, error: null, updatedAt: iso(now()) });
-  setTimeout(() => Object.assign(src, { status: "indexed", indexedRevision: src.revision, chunkCount: Math.max(1, Math.ceil(src.body.length / 400)), indexedAt: iso(now()) }), 1200);
+  setTimeout(() => {
+    if (src.kind === "url") {
+      const pageInfo = kbPages[src.url];
+      if (!pageInfo) return Object.assign(src, { status: "failed", indexedRevision: src.revision, error: "knowledge.page_unreachable" });
+      Object.assign(src, { body: pageInfo.body, title: src.titleSet ? src.title : pageInfo.title });
+    }
+    if (src.kind === "file") src.body ||= "متن سند: جدول سایزبندی مانتوها و شلوارها.";
+    Object.assign(src, { status: "indexed", indexedRevision: src.revision, chunkCount: Math.max(1, Math.ceil(src.body.length / 400)), indexedAt: iso(now()) });
+  }, 1200);
 };
 const imports = new Map();
 
@@ -1042,6 +1053,16 @@ const routes = [
   }],
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/sources$/, async (req, res) => {
     const b = await readBody(req);
+    if (b.kind === "file" || b.kind === "url") {
+      const file = b.kind === "file" ? files.get(b.fileId) : null;
+      if (b.kind === "file" && (!file || file.status !== "clean" || file.purpose !== "knowledge_document")) return problem(res, 400, "validation.failed", { fileId: ["validation.knowledge.file"] });
+      if (b.kind === "url" && !/^https:\/\/[^/]+\.[^/]+/.test(b.url ?? "")) return problem(res, 400, "validation.failed", { url: ["validation.knowledge.url"] });
+      const title = b.title?.trim() || (b.kind === "file" ? "سند" : new URL(b.url).host);
+      const src = kbSource(b.kind, title, "", { revision: 0, createdAt: iso(now()), fileId: file?.id ?? null, url: b.url ?? null, titleSet: Boolean(b.title?.trim()) });
+      kbSources.unshift(src);
+      kbIndex(src);
+      return send(res, 201, src);
+    }
     const faq = b.kind === "faq";
     const errors = {};
     if (faq && !b.question?.trim()) errors.question = ["validation.knowledge.question"];
@@ -1061,6 +1082,16 @@ const routes = [
     const edits = b.title ?? b.question ?? b.answer ?? b.body;
     if (src.kind === "product" && edits != null) return problem(res, 400, "validation.failed", { kind: ["validation.knowledge.product_managed"] });
     if (b.enabled != null) src.enabled = b.enabled;
+    if (src.kind === "file" || src.kind === "url") {
+      if (b.question != null || b.answer != null || b.body != null) return problem(res, 400, "validation.failed", { body: ["validation.knowledge.extracted"] });
+      if (b.url != null && !/^https:\/\/[^/]+\.[^/]+/.test(b.url)) return problem(res, 400, "validation.failed", { url: ["validation.knowledge.url"] });
+      if (b.title != null) Object.assign(src, { title: b.title.trim(), titleSet: true });
+      if (b.url != null && b.url !== src.url) {
+        src.url = b.url;
+        kbIndex(src);
+      } else src.updatedAt = iso(now());
+      return send(res, 200, src);
+    }
     if (edits != null) {
       if (src.kind === "faq") Object.assign(src, { title: b.question ?? src.title, question: b.question ?? src.question, body: b.answer ?? src.body });
       else Object.assign(src, { title: b.title ?? src.title, body: b.body ?? src.body });

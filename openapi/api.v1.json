@@ -4539,6 +4539,7 @@
           "Contacts"
         ],
         "summary": "A flow's submissions, newest first",
+        "description": "404 when the flow is not in this workspace and has no submissions here (a deleted flow keeps its submissions).",
         "parameters": [
           {
             "name": "workspaceId",
@@ -4581,6 +4582,16 @@
               "application/json": {
                 "schema": {
                   "$ref": "#/components/schemas/PageOfFormSubmissionResponse"
+                }
+              }
+            }
+          },
+          "404": {
+            "description": "Not Found",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ProblemDetails"
                 }
               }
             }
@@ -7252,7 +7263,7 @@
         "tags": [
           "Knowledge"
         ],
-        "summary": "Add a FAQ or a text; it is indexed in the background",
+        "summary": "Add a FAQ, a text, an uploaded document or a web page; it is indexed in the background",
         "parameters": [
           {
             "name": "workspaceId",
@@ -7463,7 +7474,7 @@
         "tags": [
           "Knowledge"
         ],
-        "summary": "Delete a FAQ or text with its chunks (product sources follow the catalog)",
+        "summary": "Delete a FAQ, text, document or page with its chunks (product sources follow the catalog)",
         "parameters": [
           {
             "name": "workspaceId",
@@ -7521,7 +7532,7 @@
         "tags": [
           "Knowledge"
         ],
-        "summary": "Build the source's chunks and embeddings again",
+        "summary": "Build the source's chunks and embeddings again (a web page is fetched again)",
         "parameters": [
           {
             "name": "workspaceId",
@@ -9485,7 +9496,8 @@
           "fields",
           "channels",
           "lastSeenAt",
-          "createdAt"
+          "createdAt",
+          "profilePicUrl"
         ],
         "type": "object",
         "properties": {
@@ -9534,6 +9546,13 @@
           "createdAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "profilePicUrl": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uri"
           }
         }
       },
@@ -9541,7 +9560,8 @@
         "required": [
           "id",
           "displayName",
-          "username"
+          "username",
+          "profilePicUrl"
         ],
         "type": "object",
         "properties": {
@@ -9560,6 +9580,13 @@
               "null",
               "string"
             ]
+          },
+          "profilePicUrl": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uri"
           }
         }
       },
@@ -13407,6 +13434,19 @@
               "null",
               "boolean"
             ]
+          },
+          "fileId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13426,7 +13466,9 @@
           "error",
           "indexedAt",
           "createdAt",
-          "updatedAt"
+          "updatedAt",
+          "fileId",
+          "url"
         ],
         "type": "object",
         "properties": {
@@ -13497,6 +13539,19 @@
           "updatedAt": {
             "type": "string",
             "format": "date-time"
+          },
+          "fileId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
+            ]
           }
         }
       },
@@ -13538,6 +13593,12 @@
             "type": [
               "null",
               "boolean"
+            ]
+          },
+          "url": {
+            "type": [
+              "null",
+              "string"
             ]
           }
         }

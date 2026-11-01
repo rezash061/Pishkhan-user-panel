@@ -66,6 +66,6 @@ Built against the backend's current API (Phase 0 through BE-1.6, plus backend PR
 | Catalog: products with filters, editor with images, option/variant matrix, Toman prices and stock; categories; storefront card sets with preview; Excel export, template and import job | Done |
 | Billing v1: current plan, trial, usage meters, plan-limit sheet | Done; online payment is Phase 2 |
 | Contacts: list with filters, profile with tags, custom fields, consent and form answers; tags, custom fields, segments with live count, forms, Excel export | Done |
-| Knowledge base: FAQ and text sources, product sources on/off, indexing status with retry, test search, unanswered questions | Done; file and URL sources wait for the backend |
+| Knowledge base: FAQ, text, document and web page sources, product sources on/off, indexing status with retry, test search, unanswered questions | Done; documents (PDF, Word, text) and web pages too |
 | AI agent: settings (persona, safety, handoff rules), test chat with corrections, reply log with trace details, AI handoff reasons in the inbox | Done |
 | Dashboard (live inbox, overnight summary, who answered by day), notifications (bell, list, preferences), workspace deletion with restore, support sessions with banner | Done; the bell updates live from the inbox connection; web push per browser |

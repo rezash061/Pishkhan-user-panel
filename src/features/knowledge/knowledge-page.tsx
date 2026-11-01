@@ -1,6 +1,6 @@
 "use client";
 
-import { BookOpen, FileText, MessageCircleQuestion, Package, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
+import { BookOpen, FileText, FileUp, Globe, MessageCircleQuestion, Package, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useDeferredValue, useState, type FormEvent } from "react";
@@ -19,15 +19,16 @@ import { toPersianDigits } from "@/lib/i18n/digits";
 import { formatNumber, formatRelative } from "@/lib/i18n/format";
 import { useCodeMessage, useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
-import { isIndexing, limits, sourceKinds, sourceStatuses, useDeleteSource, useKnowledgeSearch, useReindexSource, useSources, useToggleSource, type SourceKind } from "./data";
+import { isExtracted, isIndexing, limits, sourceKinds, sourceStatuses, useDeleteSource, useKnowledgeSearch, useReindexSource, useSources, useToggleSource, type SourceKind } from "./data";
+import { ExtractedSourceDialog } from "./extracted-dialog";
 import { SourceDialog } from "./source-dialog";
 import { KnowledgeTabs } from "./tabs";
 
-const kindIcons = { faq: MessageCircleQuestion, text: FileText, product: Package } as const;
+const kindIcons = { faq: MessageCircleQuestion, text: FileText, file: FileUp, url: Globe, product: Package } as const;
 
 /**
- * Knowledge base (BE-1.4 part 1): what the AI agent may answer from. FAQ entries and free text are written here;
- * active catalog products are added on their own and can only be switched off.
+ * Knowledge base (BE-1.4): what the AI agent may answer from. FAQ entries and free text are written here, documents
+ * and web pages are read by the backend; active catalog products are added on their own and can only be switched off.
  */
 export function KnowledgePage() {
   const t = useTranslations("knowledge");
@@ -38,7 +39,7 @@ export function KnowledgePage() {
   const query = useDeferredValue(q.trim());
   const [kind, setKind] = useState("");
   const [status, setStatus] = useState("");
-  const [editing, setEditing] = useState<{ kind: "faq" | "text"; source: KnowledgeSource | null } | null>(null);
+  const [editing, setEditing] = useState<{ kind: "faq" | "text" | "file" | "url"; source: KnowledgeSource | null } | null>(null);
   const [deleting, setDeleting] = useState<KnowledgeSource | null>(null);
   const sources = useSources(ws, { q: query, kind, status });
   const del = useDeleteSource(ws);
@@ -59,6 +60,14 @@ export function KnowledgePage() {
             <Button variant="outline" onClick={() => setEditing({ kind: "text", source: null })}>
               <Plus aria-hidden />
               {t("newText")}
+            </Button>
+            <Button variant="outline" onClick={() => setEditing({ kind: "file", source: null })}>
+              <FileUp aria-hidden />
+              {t("newFile")}
+            </Button>
+            <Button variant="outline" onClick={() => setEditing({ kind: "url", source: null })}>
+              <Globe aria-hidden />
+              {t("newUrl")}
             </Button>
           </div>
         }
@@ -105,7 +114,7 @@ export function KnowledgePage() {
           ) : items.length === 0 ? (
             filtered ? <EmptyState icon={<Search />} title={t("noResults")} /> : <EmptyState icon={<BookOpen />} title={t("empty")} body={t("emptyBody")} />
           ) : (
-            items.map((s) => <SourceRow key={s.id} source={s} onEdit={() => setEditing({ kind: s.kind === "faq" ? "faq" : "text", source: s })} onDelete={() => setDeleting(s)} />)
+            items.map((s) => <SourceRow key={s.id} source={s} onEdit={() => setEditing({ kind: s.kind === "faq" || isExtracted(s.kind) ? (s.kind as "faq" | "file" | "url") : "text", source: s })} onDelete={() => setDeleting(s)} />)
           )}
         </Card>
         {sources.hasNextPage ? (
@@ -117,7 +126,13 @@ export function KnowledgePage() {
         ) : null}
       </section>
 
-      {editing ? <SourceDialog key={editing.source?.id ?? editing.kind} kind={editing.kind} source={editing.source} onClose={() => setEditing(null)} /> : null}
+      {editing ? (
+        editing.kind === "file" || editing.kind === "url" ? (
+          <ExtractedSourceDialog key={editing.source?.id ?? editing.kind} kind={editing.kind} source={editing.source} onClose={() => setEditing(null)} />
+        ) : (
+          <SourceDialog key={editing.source?.id ?? editing.kind} kind={editing.kind} source={editing.source} onClose={() => setEditing(null)} />
+        )
+      ) : null}
       <ConfirmDialog
         open={deleting !== null}
         onClose={() => setDeleting(null)}
@@ -173,9 +188,16 @@ function SourceRow({ source: s, onEdit, onDelete }: { source: KnowledgeSource; o
           <StatusBadge source={s} />
           {!s.enabled ? <Badge>{t("off")}</Badge> : null}
         </p>
-        <p className="line-clamp-2 text-sm text-muted-foreground" dir="auto">
-          {s.body}
-        </p>
+        {s.kind === "url" && s.url ? (
+          <a href={s.url} target="_blank" rel="noopener noreferrer" dir="ltr" className="block truncate text-sm text-primary underline underline-offset-2">
+            {s.url}
+          </a>
+        ) : null}
+        {s.body ? (
+          <p className="line-clamp-2 text-sm text-muted-foreground" dir="auto">
+            {s.body}
+          </p>
+        ) : null}
         <p className="text-xs text-muted-foreground">
           {s.status === "failed" && s.error ? (
             <span className="text-danger">{codeMessage(s.error) ?? t("failedHint")}</span>
@@ -195,8 +217,15 @@ function SourceRow({ source: s, onEdit, onDelete }: { source: KnowledgeSource; o
           disabled={toggle.isPending}
           onChange={(enabled) => toggle.mutate({ id: s.id, enabled }, { onSuccess: () => toast.success(t(enabled ? "turnedOn" : "turnedOff")), onError: (err) => toast.error(errorMessage(err)) })}
         />
-        {s.status === "failed" ? (
-          <Button variant="ghost" size="icon-sm" aria-label={t("reindexFor", { title: s.title })} title={t("reindex")} loading={reindex.isPending} onClick={() => reindex.mutate(s.id, { onError: (err) => toast.error(errorMessage(err)) })}>
+        {s.status === "failed" || (s.kind === "url" && !isIndexing(s)) ? (
+          <Button
+            variant="ghost"
+            size="icon-sm"
+            aria-label={t(s.kind === "url" ? "refetchFor" : "reindexFor", { title: s.title })}
+            title={t(s.kind === "url" ? "refetch" : "reindex")} 
+            loading={reindex.isPending}
+            onClick={() => reindex.mutate(s.id, { onSuccess: () => (s.kind === "url" ? toast.success(t("refetching")) : undefined), onError: (err) => toast.error(errorMessage(err)) })}
+          >
             <RefreshCw aria-hidden />
           </Button>
         ) : null}

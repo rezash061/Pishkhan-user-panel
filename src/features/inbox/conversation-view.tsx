@@ -122,7 +122,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
           <Link href={backHref} aria-label={t("actions.backToList")} className="grid size-9 place-items-center rounded-full hover:bg-surface-muted lg:hidden">
             <ArrowRight className="size-5" aria-hidden />
           </Link>
-          <Avatar name={title} className="size-9" />
+          <Avatar name={title} src={c.contact?.profilePicUrl} className="size-9" />
           <div className="min-w-0 flex-1">
             <p className="truncate text-sm font-semibold" dir="auto">
               {title}

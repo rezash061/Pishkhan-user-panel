@@ -142,7 +142,7 @@ function Row({ conversation: c, href, active }: { conversation: Conversation; hr
       aria-current={active ? "page" : undefined}
       className={cn("flex h-full items-center gap-3 border-b px-3 transition-colors", active ? "bg-primary-soft" : "hover:bg-surface-muted")}
     >
-      <Avatar name={title} />
+      <Avatar name={title} src={c.contact?.profilePicUrl} />
       <div className="min-w-0 flex-1">
         <div className="flex items-center gap-2">
           <span className={cn("min-w-0 flex-1 truncate text-sm", unread ? "font-bold" : "font-medium")} dir="auto">

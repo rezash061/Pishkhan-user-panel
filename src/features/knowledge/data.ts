@@ -5,12 +5,15 @@ import { api, unwrap } from "@/lib/api/client";
 import { qk } from "@/lib/api/keys";
 import type { KnowledgeSource } from "@/lib/api/types";
 
-export const sourceKinds = ["faq", "text", "product"] as const;
+export const sourceKinds = ["faq", "text", "file", "url", "product"] as const;
 export type SourceKind = (typeof sourceKinds)[number];
 export const sourceStatuses = ["pending", "indexed", "failed"] as const;
 
 /** Backend limits (Knowledge module): titles 200, questions 300, FAQ answers 2,000, text bodies 50,000 characters. */
-export const limits = { title: 200, question: 300, answer: 2000, body: 50000, query: 500 } as const;
+export const limits = { title: 200, question: 300, answer: 2000, body: 50000, query: 500, url: 2000 } as const;
+
+/** Sources whose text the backend extracts from an uploaded document or a web page. */
+export const isExtracted = (kind: string): kind is "file" | "url" => kind === "file" || kind === "url";
 
 export interface SourceFilter {
   kind?: string;
@@ -55,10 +58,23 @@ function useKnowledgeMutation<T, R>(ws: string, fn: (vars: T) => Promise<R>) {
   return useMutation({ mutationFn: fn, onSuccess: () => qc.invalidateQueries({ queryKey: qk.knowledge(ws) }) });
 }
 
-export type SourceInput = { kind: "faq"; question: string; answer: string } | { kind: "text"; title: string; body: string };
+export type SourceInput =
+  | { kind: "faq"; question: string; answer: string }
+  | { kind: "text"; title: string; body: string }
+  | { kind: "file"; title: string | null; fileId: string }
+  | { kind: "url"; title: string | null; url: string };
 
 export function useSaveSource(ws: string) {
   return useKnowledgeMutation(ws, async ({ id, input }: { id: string | null; input: SourceInput }) => {
+    if (input.kind === "file" || input.kind === "url") {
+      // Their text comes from the document or page; only the title (and a page's address) can change.
+      if (id) {
+        const body = { title: input.title, question: null, answer: null, body: null, enabled: null, ...(input.kind === "url" ? { url: input.url } : {}) };
+        return unwrap(await api.PUT("/api/v1/workspaces/{workspaceId}/knowledge/sources/{sourceId}", { params: one(ws, id), body }));
+      }
+      const body = { kind: input.kind, title: input.title, question: null, answer: null, body: null, enabled: true, ...(input.kind === "file" ? { fileId: input.fileId } : { url: input.url }) };
+      return unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/knowledge/sources", { params: ws$(ws), body }));
+    }
     const fields =
       input.kind === "faq"
         ? { title: null, question: input.question, answer: input.answer, body: null }

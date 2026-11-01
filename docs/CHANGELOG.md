@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.13.0 — 2026-11-01
+
+- Knowledge documents and web pages (backend #35): «سند» uploads a PDF, Word (docx) or text file up to 20 MB, which is virus-scanned and then read in the background; «صفحهٔ وب» adds a public https page, titled from the page unless a title is given. Their rows show the extracted text, a page's address and, on failure, why (scanned PDF with no text, unreadable file, page not reachable, too large or not a text page). Editing changes the title and a page's address; «خواندن دوبارهٔ صفحه» reads a page again.
+- Customer photos: the inbox list, conversation header, contact list and contact page show the customer's Instagram photo when there is one, falling back to the initial when there is none or the signed link has expired.
+- Backend gaps 7, 11 and 16 marked done.
+- API refreshed from the backend branch for #35.
+
+## 0.12.0 — 2026-11-01
+
+- Web push (backend #33): Settings → Notifications has «اعلان روی این دستگاه» to turn push on or off for this browser and remove the user's other browsers. Hidden when the server has no push keys; on iPhone it asks to install the app first. The push column in the preferences table is enabled once push exists.
+- The service worker (v2) shows pushes in Persian and opens their link in the workspace, reusing an open panel tab.
+- The bell updates live from the inbox connection (`notification.created`) with a toast; polling drops to every 5 minutes as a fallback.
+
 ## 0.11.0 — 2026-11-01
 
 - AI agent «آزمایش» (backend #29): chat as a customer and see what the assistant would answer, using the real settings and knowledge with nothing sent or stored. Each answer shows its outcome and confidence, «چرا این جواب؟» opens the full trace, and «جواب درست را یاد بدهید» opens a FAQ prefilled with the question and answer. Test customer tags show VIP handoffs. The panel keeps the last 20 turns as history.
