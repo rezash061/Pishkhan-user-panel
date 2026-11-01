@@ -1,5 +1,12 @@
 # Changelog
 
+## 0.11.0 — 2026-11-01
+
+- AI agent «آزمایش» (backend #29): chat as a customer and see what the assistant would answer, using the real settings and knowledge with nothing sent or stored. Each answer shows its outcome and confidence, «چرا این جواب؟» opens the full trace, and «جواب درست را یاد بدهید» opens a FAQ prefilled with the question and answer. Test customer tags show VIP handoffs. The panel keeps the last 20 turns as history.
+- Knowledge «سؤال‌های بی‌جواب»: what customers asked that the knowledge base could not answer, with how often and the last conversation. Answer one (optionally reworded) to add it as a FAQ, or dismiss it; a dismissed question opens again when asked again. The tab shows the open count.
+- Fix: a `useEffect` that returned `scrollIntoView(...)` crashed in browsers where it returns a promise.
+- API refreshed from backend main.
+
 ## 0.10.0 — 2026-11-01
 
 - AI agent (backend #28, BE-1.4 part 2): «دستیار هوشمند» replaces its placeholder.

@@ -413,6 +413,62 @@ test("AI agent: save the persona and rules, read the reply log, and follow an AI
   await expect(page.getByRole("link", { name: /مانتو کتان چنده؟/ })).toHaveCount(0);
 });
 
+test("AI agent test chat: an answer with its reasons, a VIP handoff, and a correction prefilled as a FAQ", async ({ page }) => {
+  await login(page);
+  await page.goto(`/w/${workspaceId}/agent/test`);
+  const chat = page.getByRole("log");
+  await page.getByLabel("پیام مشتری").fill("ارسال به شهرستان چند روز طول می‌کشد؟");
+  await page.getByLabel("پیام مشتری").press("Enter");
+  await expect(chat.getByText(/پست پیشتاز/)).toBeVisible();
+  await chat.getByRole("button", { name: "چرا این جواب؟" }).click();
+  await expect(chat.getByRole("heading", { name: "اطلاعات استفاده‌شده" })).toBeVisible();
+  await chat.getByRole("button", { name: "جواب درست را یاد بدهید" }).click();
+  await expect(page.getByRole("dialog").getByLabel("پرسش")).toHaveValue("ارسال به شهرستان چند روز طول می‌کشد؟");
+  await page.getByRole("dialog").getByRole("button", { name: "انصراف" }).click();
+
+  await page.getByLabel("برچسب‌های مشتری آزمایشی").fill("vip");
+  await page.getByLabel("برچسب‌های مشتری آزمایشی").press("Enter");
+  await page.getByLabel("پیام مشتری").fill("سلام، وقت بخیر");
+  await page.getByRole("button", { name: "بفرست" }).click();
+  await expect(chat.getByText("مشتری برچسب ویژه دارد.")).toBeVisible();
+  await expect(chat.getByText("به تیم سپرده شد")).toBeVisible();
+  const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(results.violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+  await noHorizontalScroll(page);
+  await page.getByRole("button", { name: "شروع دوباره" }).click();
+  await expect(chat.getByText("مشتری برچسب ویژه دارد.")).toHaveCount(0);
+});
+
+test("unanswered questions: answer one into a FAQ and dismiss another", async ({ page }) => {
+  await login(page);
+  await page.goto(`/w/${workspaceId}/knowledge/unanswered`);
+  await expect(page.getByRole("radio", { name: "منتظر جواب" })).toBeChecked();
+  // Mobile and desktop share the mock: whichever runs first answers and dismisses, the other checks the result.
+  const answer = page.getByRole("button", { name: "جواب به «برای کیش هم ارسال دارید؟»" });
+  await expect(page.getByRole("main").getByText(/بار پرسیده شد|سؤال بی‌جوابی نمانده است/).first()).toBeVisible();
+  if (await answer.count()) {
+    await answer.click();
+    await page.getByRole("dialog").getByLabel("جواب").fill("بله، ارسال به کیش با پست پیشتاز سه تا پنج روز کاری است.");
+    await page.getByRole("dialog").getByRole("button", { name: "افزودن به پرسش و پاسخ‌ها" }).click();
+    await expect(page.getByText("به پرسش و پاسخ‌ها اضافه شد؛ دستیار به‌زودی از آن استفاده می‌کند.")).toBeVisible();
+  }
+  const dismiss = page.getByRole("button", { name: "نادیده گرفتن «جنس آستر مانتو چیه؟»" });
+  if (await dismiss.count()) {
+    await dismiss.click();
+    await expect(page.getByText("نادیده گرفته شد. اگر دوباره پرسیده شود برمی‌گردد.")).toBeVisible();
+  }
+  await expect(page.getByText("برای کیش هم ارسال دارید؟")).toHaveCount(0);
+  await page.getByRole("radio", { name: "جواب داده شد" }).click();
+  await expect(page.getByText("برای کیش هم ارسال دارید؟")).toBeVisible();
+  await page.getByRole("radio", { name: "نادیده گرفته شد" }).click();
+  await expect(page.getByText("جنس آستر مانتو چیه؟")).toBeVisible();
+  await noHorizontalScroll(page);
+
+  await page.getByRole("link", { name: "منابع" }).click();
+  await page.getByLabel("جستجو در منابع").fill("کیش");
+  await expect(page.getByText("برای کیش هم ارسال دارید؟")).toBeVisible();
+});
+
 test("adds an internal note", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001001`);

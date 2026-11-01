@@ -6413,6 +6413,193 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/knowledge/unanswered": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Unanswered questions, most recently asked first; status defaults to open */
+        get: {
+            parameters: {
+                query?: {
+                    status?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PageOfUnansweredResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/knowledge/unanswered/{questionId}/answer": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Answer once: the answer is saved as a FAQ and the question is marked answered */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    questionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["UnansweredAnswerRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UnansweredAnswerResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/knowledge/unanswered/{questionId}/dismiss": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Hide a question that needs no answer (it opens again if asked again) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    questionId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UnansweredResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/agent/profile": {
         parameters: {
             query?: never;
@@ -6580,6 +6767,66 @@ export interface paths {
         };
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/agent/sandbox": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Test mode: what the AI agent would answer, with its trace (nothing is sent or stored) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SandboxRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SandboxResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
         delete?: never;
         options?: never;
         head?: never;
@@ -7729,6 +7976,10 @@ export interface components {
             items: components["schemas"]["TraceSummary"][];
             nextCursor: null | string;
         };
+        PageOfUnansweredResponse: {
+            items: components["schemas"]["UnansweredResponse"][];
+            nextCursor: null | string;
+        };
         PasswordLoginRequest: {
             phone: string;
             password: string;
@@ -7981,6 +8232,20 @@ export interface components {
             text: null | string;
             payload: null | string;
         };
+        SandboxRequest: {
+            text: string;
+            history: null | components["schemas"]["SandboxTurn"][];
+            tags: null | string[];
+            goal: null | string;
+        };
+        SandboxResponse: {
+            outcome: string;
+            messages: string[];
+            handoffReason: null | string;
+            suggestedReply: null | string;
+            unansweredQuestion: null | string;
+            trace: components["schemas"]["TraceDetail"];
+        };
         SandboxStep: {
             type: string;
             message?: null | components["schemas"]["OutboundContent"];
@@ -7997,6 +8262,10 @@ export interface components {
             /** Format: date-time */
             until?: null | string;
             goal?: null | string;
+        };
+        SandboxTurn: {
+            role: string;
+            text: string;
         };
         SegmentCondition: {
             field: string;
@@ -8276,6 +8545,30 @@ export interface components {
             payload?: null | string;
             /** Format: int32 */
             cooldownMinutes?: null | number;
+        };
+        UnansweredAnswerRequest: {
+            answer: string;
+            question: null | string;
+        };
+        UnansweredAnswerResponse: {
+            question: components["schemas"]["UnansweredResponse"];
+            source: components["schemas"]["SourceResponse"];
+        };
+        UnansweredResponse: {
+            /** Format: uuid */
+            id: string;
+            question: string;
+            /** Format: int32 */
+            count: number;
+            status: string;
+            /** Format: date-time */
+            firstAskedAt: string;
+            /** Format: date-time */
+            lastAskedAt: string;
+            /** Format: uuid */
+            lastConversationId: string;
+            /** Format: uuid */
+            answerSourceId: null | string;
         };
         UpdateContactRequest: {
             displayName: null | string;

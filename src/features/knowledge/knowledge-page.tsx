@@ -21,6 +21,7 @@ import { useCodeMessage, useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
 import { isIndexing, limits, sourceKinds, sourceStatuses, useDeleteSource, useKnowledgeSearch, useReindexSource, useSources, useToggleSource, type SourceKind } from "./data";
 import { SourceDialog } from "./source-dialog";
+import { KnowledgeTabs } from "./tabs";
 
 const kindIcons = { faq: MessageCircleQuestion, text: FileText, product: Package } as const;
 
@@ -62,6 +63,7 @@ export function KnowledgePage() {
           </div>
         }
       />
+      <KnowledgeTabs />
 
       <TestBox />
 

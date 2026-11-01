@@ -127,3 +127,6 @@ export type AgentProfile = Schemas["AgentProfileDto"];
 export type AgentProfileResponse = Schemas["AgentProfileResponse"];
 export type TraceSummary = Schemas["TraceSummary"];
 export type TraceDetail = Schemas["TraceDetail"];
+export type UnansweredQuestion = Schemas["UnansweredResponse"];
+export type SandboxResponse = Schemas["SandboxResponse"];
+export type SandboxTurn = Schemas["SandboxTurn"];

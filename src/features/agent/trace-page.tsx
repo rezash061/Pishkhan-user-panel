@@ -34,7 +34,7 @@ export function TracePage({ traceId }: { traceId: string }) {
       ) : trace.isError ? (
         <EmptyState title={trace.error instanceof ApiError && trace.error.status === 404 ? t("notFound") : errorMessage(trace.error)} />
       ) : (
-        <Detail trace={trace.data} />
+        <TraceView trace={trace.data} />
       )}
     </div>
   );
@@ -49,7 +49,8 @@ function Row({ label, children }: { label: string; children: ReactNode }) {
   );
 }
 
-function Detail({ trace: x }: { trace: TraceDetail }) {
+/** The whole trace. In test mode there is no real conversation, so `sandbox` hides that link. */
+export function TraceView({ trace: x, sandbox }: { trace: TraceDetail; sandbox?: boolean }) {
   const t = useTranslations("agent.log");
   const tk = useTranslations("knowledge.kinds");
   const reasonLabel = useHandoffReason();
@@ -81,7 +82,7 @@ function Detail({ trace: x }: { trace: TraceDetail }) {
               </p>
             </div>
           ) : null}
-          {can(P.inboxRead) ? (
+          {!sandbox && can(P.inboxRead) ? (
             <Link href={`/w/${workspace.id}/inbox/${x.conversationId}`} className="inline-flex items-center gap-1 text-sm text-primary underline underline-offset-2">
               <MessageCircle className="size-4" aria-hidden />
               {t("openConversation")}

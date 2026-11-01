@@ -27,6 +27,7 @@ export const qk = {
   agentTraces: (ws: string, filter: object) => ["agent", ws, "traces", filter] as const,
   agentTrace: (ws: string, id: string) => ["agent", ws, "trace", id] as const,
   knowledgeList: (ws: string, filter: object) => ["knowledge", ws, "list", filter] as const,
+  unanswered: (ws: string, status: string) => ["knowledge", ws, "unanswered", status] as const,
   billingPlan: (ws: string) => ["billing", ws, "plan"] as const,
   billingUsage: (ws: string) => ["billing", ws, "usage"] as const,
   audit: (ws: string, filter: object) => ["audit", ws, filter] as const,
