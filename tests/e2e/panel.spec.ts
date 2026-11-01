@@ -88,6 +88,8 @@ test("finds a customer by name and answers a handoff with the suggested reply", 
   await page.getByLabel("جستجوی گفتگو").fill("niloo");
   const row = page.locator("ul li a").first();
   await expect(row).toContainText("نیلوفر احمدی");
+  // Her Instagram photo replaces the initial.
+  await expect(row.locator("img")).toHaveJSProperty("complete", true);
   await expect(page.locator("ul li a")).toHaveCount(4);
   await page.getByLabel("جستجوی گفتگو").fill("هیچ‌کس");
   await expect(page.getByText("گفتگویی پیدا نشد.")).toBeVisible();
@@ -422,6 +424,51 @@ test("knowledge: add a FAQ, watch it index, test a question, switch a product of
   await page.getByRole("button", { name: `حذف «ساعت کاری فروشگاه ${p}؟»` }).click();
   await page.getByRole("dialog").getByRole("button", { name: "حذف" }).click();
   await expect(page.getByText("منبع حذف شد.")).toBeVisible();
+});
+
+test("knowledge: add a document and web pages, and see why a page failed", async ({ page }, info) => {
+  await login(page);
+  const p = info.project.name;
+  await page.goto(`/w/${workspaceId}/knowledge`);
+  await expect(page.getByText("راهنمای سایز", { exact: true })).toBeVisible();
+
+  // A document: upload, virus scan, then the backend reads its text.
+  await page.getByRole("button", { name: "سند", exact: true }).click();
+  let dialog = page.getByRole("dialog");
+  await dialog.locator('input[type="file"]').setInputFiles({ name: "sizes.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 mock") });
+  await expect(dialog.getByText("sizes.pdf")).toBeVisible();
+  await dialog.getByLabel("عنوان").fill(`جدول سایز ${p}`);
+  const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(axe.violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+  await dialog.getByRole("button", { name: "ذخیره" }).click();
+  await expect(page.getByText("اضافه شد؛ متنش چند لحظهٔ دیگر آماده می‌شود.")).toBeVisible();
+  const doc = page.getByText(`جدول سایز ${p}`, { exact: true }).locator("xpath=ancestor::div[contains(@class,'items-start')][1]");
+  await expect(doc.getByText("آماده", { exact: true })).toBeVisible({ timeout: 10_000 });
+  await expect(doc.getByText(/جدول سایزبندی مانتوها/)).toBeVisible();
+
+  // A web page that cannot be opened fails with the reason.
+  await page.getByRole("button", { name: "صفحهٔ وب", exact: true }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel("نشانی صفحه").fill("https://nowhere.example/faq");
+  await dialog.getByLabel("عنوان").fill(`صفحهٔ گمشده ${p}`);
+  await dialog.getByRole("button", { name: "ذخیره" }).click();
+  const broken = page.getByText(`صفحهٔ گمشده ${p}`, { exact: true }).locator("xpath=ancestor::div[contains(@class,'items-start')][1]");
+  await expect(broken.getByText(/صفحه باز نشد/)).toBeVisible({ timeout: 10_000 });
+
+  // Fix its address: the page is read again and takes its own title only when none was given.
+  await page.getByRole("button", { name: `ویرایش «صفحهٔ گمشده ${p}»` }).click();
+  dialog = page.getByRole("dialog");
+  await dialog.getByLabel("نشانی صفحه").fill("https://niloofar.example/shipping");
+  await dialog.getByRole("button", { name: "ذخیره" }).click();
+  await expect(broken.getByText("آماده", { exact: true })).toBeVisible({ timeout: 10_000 });
+  await expect(broken.getByRole("link", { name: "https://niloofar.example/shipping" })).toBeVisible();
+  await noHorizontalScroll(page);
+
+  for (const title of [`جدول سایز ${p}`, `صفحهٔ گمشده ${p}`]) {
+    await page.getByRole("button", { name: `حذف «${title}»` }).click();
+    await page.getByRole("dialog").getByRole("button", { name: "حذف" }).click();
+    await expect(page.getByText(title, { exact: true })).toHaveCount(0);
+  }
 });
 
 test("AI agent: save the persona and rules, read the reply log, and follow an AI handoff to its trace", async ({ page }, info) => {

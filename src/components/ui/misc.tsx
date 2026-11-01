@@ -39,14 +39,7 @@ export function PageHeader({ title, description, action }: { title: ReactNode; d
   );
 }
 
-export function Avatar({ name, className }: { name: string; className?: string }) {
-  const letter = name.trim().charAt(0) || "؟";
-  return (
-    <span aria-hidden className={cn("grid size-10 shrink-0 place-items-center rounded-full bg-primary-soft text-sm font-semibold text-primary", className)}>
-      {letter}
-    </span>
-  );
-}
+export { Avatar } from "./avatar";
 
 export function Switch({ checked, onChange, label, disabled, id }: { checked: boolean; onChange: (value: boolean) => void; label: string; disabled?: boolean; id?: string }) {
   return (

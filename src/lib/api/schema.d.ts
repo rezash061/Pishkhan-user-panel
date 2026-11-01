@@ -3943,7 +3943,10 @@ export interface paths {
             path?: never;
             cookie?: never;
         };
-        /** A flow's submissions, newest first */
+        /**
+         * A flow's submissions, newest first
+         * @description 404 when the flow is not in this workspace and has no submissions here (a deleted flow keeps its submissions).
+         */
         get: {
             parameters: {
                 query?: {
@@ -3966,6 +3969,15 @@ export interface paths {
                     };
                     content: {
                         "application/json": components["schemas"]["PageOfFormSubmissionResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
                     };
                 };
             };
@@ -6105,7 +6117,7 @@ export interface paths {
             };
         };
         put?: never;
-        /** Add a FAQ or a text; it is indexed in the background */
+        /** Add a FAQ, a text, an uploaded document or a web page; it is indexed in the background */
         post: {
             parameters: {
                 query?: never;
@@ -6260,7 +6272,7 @@ export interface paths {
             };
         };
         post?: never;
-        /** Delete a FAQ or text with its chunks (product sources follow the catalog) */
+        /** Delete a FAQ, text, document or page with its chunks (product sources follow the catalog) */
         delete: {
             parameters: {
                 query?: never;
@@ -6314,7 +6326,7 @@ export interface paths {
         };
         get?: never;
         put?: never;
-        /** Build the source's chunks and embeddings again */
+        /** Build the source's chunks and embeddings again (a web page is fetched again) */
         post: {
             parameters: {
                 query?: never;
@@ -7569,12 +7581,16 @@ export interface components {
             lastSeenAt: null | string;
             /** Format: date-time */
             createdAt: string;
+            /** Format: uri */
+            profilePicUrl: null | string;
         };
         ConversationContact: {
             /** Format: uuid */
             id: string;
             displayName: null | string;
             username: null | string;
+            /** Format: uri */
+            profilePicUrl: null | string;
         };
         ConversationResponse: {
             /** Format: uuid */
@@ -8516,6 +8532,9 @@ export interface components {
             answer: null | string;
             body: null | string;
             enabled: null | boolean;
+            /** Format: uuid */
+            fileId?: null | string;
+            url?: null | string;
         };
         SourceResponse: {
             /** Format: uuid */
@@ -8541,6 +8560,9 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             updatedAt: string;
+            /** Format: uuid */
+            fileId: null | string;
+            url: null | string;
         };
         SourceUpdateRequest: {
             title: null | string;
@@ -8548,6 +8570,7 @@ export interface components {
             answer: null | string;
             body: null | string;
             enabled: null | boolean;
+            url?: null | string;
         };
         StorefrontCard: {
             /** Format: uuid */

@@ -23,16 +23,16 @@ Items marked ✅ were closed by backend PR #13 (`feature/user-panel-gaps`) and t
 5. ✅ **Conversation search** (`q` on the list: name, username, phone) — plan 3.3.
 6. ✅ **Handoff suggestion on the conversation.** `handoff.requested` carries `suggestedReply`, but a conversation opened
    later cannot get it; add it (and the handoff reason) to `ConversationResponse`.
-7. **SignalR CORS / same origin.** The hub has no CORS policy, so the panel must reach `/hubs/inbox` on its own origin
-   (Next rewrite in dev, Nginx in production). Fine, but worth recording in the deployment docs.
+7. ✅ **SignalR CORS / same origin.** The hub has no CORS policy, so the panel must reach `/hubs/inbox` on its own origin
+   (Next rewrite in dev, Nginx in production). Recorded in the backend's `docs/deployment.md` (backend #35).
 
 ## Endpoints for planned panel features (Phase 1)
 
 8. ✅ Dashboard summary (`GET /workspaces/{id}/dashboard`: counts, answered by AI/rules/humans, overnight summary).
 9. ✅ Pending invitations list and revoke (`GET/DELETE /workspaces/{id}/invitations`).
 10. ✅ Notification preferences, workspace deletion with grace period, support-session token exchange (backend #18). Notification links point to `/settings/channels`; the panel's page is `/channels`, so the panel maps it.
-11. Modules not yet in the API: AI agent settings + test chat + traces, knowledge,
-    contacts/CRM/forms, billing/plans/usage, web push (VAPID public key + subscription endpoint).
+11. ✅ Modules not yet in the API: AI agent settings + test chat + traces, knowledge (documents and web pages in backend #35),
+    contacts/CRM/forms, billing/plans/usage, web push (VAPID public key + subscription endpoint, backend #33).
 
 ## Automations and catalog (BE-1.3, BE-1.6)
 
@@ -47,4 +47,5 @@ Items 12–15 were closed by backend PR #14; the panel now uses one set of hours
     endpoint to add, remove or reorder one image, so every image change re-sends the whole product.
 15. ✅ **Automation hours** (12) are moving to the workspace business hours in a coming backend PR, together with product
     image and test-run endpoints (13, 14). The panel will drop its separate automation-hours editor then.
-16. **Contact profile picture.** `ConversationContact` has no `profilePicUrl`, so avatars are initials.
+16. ✅ **Contact profile picture.** `ConversationContact` has no `profilePicUrl`, so avatars are initials. Backend #35 adds
+    `profilePicUrl` (a 6-hour signed URL, or null) to conversations and CRM contacts; older contacts keep initials.

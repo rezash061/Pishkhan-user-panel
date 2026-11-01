@@ -145,7 +145,7 @@ export function ContactsPage() {
             const { title, handle } = contactLabel(c, (short) => tInbox("customer", { id: short }));
             return (
               <Link key={c.id} href={`/w/${ws}/contacts/${c.id}`} className="flex items-center gap-3 p-3 hover:bg-surface-muted/50 sm:p-4">
-                <Avatar name={title.replace(/^@/, "")} />
+                <Avatar name={title.replace(/^@/, "")} src={c.profilePicUrl} />
                 <div className="min-w-0 flex-1 space-y-1">
                   <p className="flex flex-wrap items-baseline gap-x-2">
                     <span className="truncate font-medium" dir="auto">

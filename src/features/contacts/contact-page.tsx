@@ -90,7 +90,7 @@ function NameHeader({ detail, title, handle, writable }: { detail: ContactDetail
 
   return (
     <div className="flex items-start gap-3">
-      <Avatar name={title.replace(/^@/, "")} className="size-12 text-base" />
+      <Avatar name={title.replace(/^@/, "")} src={c.profilePicUrl} className="size-12 text-base" />
       <div className="min-w-0 flex-1">
         {editing ? (
           <form onSubmit={submit} className="flex flex-wrap items-end gap-2">
