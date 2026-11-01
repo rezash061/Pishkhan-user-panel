@@ -22,7 +22,7 @@ export const navItems: NavItem[] = [
   { key: "contacts", href: "/contacts", icon: UsersRound, permission: P.crmRead, soon: true },
   { key: "channels", href: "/channels", icon: Radio, permission: P.settingsRead, tab: true },
   { key: "team", href: "/team", icon: Users, permission: P.membersRead },
-  { key: "billing", href: "/billing", icon: CreditCard, permission: P.billingManage, soon: true },
+  { key: "billing", href: "/billing", icon: CreditCard, permission: P.billingManage },
   { key: "settings", href: "/settings", icon: Settings, permission: P.settingsRead, tab: true },
 ];
 

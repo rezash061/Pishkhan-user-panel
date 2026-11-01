@@ -1511,7 +1511,10 @@ export interface paths {
             };
         };
         put?: never;
-        /** Invite a team member by phone (SMS link) */
+        /**
+         * Invite a team member by phone (SMS link)
+         * @description Members and pending invitations count against the plan's `seats`; over the limit answers 402 `billing.plan_limit`.
+         */
         post: {
             parameters: {
                 query?: never;
@@ -1547,6 +1550,15 @@ export interface paths {
                 };
                 /** @description Bad Request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Payment Required */
+                402: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -1797,7 +1809,7 @@ export interface paths {
         put?: never;
         /**
          * Start connecting an Instagram professional account
-         * @description Returns the Instagram authorization URL. The browser is sent back to the panel after the callback with `status=connected|denied|error` and `reason`.
+         * @description Returns the Instagram authorization URL. The browser is sent back to the panel after the callback with `status=connected|denied|error` and `reason` (`plan_limit` when a new account would exceed the plan's `channel_accounts`). 402 `billing.plan_limit` when the plan's accounts are all in use and none needs reconnecting.
          */
         post: {
             parameters: {
@@ -1821,6 +1833,15 @@ export interface paths {
                 };
                 /** @description Bad Request */
                 400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Payment Required */
+                402: {
                     headers: {
                         [name: string]: unknown;
                     };
@@ -4691,6 +4712,124 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/billing/subscription": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The workspace's plan and its limits
+         * @description Without a subscription the workspace is on the free plan. During the beta plans are granted by the Pishkhan team.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CurrentPlanResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/billing/usage": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Usage this billing period against the plan's limits
+         * @description Every meter: ai_conversations, ai_messages, receipt_verifications and sms count this period; channel_accounts and seats (members plus pending invitations) are current counts.
+         */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["UsageResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/audit": {
         parameters: {
             query?: never;
@@ -5238,6 +5377,22 @@ export interface components {
         };
         /** @enum {string} */
         Currency: "IRR";
+        CurrentPlanResponse: {
+            source: string;
+            /** Format: uuid */
+            planId: null | string;
+            planCode: null | string;
+            planName: null | string;
+            /** Format: int32 */
+            planVersion: null | number;
+            trial: boolean;
+            /** Format: date-time */
+            endsAt: null | string;
+            limits: {
+                [key: string]: null | number;
+            };
+            subscription: null | components["schemas"]["SubscriptionResponse"];
+        };
         DashboardDay: {
             /** Format: date */
             day: string;
@@ -5946,6 +6101,24 @@ export interface components {
             name: string;
             cards: components["schemas"]["StorefrontCard"][];
         };
+        SubscriptionResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            planId: string;
+            planCode: string;
+            /** Format: int32 */
+            planVersion: number;
+            state: string;
+            trial: boolean;
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: null | string;
+            /** Format: date-time */
+            endedAt: null | string;
+            endReason: null | string;
+        };
         SupportSessionResponse: {
             accessToken: string;
             /** Format: date-time */
@@ -5994,6 +6167,20 @@ export interface components {
         UpdateWorkspaceRequest: {
             name: null | string;
             industry: null | string;
+        };
+        UsageMeter: {
+            meter: string;
+            /** Format: int64 */
+            used: number;
+            /** Format: int32 */
+            limit: null | number;
+        };
+        UsageResponse: {
+            /** Format: date-time */
+            periodStart: string;
+            /** Format: date-time */
+            periodEnd: string;
+            meters: components["schemas"]["UsageMeter"][];
         };
         VariantRequest: {
             /** Format: uuid */

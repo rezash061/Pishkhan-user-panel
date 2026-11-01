@@ -64,5 +64,6 @@ Built against the backend's current API (Phase 0 through BE-1.6, plus backend PR
 | PWA: manifest, icons, service worker with offline page, install prompt | Done; web push waits for backend VAPID keys |
 | Automations: rules by trigger with priority order, rule editor (Persian keyword preview and tester, message builder with buttons/quick replies/variables and a live DM preview, post picker, actions), comment-to-DM wizard with old-comment backlog, rule stats, rule and flow dry-run testers, flows (list-based builder, server validation, publish), fallback reply (hours come from the workspace business hours) | Done; canvas flow builder is a follow-up |
 | Catalog: products with filters, editor with images, option/variant matrix, Toman prices and stock; categories; storefront card sets with preview; Excel export, template and import job | Done |
-| AI agent, knowledge, contacts, billing | Placeholder pages until the backend modules exist |
+| Billing v1: current plan, trial, usage meters, plan-limit sheet | Done; online payment is Phase 2 |
+| AI agent, knowledge, contacts | Placeholder pages until the backend modules exist |
 | Dashboard (live inbox, overnight summary, who answered by day), notifications (bell, list, preferences), workspace deletion with restore, support sessions with banner | Done; web push waits for the backend |

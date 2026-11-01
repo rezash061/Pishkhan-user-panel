@@ -201,6 +201,30 @@ test("owner reads the activity log, with support access and its reason", async (
   expect(axe.violations).toEqual([]);
 });
 
+test("billing shows the plan and this month's usage; a full plan opens the upgrade sheet", async ({ page }) => {
+  await login(page);
+  await page.goto(`/w/${workspaceId}/billing`);
+  await expect(page.getByRole("heading", { name: "اشتراک" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /رشد/ })).toBeVisible();
+  await expect(page.getByText("آزمایشی", { exact: true })).toBeVisible();
+  await expect(page.getByRole("meter", { name: "گفتگوهای هوش مصنوعی" })).toHaveAttribute("aria-valuetext", "۴۱۲ از ۵۰۰");
+  await expect(page.getByText("نزدیک سقف طرح")).toBeVisible();
+  await expect(page.getByText("سقف طرح پر شده است")).toBeVisible();
+  await expect(page.getByText("بدون سقف")).toBeVisible();
+  await noHorizontalScroll(page);
+  const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
+  expect(axe.violations).toEqual([]);
+
+  await page.goto(`/w/${workspaceId}/team`);
+  await page.getByRole("button", { name: "دعوت همکار" }).first().click();
+  await page.getByLabel("شمارهٔ موبایل همکار").fill("09120009999");
+  await page.getByRole("dialog").getByRole("button", { name: "دعوت همکار" }).click();
+  const sheet = page.getByRole("dialog", { name: "به سقف طرح رسیده‌اید" });
+  await expect(sheet.getByText(/«اعضای تیم»/)).toBeVisible();
+  await sheet.getByRole("link", { name: "مشاهدهٔ طرح‌ها" }).click();
+  await expect(page).toHaveURL(new RegExp(`/w/${workspaceId}/billing$`));
+});
+
 test("adds an internal note", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001001`);
