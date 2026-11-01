@@ -12,6 +12,7 @@ export const HubEvents = {
   messageStatus: "message.status",
   handoffRequested: "handoff.requested",
   channelStatus: "channel.status",
+  notificationCreated: "notification.created",
 } as const;
 
 export type HubStatus = "connecting" | "connected" | "reconnecting" | "disconnected";

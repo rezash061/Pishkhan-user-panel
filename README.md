@@ -61,11 +61,11 @@ Built against the backend's current API (Phase 0 through BE-1.6, plus backend PR
 | Inbox: filters, virtualized list, thread, optimistic send with retry, 24-hour/7-day window, quick replies (`/`), notes, assign, status, AI pause, live updates, keyboard shortcuts, customer names, search, handoff reason and suggested reply, attachments and story replies | Done |
 | Channels: status, reconnect, disconnect, recent posts; banners for disconnected/expiring accounts | Done |
 | Settings: general, business hours with Jalali closed dates, quick replies, notifications, activity log (owner) | Done |
-| PWA: manifest, icons, service worker with offline page, install prompt | Done; web push waits for backend VAPID keys |
+| PWA: manifest, icons, service worker with offline page, install prompt | Done; web push per browser (shows the notification and opens its link) |
 | Automations: rules by trigger with priority order, rule editor (Persian keyword preview and tester, message builder with buttons/quick replies/variables and a live DM preview, post picker, actions), comment-to-DM wizard with old-comment backlog, rule stats, rule and flow dry-run testers, flows (list-based builder, server validation, publish), fallback reply (hours come from the workspace business hours) | Done; canvas flow builder is a follow-up |
 | Catalog: products with filters, editor with images, option/variant matrix, Toman prices and stock; categories; storefront card sets with preview; Excel export, template and import job | Done |
 | Billing v1: current plan, trial, usage meters, plan-limit sheet | Done; online payment is Phase 2 |
 | Contacts: list with filters, profile with tags, custom fields, consent and form answers; tags, custom fields, segments with live count, forms, Excel export | Done |
 | Knowledge base: FAQ and text sources, product sources on/off, indexing status with retry, test search, unanswered questions | Done; file and URL sources wait for the backend |
 | AI agent: settings (persona, safety, handoff rules), test chat with corrections, reply log with trace details, AI handoff reasons in the inbox | Done |
-| Dashboard (live inbox, overnight summary, who answered by day), notifications (bell, list, preferences), workspace deletion with restore, support sessions with banner | Done; web push waits for the backend |
+| Dashboard (live inbox, overnight summary, who answered by day), notifications (bell, list, preferences), workspace deletion with restore, support sessions with banner | Done; the bell updates live from the inbox connection; web push per browser |

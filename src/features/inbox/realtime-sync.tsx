@@ -7,6 +7,7 @@ import { toast } from "sonner";
 import { qk } from "@/lib/api/keys";
 import type { Channel, Message } from "@/lib/api/types";
 import { HubEvents, useHubEvent } from "@/lib/realtime/hub";
+import { notificationHref } from "@/features/notifications/data";
 import { patchConversation, updateMessageStatus, upsertMessage } from "./data";
 
 interface ConversationUpdated {
@@ -66,6 +67,15 @@ export function RealtimeSync({ workspaceId }: { workspaceId: string }) {
     qc.setQueryData<Channel[]>(qk.channels(workspaceId), (old) => old?.map((c) => (c.id === p.channelAccountId ? { ...c, status: p.status, statusReason: p.reason } : c)));
     void qc.invalidateQueries({ queryKey: qk.channels(workspaceId) });
     void qc.invalidateQueries({ queryKey: qk.notifications(workspaceId) });
+  });
+
+  // Sent to the user (not the workspace group), so it can be for another of their workspaces.
+  useHubEvent<{ workspaceId: string; id: string; kind: string; title: string; body: string | null; link: string | null }>(HubEvents.notificationCreated, (p) => {
+    void qc.invalidateQueries({ queryKey: qk.notifications(p.workspaceId) });
+    // Handoffs already have their own toast (handoff.requested); others announce themselves here.
+    if (p.workspaceId !== workspaceId || p.kind === "handoff") return;
+    const href = notificationHref(workspaceId, p.link);
+    toast(p.title, { description: p.body ?? undefined, ...(href ? { action: { label: t("open"), onClick: () => router.push(href) } } : {}), duration: 8_000 });
   });
 
   return null;

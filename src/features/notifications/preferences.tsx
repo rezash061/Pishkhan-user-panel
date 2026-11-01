@@ -11,15 +11,22 @@ import { useWorkspace } from "@/features/workspace/context";
 import type { NotificationPreference } from "@/lib/api/types";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { useNotificationPreferences, useSaveNotificationPreferences } from "./data";
+import { usePushKey } from "./push";
+import { PushCard } from "./push-card";
 
-/** Each member's own choice, per kind: in the panel, as a push (not available yet) or by SMS (urgent kinds only). */
+/** Each member's own choice, per kind: in the panel, as a push (to the browsers they turned it on for) or by SMS (urgent kinds only). */
 export function NotificationPreferences() {
   const errorMessage = useErrorMessage();
   const { workspace } = useWorkspace();
   const prefs = useNotificationPreferences(workspace.id);
   if (prefs.isPending) return <Skeleton className="h-64" />;
   if (prefs.isError) return <p className="text-sm text-danger">{errorMessage(prefs.error)}</p>;
-  return <PreferencesForm initial={prefs.data} />;
+  return (
+    <div className="space-y-5">
+      <PushCard />
+      <PreferencesForm initial={prefs.data} />
+    </div>
+  );
 }
 
 type Channel = "inApp" | "push" | "sms";
@@ -29,6 +36,7 @@ function PreferencesForm({ initial }: { initial: NotificationPreference[] }) {
   const errorMessage = useErrorMessage();
   const { workspace } = useWorkspace();
   const save = useSaveNotificationPreferences(workspace.id);
+  const pushAvailable = Boolean(usePushKey().data);
   const [items, setItems] = useState(initial);
   const dirty = JSON.stringify(items) !== JSON.stringify(initial);
   const set = (kind: string, channel: Channel, on: boolean) => setItems((list) => list.map((p) => (p.kind === kind ? { ...p, [channel]: on } : p)));
@@ -45,7 +53,8 @@ function PreferencesForm({ initial }: { initial: NotificationPreference[] }) {
                 <th className="py-2 text-start font-medium">{t("kind")}</th>
                 <th className="w-20 py-2 font-medium">{t("inApp")}</th>
                 <th className="w-20 py-2 font-medium">
-                  {t("push")} <Badge className="ms-0.5">{t("soon")}</Badge>
+                  {t("push")}
+                  {pushAvailable ? null : <Badge className="ms-0.5">{t("pushOff")}</Badge>}
                 </th>
                 <th className="w-20 py-2 font-medium">{t("sms")}</th>
               </tr>
@@ -61,7 +70,7 @@ function PreferencesForm({ initial }: { initial: NotificationPreference[] }) {
                     <Switch label={`${label(p)}: ${t("inApp")}`} checked={p.inApp} onChange={(on) => set(p.kind, "inApp", on)} />
                   </td>
                   <td className="py-3 text-center">
-                    <Switch label={`${label(p)}: ${t("push")}`} checked={p.push} disabled onChange={(on) => set(p.kind, "push", on)} />
+                    <Switch label={`${label(p)}: ${t("push")}`} checked={p.push} disabled={!pushAvailable} onChange={(on) => set(p.kind, "push", on)} />
                   </td>
                   <td className="py-3 text-center">
                     {p.smsAvailable ? <Switch label={`${label(p)}: ${t("sms")}`} checked={p.sms} onChange={(on) => set(p.kind, "sms", on)} /> : <span className="text-xs text-muted-foreground">—</span>}

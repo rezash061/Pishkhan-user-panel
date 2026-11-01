@@ -5,8 +5,8 @@ import { api, unwrap } from "@/lib/api/client";
 import { qk } from "@/lib/api/keys";
 import type { NotificationPreference } from "@/lib/api/types";
 
-/** There is no realtime event for notifications yet, so the badge polls (and refetches on handoff and channel events). */
-const POLL_MS = 60_000;
+/** The hub's «notification.created» bumps the badge live; this slow poll only covers a lost connection. */
+const POLL_MS = 5 * 60_000;
 
 export function useUnreadNotifications(ws: string) {
   return useQuery({
