@@ -19,6 +19,7 @@ import { P } from "@/lib/permissions";
 import { useJoinConversation } from "@/lib/realtime/hub";
 import { Composer, type ComposerHandle } from "./composer";
 import { contactTitle } from "./contact";
+import { isAiDraft, useHandoffReason } from "./handoff-reason";
 import { newLocalMessage, useAiPause, useAssign, useChangeStatus, useConversation, useMarkRead, useQuickReplies, useSendMessage, type OptimisticMessage } from "./data";
 import { SidePanel } from "./side-panel";
 import { Thread } from "./thread";
@@ -180,7 +181,7 @@ export function ConversationView({ conversationId }: { conversationId: string })
 
         <Thread workspaceId={ws} conversationId={conversationId} senderName={senderName} onRetry={retry} onNewInbound={onNewInbound} />
 
-        {c.status === "handed_off" && c.handoff ? <HandoffBanner handoff={c.handoff} canReply={canReply} onUse={(text) => composer.current?.setText(text)} /> : null}
+        {c.status === "handed_off" && c.handoff ? <HandoffBanner handoff={c.handoff} conversationId={c.id} canReply={canReply} onUse={(text) => composer.current?.setText(text)} /> : null}
 
         <Composer
           ref={composer}
@@ -203,9 +204,11 @@ export function ConversationView({ conversationId }: { conversationId: string })
 }
 
 /** Why the conversation waits for a person, and the reply the AI or rule suggested, one tap from the composer. */
-function HandoffBanner({ handoff, canReply, onUse }: { handoff: Handoff; canReply: boolean; onUse: (text: string) => void }) {
+function HandoffBanner({ handoff, conversationId, canReply, onUse }: { handoff: Handoff; conversationId: string; canReply: boolean; onUse: (text: string) => void }) {
   const t = useTranslations("inbox.handoff");
-  const reason = handoff.reason === "manual" || handoff.reason === "automation" ? t(`reasons.${handoff.reason}`) : handoff.reason;
+  const reasonLabel = useHandoffReason();
+  const { workspace, can } = useWorkspace();
+  const reason = reasonLabel(handoff.reason);
   return (
     <div className="shrink-0 space-y-2 border-t bg-warning-soft/60 px-3 py-2.5 text-sm" role="note">
       <p className="flex flex-wrap items-center gap-x-1.5">
@@ -213,11 +216,16 @@ function HandoffBanner({ handoff, canReply, onUse }: { handoff: Handoff; canRepl
         <span className="font-medium">{t("title")}</span>
         <span dir="auto">{reason}</span>
         {handoff.at ? <span className="text-xs text-muted-foreground">· {formatRelative(handoff.at)}</span> : null}
+        {handoff.reason.startsWith("ai:") && can(P.agentWrite) ? (
+          <Link href={`/w/${workspace.id}/agent/log?conversation=${conversationId}`} className="ms-auto text-xs text-primary underline underline-offset-2">
+            {t("why")}
+          </Link>
+        ) : null}
       </p>
       {handoff.suggestedReply ? (
         <div className="flex items-start gap-2 rounded-xl bg-surface p-2.5">
           <p className="min-w-0 flex-1 whitespace-pre-wrap text-sm" dir="auto">
-            <span className="mb-0.5 block text-xs text-muted-foreground">{t("suggested")}</span>
+            <span className="mb-0.5 block text-xs text-muted-foreground">{t(isAiDraft(handoff.reason) ? "aiDraft" : "suggested")}</span>
             {handoff.suggestedReply}
           </p>
           {canReply ? (

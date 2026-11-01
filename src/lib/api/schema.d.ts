@@ -6068,6 +6068,524 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/knowledge/sources": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Knowledge sources, newest first; filter by kind, text or status */
+        get: {
+            parameters: {
+                query?: {
+                    kind?: string;
+                    q?: string;
+                    status?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PageOfSourceResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /** Add a FAQ or a text; it is indexed in the background */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SourceRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SourceResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/knowledge/sources/{sourceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    sourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SourceResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        /** Change a source; a changed text is re-indexed */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    sourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["SourceUpdateRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SourceResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        /** Delete a FAQ or text with its chunks (product sources follow the catalog) */
+        delete: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    sourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description No Content */
+                204: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content?: never;
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/knowledge/sources/{sourceId}/reindex": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Build the source's chunks and embeddings again */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    sourceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description Accepted */
+                202: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["SourceResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/knowledge/search": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** What the AI would retrieve for a question (debug) */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["KnowledgeSearchRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["KnowledgeHit"][];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/agent/profile": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The AI agent's persona, guardrails and handoff rules (defaults until saved) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AgentProfileResponse"];
+                    };
+                };
+            };
+        };
+        /** Save the AI agent's settings */
+        put: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["AgentProfileDto"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["AgentProfileResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/agent/traces": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What the agent did for each customer turn, newest first; filter by conversation or outcome */
+        get: {
+            parameters: {
+                query?: {
+                    conversationId?: string;
+                    outcome?: string;
+                    cursor?: string;
+                    limit?: number;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PageOfTraceSummary"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/agent/traces/{traceId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One trace: classification, retrieved facts, tool calls, guard issues, confidence and usage */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    traceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TraceDetail"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/audit": {
         parameters: {
             query?: never;
@@ -6452,6 +6970,24 @@ export interface components {
             /** Format: uuid */
             workspaceId: string;
             role: string;
+        };
+        AgentProfileDto: {
+            name: string;
+            tone: string;
+            brandVoice: null | string;
+            replyInCustomerLanguage: boolean;
+            neverSay: string[];
+            /** Format: double */
+            confidenceThreshold: number;
+            handoff: components["schemas"]["HandoffRulesDto"];
+            handoffMessage: null | string;
+            allowedDomains: string[];
+        };
+        AgentProfileResponse: {
+            profile: components["schemas"]["AgentProfileDto"];
+            isDefault: boolean;
+            /** Format: date-time */
+            updatedAt: null | string;
         };
         AiPauseRequest: {
             paused: boolean;
@@ -6922,6 +7458,14 @@ export interface components {
             /** Format: date-time */
             at: null | string;
         };
+        HandoffRulesDto: {
+            humanRequest: boolean;
+            complaint: boolean;
+            discountRequest: boolean;
+            repeatedLowConfidence: boolean;
+            keywords: string[];
+            vipTags: string[];
+        };
         /** Format: binary */
         IFormFile: string;
         ImportRequest: {
@@ -6978,6 +7522,26 @@ export interface components {
             role: string;
         };
         JsonElement: unknown;
+        KnowledgeHit: {
+            /** Format: uuid */
+            chunkId: string;
+            /** Format: uuid */
+            sourceId: string;
+            sourceKind: string;
+            title: string;
+            text: string;
+            /** Format: double */
+            score: number;
+            /** Format: double */
+            similarity: null | number;
+            /** Format: uuid */
+            productId: null | string;
+        };
+        KnowledgeSearchRequest: {
+            query: string;
+            /** Format: int32 */
+            limit: null | number;
+        };
         LoginResponse: {
             accessToken: string;
             /** Format: date-time */
@@ -7155,6 +7719,14 @@ export interface components {
         };
         PageOfProductResponse: {
             items: components["schemas"]["ProductResponse"][];
+            nextCursor: null | string;
+        };
+        PageOfSourceResponse: {
+            items: components["schemas"]["SourceResponse"][];
+            nextCursor: null | string;
+        };
+        PageOfTraceSummary: {
+            items: components["schemas"]["TraceSummary"][];
             nextCursor: null | string;
         };
         PasswordLoginRequest: {
@@ -7489,6 +8061,46 @@ export interface components {
             /** Format: int32 */
             fallbackCooldownMinutes: number;
         };
+        SourceRequest: {
+            kind: string;
+            title: null | string;
+            question: null | string;
+            answer: null | string;
+            body: null | string;
+            enabled: null | boolean;
+        };
+        SourceResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            title: string;
+            question: null | string;
+            body: string;
+            /** Format: uuid */
+            productId: null | string;
+            enabled: boolean;
+            status: string;
+            /** Format: int32 */
+            revision: number;
+            /** Format: int32 */
+            indexedRevision: null | number;
+            /** Format: int32 */
+            chunkCount: number;
+            error: null | string;
+            /** Format: date-time */
+            indexedAt: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            updatedAt: string;
+        };
+        SourceUpdateRequest: {
+            title: null | string;
+            question: null | string;
+            answer: null | string;
+            body: null | string;
+            enabled: null | boolean;
+        };
         StorefrontCard: {
             /** Format: uuid */
             productId: string;
@@ -7568,6 +8180,92 @@ export interface components {
         TotpSetupResponse: {
             secret: string;
             otpAuthUri: string;
+        };
+        TraceDetail: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            /** Format: uuid */
+            messageId: string;
+            /** Format: uuid */
+            flowRunId: null | string;
+            goal: null | string;
+            input: string;
+            intent: null | string;
+            language: null | string;
+            sentiment: null | string;
+            /** Format: double */
+            classifierConfidence: null | number;
+            facts: components["schemas"]["TraceFact"][];
+            toolCalls: components["schemas"]["TraceToolCall"][];
+            guardIssues: components["schemas"]["TraceGuardIssue"][];
+            reply: null | string;
+            /** Format: double */
+            selfConfidence: null | number;
+            /** Format: double */
+            confidence: null | number;
+            /** Format: double */
+            threshold: number;
+            outcome: string;
+            handoffReason: null | string;
+            prompts: null | string;
+            models: null | string;
+            /** Format: int64 */
+            inputTokens: number;
+            /** Format: int64 */
+            outputTokens: number;
+            /** Format: double */
+            costIrr: number;
+            /** Format: int32 */
+            latencyMs: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        TraceFact: {
+            /** Format: uuid */
+            chunkId: string;
+            /** Format: uuid */
+            sourceId: string;
+            sourceKind: string;
+            title: string;
+            /** Format: double */
+            score: number;
+            /** Format: double */
+            similarity: null | number;
+        };
+        TraceGuardIssue: {
+            /** Format: int32 */
+            attempt: number;
+            kind: string;
+            detail: string;
+        };
+        TraceSummary: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            /** Format: uuid */
+            messageId: string;
+            input: string;
+            intent: null | string;
+            outcome: string;
+            handoffReason: null | string;
+            reply: null | string;
+            /** Format: double */
+            confidence: null | number;
+            /** Format: double */
+            threshold: number;
+            /** Format: int32 */
+            latencyMs: number;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        TraceToolCall: {
+            name: string;
+            arguments: string;
+            result: null | string;
+            error: null | string;
         };
         TriggerConfig: {
             match?: null | string;

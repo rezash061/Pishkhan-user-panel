@@ -121,3 +121,9 @@ export type Industry = "clothing" | "cosmetics" | "jewelry" | "beauty_clinic" | 
 
 export const industries: Industry[] = ["clothing", "cosmetics", "jewelry", "beauty_clinic", "courses", "other"];
 export const roles: WorkspaceRole[] = ["owner", "admin", "agent", "viewer"];
+export type KnowledgeSource = Schemas["SourceResponse"];
+export type KnowledgeHit = Schemas["KnowledgeHit"];
+export type AgentProfile = Schemas["AgentProfileDto"];
+export type AgentProfileResponse = Schemas["AgentProfileResponse"];
+export type TraceSummary = Schemas["TraceSummary"];
+export type TraceDetail = Schemas["TraceDetail"];
