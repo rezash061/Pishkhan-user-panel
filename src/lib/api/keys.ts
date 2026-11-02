@@ -53,4 +53,10 @@ export const qk = {
   cardSets: (ws: string) => ["card-sets", ws] as const,
   cardSetPreview: (ws: string, id: string) => ["card-set-preview", ws, id] as const,
   catalogImport: (ws: string, id: string) => ["catalog-import", ws, id] as const,
+  orders: (ws: string) => ["orders", ws] as const,
+  orderList: (ws: string, filter: object) => ["orders", ws, "list", filter] as const,
+  order: (ws: string, id: string) => ["orders", ws, "one", id] as const,
+  orderTimeline: (ws: string, id: string) => ["orders", ws, "one", id, "timeline"] as const,
+  orderInvoice: (ws: string, id: string) => ["orders", ws, "one", id, "invoice"] as const,
+  provinces: ["provinces"] as const,
 };

@@ -60,13 +60,13 @@ function Frame({ children }: { children: ReactNode }) {
   const inThread = /\/inbox\/[^/]+/.test(pathname);
 
   return (
-    <div className="flex h-dvh overflow-hidden">
+    <div className="flex h-dvh overflow-hidden print:block print:h-auto print:overflow-visible">
       <a href="#main" className="sr-only focus:not-sr-only focus:fixed focus:start-2 focus:top-2 focus:z-50 focus:rounded-lg focus:bg-surface focus:p-2">
         {t("nav.skipToContent")}
       </a>
 
       {/* Desktop sidebar (start side, which is the right in RTL). */}
-      <aside className="hidden w-64 shrink-0 flex-col border-e bg-surface lg:flex">
+      <aside className="hidden w-64 shrink-0 flex-col border-e bg-surface lg:flex print:hidden">
         <div className="flex items-center gap-2 p-4">
           <Logo />
           <span className="font-bold">{t("app.name")}</span>
@@ -92,7 +92,7 @@ function Frame({ children }: { children: ReactNode }) {
 
       <div className="flex min-w-0 flex-1 flex-col">
         {/* Mobile top bar. */}
-        <header className={cn("flex h-14 shrink-0 items-center gap-2 border-b bg-surface px-4 lg:hidden", inThread && "hidden")}>
+        <header className={cn("flex h-14 shrink-0 items-center gap-2 border-b bg-surface px-4 lg:hidden print:hidden", inThread && "hidden")}>
           <Logo className="size-7" />
           <Link href="/workspaces?all=1" className="flex min-w-0 flex-1 items-center gap-1 text-sm font-semibold">
             <span className="truncate">{workspace.name}</span>
@@ -104,17 +104,21 @@ function Frame({ children }: { children: ReactNode }) {
           </Link>
         </header>
 
-        <SupportBanner inShell />
-        <Banners />
+        <div className="contents print:hidden">
+          <SupportBanner inShell />
+          <Banners />
+        </div>
 
-        <main id="main" className="min-h-0 flex-1 overflow-y-auto">
+        <main id="main" className="min-h-0 flex-1 overflow-y-auto print:overflow-visible">
           {children}
         </main>
 
-        <InstallPrompt />
+        <div className="contents print:hidden">
+          <InstallPrompt />
+        </div>
 
         {/* Mobile bottom tabs. */}
-        <nav aria-label={t("nav.dashboard")} className={cn("grid shrink-0 border-t bg-surface safe-bottom lg:hidden", inThread && "hidden")} style={{ gridTemplateColumns: `repeat(${tabs.length + (rest.length ? 1 : 0)}, minmax(0, 1fr))` }}>
+        <nav aria-label={t("nav.dashboard")} className={cn("grid shrink-0 border-t bg-surface safe-bottom lg:hidden print:hidden", inThread && "hidden")} style={{ gridTemplateColumns: `repeat(${tabs.length + (rest.length ? 1 : 0)}, minmax(0, 1fr))` }}>
           {tabs.map((item) => (
             <Link
               key={item.key}

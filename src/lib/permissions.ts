@@ -15,6 +15,8 @@ export const P = {
   knowledgeWrite: "workspace.knowledge.write",
   catalogRead: "workspace.catalog.read",
   catalogWrite: "workspace.catalog.write",
+  ordersRead: "workspace.orders.read",
+  ordersWrite: "workspace.orders.write",
   crmRead: "workspace.crm.read",
   crmWrite: "workspace.crm.write",
   filesUpload: "workspace.files.upload",
@@ -31,8 +33,8 @@ const all = Object.values(P) as Permission[];
 const sets: Record<WorkspaceRole, ReadonlySet<Permission>> = {
   owner: new Set(all),
   admin: new Set(all.filter((p) => p !== P.billingManage && p !== P.workspaceDelete && p !== P.auditRead)),
-  agent: new Set([P.settingsRead, P.inboxRead, P.inboxReply, P.catalogRead, P.crmRead, P.crmWrite, P.filesUpload, P.filesRead, P.membersRead]),
-  viewer: new Set([P.settingsRead, P.inboxRead, P.catalogRead, P.crmRead, P.filesRead, P.membersRead, P.analyticsRead]),
+  agent: new Set([P.settingsRead, P.inboxRead, P.inboxReply, P.catalogRead, P.ordersRead, P.ordersWrite, P.crmRead, P.crmWrite, P.filesUpload, P.filesRead, P.membersRead]),
+  viewer: new Set([P.settingsRead, P.inboxRead, P.catalogRead, P.ordersRead, P.crmRead, P.filesRead, P.membersRead, P.analyticsRead]),
 };
 
 export function permissionsOf(role: string): ReadonlySet<Permission> {

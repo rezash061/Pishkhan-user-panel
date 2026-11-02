@@ -253,6 +253,92 @@ let products = [
 let cardSets = [];
 
 // Knowledge (BE-1.4 part 1): FAQ and text sources, plus one source per active product. Indexing finishes after a moment.
+// Orders (BE-2.1): numbers count up per workspace; catalog lines are priced from the catalog.
+const provinces = [
+  { code: "THR", name: "تهران", cities: ["تهران", "شهریار", "اسلامشهر"] },
+  { code: "FRS", name: "فارس", cities: ["شیراز", "مرودشت", "کازرون"] },
+  { code: "ESF", name: "اصفهان", cities: ["اصفهان", "کاشان", "نجف‌آباد"] },
+];
+const orderNext = {
+  draft: ["awaiting_payment", "cancelled"], awaiting_payment: ["draft", "paid", "cancelled"], paid: ["preparing", "shipped", "refunded"],
+  preparing: ["shipped", "refunded"], shipped: ["delivered", "returned"], delivered: ["completed", "returned"], completed: ["returned"],
+  returned: ["refunded"], cancelled: [], refunded: [],
+};
+const orderStatusFa = { draft: "پیش‌نویس", awaiting_payment: "در انتظار پرداخت", paid: "پرداخت‌شده", preparing: "در حال آماده‌سازی", shipped: "ارسال‌شده", delivered: "تحویل‌شده", completed: "تکمیل‌شده", cancelled: "لغوشده", refunded: "مسترد‌شده", returned: "مرجوعی" };
+let orderSeq = 1000;
+const orders = [];
+const orderEvents = new Map();
+const faDigits = (x) => String(x).replace(/\d/g, (d) => "۰۱۲۳۴۵۶۷۸۹"[d]);
+const faToman = (rial) => `${faDigits(Math.round(rial / 10).toLocaleString("en-US")).replace(/,/g, "٬")} تومان`;
+const orderMissing = (o) => [!o.address?.line ? "address" : null, o.address?.line && !o.address.city ? "city" : null, !o.address?.postalCode ? "postalCode" : null, !o.phone ? "phone" : null].filter(Boolean);
+const orderView = (o) => {
+  const subtotal = o.items.reduce((sum, l) => sum + l.lineTotal.amount, 0);
+  const total = Math.max(0, subtotal + o.shippingFee.amount - o.discount.amount);
+  return { ...o, nextStatuses: orderNext[o.status], subtotal: { amount: subtotal, currency: "IRR" }, total: { amount: total, currency: "IRR" }, missing: orderMissing(o) };
+};
+const addOrderEvent = (o, kind, actorType, extra = {}) => {
+  const list = orderEvents.get(o.id) ?? [];
+  list.push({ id: randomUUID(), kind, fromStatus: null, toStatus: kind === "created" || kind === "status_changed" ? o.status : null, actorType, actorId: actorType === "user" ? me.id : null, note: null, at: iso(now()), ...extra });
+  orderEvents.set(o.id, list);
+};
+/** Prices lines like the backend: catalog lines from the catalog, custom lines from the request. Returns [items, errors]. */
+const priceOrderLines = (lines) => {
+  const errors = {};
+  const items = (lines ?? []).map((l, i) => {
+    const qty = Number(l.quantity);
+    if (!Number.isInteger(qty) || qty < 1 || qty > 1000) errors[`items[${i}]`] = ["orders.quantity_invalid"];
+    if (!l.productId) {
+      if (!l.title?.trim()) errors[`items[${i}]`] = ["orders.title_invalid"];
+      if (!l.unitPrice?.amount) errors[`items[${i}]`] = ["orders.price_invalid"];
+      const unit = l.unitPrice?.amount ?? 0;
+      return { productId: null, variantId: null, title: l.title?.trim() ?? "", variantLabel: null, sku: null, unitPrice: { amount: unit, currency: "IRR" }, quantity: qty, lineTotal: { amount: unit * qty, currency: "IRR" } };
+    }
+    const p = products.find((x) => x.id === l.productId && x.status === "active");
+    if (!p) { errors[`items[${i}]`] = ["orders.product_not_found"]; return null; }
+    const view = productView(p);
+    let variant = null;
+    if (view.variants.length > 1 || (view.variants.length === 1 && l.variantId)) {
+      if (!l.variantId) { errors[`items[${i}]`] = ["orders.variant_required"]; return null; }
+      variant = view.variants.find((v) => v.id === l.variantId);
+      if (!variant) { errors[`items[${i}]`] = ["orders.variant_not_found"]; return null; }
+    }
+    if (variant ? !variant.inStock : !view.inStock) errors[`items[${i}]`] = ["orders.out_of_stock"];
+    const unit = (variant?.effectivePrice ?? p.price)?.amount;
+    if (!unit) { errors[`items[${i}]`] = ["orders.price_missing"]; return null; }
+    return { productId: p.id, variantId: variant?.id ?? null, title: p.title, variantLabel: variant ? Object.values(variant.attributes).join(" / ") : null, sku: variant?.sku ?? null, unitPrice: { amount: unit, currency: "IRR" }, quantity: qty, lineTotal: { amount: unit * qty, currency: "IRR" } };
+  });
+  return [items, errors];
+};
+const orderAddress = (a, errors) => {
+  if (!a) return null;
+  if (!a.line?.trim()) { errors["address.line"] = ["orders.address_line_required"]; return null; }
+  const prov = a.province ? provinces.find((p) => p.code === a.province || p.name === a.province) : null;
+  if (a.province && !prov) errors["address.province"] = ["orders.province_unknown"];
+  if (a.postalCode && !/^\d{10}$/.test(a.postalCode)) errors["address.postalCode"] = ["orders.postal_code_invalid"];
+  return { recipient: a.recipient ?? null, provinceCode: prov?.code ?? null, province: prov?.name ?? null, city: a.city ?? null, line: a.line.trim(), postalCode: a.postalCode ?? null };
+};
+const orderPhone = (text, errors) => {
+  if (!text) return null;
+  const d = String(text).replace(/\D/g, "").replace(/^0098|^98(?=9\d{9}$)|^0/, "");
+  if (!/^9\d{9}$/.test(d)) { errors.phone = ["orders.phone_invalid"]; return null; }
+  return `+98${d}`;
+};
+// Conversation 1000 (Niloofar) has a draft the AI saved; one older order is already paid.
+{
+  const c = conversations[0];
+  const coat = productView(products[0]);
+  const m = coat.variants[0];
+  const ai = { id: "0199b000-0000-7000-a000-000000000001", number: ++orderSeq, source: "ai", status: "draft", contactId: c.contactId, conversationId: c.id, customerName: "نیلوفر احمدی", phone: "+989121112233", address: { recipient: null, provinceCode: "FRS", province: "فارس", city: "شیراز", line: "خیابان زند، کوچهٔ ۱۲، پلاک ۴", postalCode: null },
+    items: [{ productId: products[0].id, variantId: m.id, title: products[0].title, variantLabel: "M", sku: null, unitPrice: m.effectivePrice, quantity: 1, lineTotal: m.effectivePrice }],
+    shippingFee: { amount: 500_000, currency: "IRR" }, discount: { amount: 0, currency: "IRR" }, note: null, revision: 1, createdAt: ago(40 * 60_000), updatedAt: ago(40 * 60_000), paidAt: null, closedAt: null };
+  const paid = { id: "0199b000-0000-7000-a000-000000000002", number: ++orderSeq, source: "panel", status: "paid", contactId: c.contactId, conversationId: null, customerName: "نیلوفر احمدی", phone: "+989121112233", address: { recipient: null, provinceCode: "FRS", province: "فارس", city: "شیراز", line: "خیابان زند، کوچهٔ ۱۲، پلاک ۴", postalCode: "7134567890" },
+    items: [{ productId: products[1].id, variantId: null, title: products[1].title, variantLabel: null, sku: null, unitPrice: money(1_250_000), quantity: 2, lineTotal: money(2_500_000) }],
+    shippingFee: money(0), discount: money(100_000), note: "بسته‌بندی کادویی", revision: 2, createdAt: ago(3 * 24 * H), updatedAt: ago(2 * 24 * H), paidAt: ago(2 * 24 * H), closedAt: null };
+  orders.unshift(ai, paid);
+  addOrderEvent(paid, "created", "user", { toStatus: "draft", at: paid.createdAt });
+  addOrderEvent(paid, "status_changed", "user", { fromStatus: "awaiting_payment", toStatus: "paid", at: paid.paidAt });
+  addOrderEvent(ai, "created", "ai", { at: ai.createdAt });
+}
 const kbSource = (kind, title, body, extra = {}) => ({ id: randomUUID(), kind, title, question: kind === "faq" ? title : null, body, productId: null, fileId: null, url: null, enabled: true, status: "indexed", revision: 1, indexedRevision: 1, chunkCount: 1, error: null, indexedAt: ago(2 * H), createdAt: ago(5 * 24 * H), updatedAt: ago(2 * H), ...extra });
 let kbSources = [
   kbSource("faq", "ارسال به شهرستان چند روز طول می‌کشد؟", "ارسال به شهرستان‌ها با پست پیشتاز دو تا چهار روز کاری است."),
@@ -1043,6 +1129,100 @@ const routes = [
   ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/storefront-cards\/([^/]+)$/, (req, res, url, [id]) => {
     cardSets = cardSets.filter((x) => x.id !== id);
     send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/orders\/provinces$/, (req, res) => send(res, 200, provinces)],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/orders\/parse-address$/, async (req, res) => {
+    const { text } = await readBody(req);
+    if (!text?.trim()) return problem(res, 400, "validation.failed", { text: ["orders.address_invalid"] });
+    const latin = text.replace(/[۰-۹]/g, (d) => "۰۱۲۳۴۵۶۷۸۹".indexOf(d));
+    const prov = provinces.find((p) => latin.includes(p.name) || p.cities.some((c) => latin.includes(c)));
+    const city = prov?.cities.find((c) => latin.includes(c)) ?? null;
+    const postal = /\b\d{10}\b/.exec(latin.replace(/09\d{9}/, ""))?.[0] ?? null;
+    const mobile = /09\d{9}/.exec(latin)?.[0] ?? null;
+    let line = latin;
+    for (const part of [prov?.name, city, postal, mobile, "کد پستی", "استان", "شهر"]) if (part) line = line.replace(part, " ");
+    send(res, 200, { provinceCode: prov?.code ?? null, province: prov?.name ?? null, city, postalCode: postal, mobile: mobile ? `+98${mobile.slice(1)}` : null, line: line.replace(/[،,:\s]+/g, " ").trim() });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/orders$/, (req, res, url) => {
+    const q = url.searchParams;
+    const statuses = q.getAll("status");
+    let items = orders.filter((o) => (!statuses.length || statuses.includes(o.status)) && (!q.get("contactId") || o.contactId === q.get("contactId")) && (!q.get("conversationId") || o.conversationId === q.get("conversationId")) && (!q.get("number") || String(o.number) === q.get("number")));
+    if (q.get("phone")) items = items.filter((o) => o.phone === `+98${q.get("phone").replace(/\D/g, "").replace(/^0/, "")}`);
+    const result = page(items, q.get("cursor"), Number(q.get("limit") ?? 30));
+    send(res, 200, { ...result, items: result.items.map(orderView) });
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/orders$/, async (req, res) => {
+    const b = await readBody(req);
+    const errors = {};
+    const [items, lineErrors] = priceOrderLines(b.items);
+    Object.assign(errors, lineErrors);
+    const address = orderAddress(b.address, errors);
+    const phone = orderPhone(b.phone, errors);
+    const conv = b.conversationId ? conversations.find((c) => c.id === b.conversationId) : null;
+    if (b.conversationId && !conv) errors.conversationId = ["orders.conversation_not_found"];
+    if (Object.keys(errors).length) return problem(res, 400, Object.values(errors)[0][0], errors);
+    const o = { id: randomUUID(), number: ++orderSeq, source: "panel", status: "draft", contactId: conv?.contactId ?? b.contactId ?? null, conversationId: conv?.id ?? null, customerName: b.customerName ?? null, phone, address, items, shippingFee: b.shippingFee ?? money(0), discount: b.discount ?? money(0), note: b.note ?? null, revision: 1, createdAt: iso(now()), updatedAt: iso(now()), paidAt: null, closedAt: null };
+    orders.unshift(o);
+    addOrderEvent(o, "created", "user");
+    send(res, 201, orderView(o));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/orders\/([^/]+)$/, (req, res, url, [id]) => {
+    const o = orders.find((x) => x.id === id);
+    return o ? send(res, 200, orderView(o)) : problem(res, 404, "common.not_found");
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/orders\/([^/]+)$/, async (req, res, url, [id]) => {
+    const o = orders.find((x) => x.id === id);
+    if (!o) return problem(res, 404, "common.not_found");
+    if (o.status !== "draft") return problem(res, 409, "orders.not_editable");
+    const b = await readBody(req);
+    const errors = {};
+    const [items, lineErrors] = priceOrderLines(b.items);
+    Object.assign(errors, lineErrors);
+    const address = orderAddress(b.address, errors);
+    const phone = orderPhone(b.phone, errors);
+    if (Object.keys(errors).length) return problem(res, 400, Object.values(errors)[0][0], errors);
+    Object.assign(o, { items, address, phone, customerName: b.customerName ?? null, shippingFee: b.shippingFee ?? money(0), discount: b.discount ?? money(0), note: b.note ?? null, revision: o.revision + 1, updatedAt: iso(now()) });
+    addOrderEvent(o, "edited", "user");
+    send(res, 200, orderView(o));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/orders\/([^/]+)\/status$/, async (req, res, url, [id]) => {
+    const o = orders.find((x) => x.id === id);
+    if (!o) return problem(res, 404, "common.not_found");
+    const b = await readBody(req);
+    if (!orderNext[b.status]) return problem(res, 400, "orders.status_unknown", { status: ["orders.status_unknown"] });
+    if (b.status === "awaiting_payment") {
+      const missing = [o.items.length ? null : "items", orderView(o).total.amount > 0 ? null : "total"].filter(Boolean);
+      if (missing.length) return problem(res, 400, "orders.incomplete", Object.fromEntries(missing.map((m) => [m, ["orders.incomplete"]])));
+    }
+    if (!orderNext[o.status].includes(b.status)) return problem(res, 409, "orders.status_move_invalid");
+    const from = o.status;
+    Object.assign(o, { status: b.status, revision: o.revision + 1, updatedAt: iso(now()), ...(b.status === "paid" ? { paidAt: iso(now()) } : {}), ...(["cancelled", "refunded", "completed"].includes(b.status) ? { closedAt: iso(now()) } : {}) });
+    addOrderEvent(o, "status_changed", "user", { fromStatus: from, note: b.note ?? null });
+    send(res, 200, orderView(o));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/orders\/([^/]+)\/notes$/, async (req, res, url, [id]) => {
+    const o = orders.find((x) => x.id === id);
+    if (!o) return problem(res, 404, "common.not_found");
+    const { note } = await readBody(req);
+    if (!note?.trim()) return problem(res, 400, "orders.note_invalid", { note: ["orders.note_invalid"] });
+    addOrderEvent(o, "note", "user", { note: note.trim() });
+    send(res, 201, orderEvents.get(o.id).at(-1));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/orders\/([^/]+)\/timeline$/, (req, res, url, [id]) => {
+    const o = orders.find((x) => x.id === id);
+    return o ? send(res, 200, orderEvents.get(o.id) ?? []) : problem(res, 404, "common.not_found");
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/orders\/([^/]+)\/invoice$/, (req, res, url, [id]) => {
+    const found = orders.find((x) => x.id === id);
+    if (!found) return problem(res, 404, "common.not_found");
+    const o = orderView(found);
+    const addr = o.address ? [o.address.province, o.address.city !== o.address.province ? o.address.city : null, o.address.line].filter(Boolean).join("، ") : null;
+    send(res, 200, {
+      orderId: o.id, number: o.number, numberText: faDigits(o.number), date: "۱۴۰۵/۰۸/۱۰", dateLong: "۱۰ آبان ۱۴۰۵", status: o.status, statusText: orderStatusFa[o.status],
+      customerName: o.customerName, phone: o.phone ? faDigits(`0${o.phone.slice(3)}`) : null, address: addr, postalCode: o.address?.postalCode ? faDigits(o.address.postalCode) : null,
+      lines: o.items.map((l) => ({ title: l.title, variantLabel: l.variantLabel, quantity: faDigits(l.quantity), unitPrice: faToman(l.unitPrice.amount), lineTotal: faToman(l.lineTotal.amount) })),
+      subtotal: faToman(o.subtotal.amount), shippingFee: faToman(o.shippingFee.amount), discount: faToman(o.discount.amount), total: faToman(o.total.amount), totalAmount: o.total, paidDate: o.paidAt ? "۸ آبان ۱۴۰۵" : null,
+    });
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/sources$/, (req, res, url) => {
     const q = url.searchParams.get("q") ?? "";

@@ -9,6 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Select, Textarea } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/misc";
 import { useChannels } from "@/features/channels/data";
+import { OrdersMini } from "@/features/orders/orders-mini";
 import { useWorkspace } from "@/features/workspace/context";
 import type { Conversation, Member } from "@/lib/api/types";
 import { formatCountdown, formatDateTime, formatRelative } from "@/lib/i18n/format";
@@ -82,6 +83,8 @@ export function SidePanel({ conversation: c, members, canReply, onAssign, idPref
           ))}
         </Select>
       </section>
+
+      <OrdersMini conversationId={c.id} heading={() => <h3 className="text-xs font-semibold text-muted-foreground">{t("side.orders")}</h3>} />
 
       <Notes conversationId={c.id} canWrite={canReply} members={members} idPrefix={idPrefix} />
     </div>

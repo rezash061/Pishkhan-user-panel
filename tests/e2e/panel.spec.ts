@@ -290,6 +290,8 @@ test("contacts: filter by tag, edit tags and fields on the contact page", async 
 
   await expect(page.getByRole("heading", { name: "نیلوفر احمدی" })).toBeVisible();
   await expect(page.getByLabel("شهر")).toHaveValue("شیراز");
+  // Her orders, including the AI's draft.
+  await expect(page.getByRole("link", { name: /سفارش #۱۰۰۱/ })).toBeVisible();
   const tag = `خوش‌قول ${info.project.name}`;
   await page.getByLabel("برچسب جدید").fill(tag);
   await page.getByRole("button", { name: "افزودن" }).click();
@@ -565,6 +567,95 @@ test("unanswered questions: answer one into a FAQ and dismiss another", async ({
   await expect(page.getByText("برای کیش هم ارسال دارید؟")).toBeVisible();
 });
 
+test("orders: the AI draft is listed, a new order is created from a chat, paid, noted and printed", async ({ page }, info) => {
+  await login(page);
+  const p = info.project.name;
+  await page.goto(`/w/${workspaceId}/orders`);
+  await expect(page.getByRole("heading", { name: "سفارش‌ها", level: 1 })).toBeVisible();
+  const aiDraft = page.getByRole("link", { name: /سفارش #۱۰۰۱/ });
+  await expect(aiDraft).toContainText("ثبت دستیار");
+  await page.getByRole("tab", { name: "آمادهٔ ارسال" }).click();
+  await expect(page.getByRole("link", { name: /سفارش #۱۰۰۲/ })).toBeVisible();
+  await expect(aiDraft).toHaveCount(0);
+  await page.getByRole("tab", { name: "همه" }).click();
+  await page.getByLabel("جستجوی سفارش").fill("۱۰۰۲");
+  await expect(page.getByRole("main").getByRole("link", { name: /سفارش #/ })).toHaveCount(1);
+
+  // A new order for conversation 1003 (one per project, so the runs do not collide).
+  const conversation = `0199b000-0000-7000-8000-00000000${p === "mobile" ? "1003" : "1004"}`;
+  await page.goto(`/w/${workspaceId}/orders/new?conversation=${conversation}`);
+  await page.getByRole("button", { name: "افزودن محصول" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /شلوار بگ جین/ }).click();
+  await page.getByLabel("تعداد").first().fill("2");
+  await page.getByRole("button", { name: "قلم دستی" }).click();
+  await page.getByLabel("شرح").fill("کیسهٔ هدیه");
+  await page.getByLabel("قیمت واحد").fill("50000");
+  await page.getByLabel("هزینهٔ ارسال").fill("60000");
+  await page.getByLabel("نام مشتری").fill(`مشتری ${p}`);
+  await page.getByLabel("نشانی کامل (چسباندن)").fill("شیراز، خیابان زند، کوچه ۵، پلاک ۸، کد پستی 7134567890، 09121234567");
+  await page.getByRole("button", { name: "جدا کردن خودکار" }).click();
+  await expect(page.getByLabel("استان")).toHaveValue("FRS");
+  await expect(page.getByLabel("شهر", { exact: true })).toHaveValue("شیراز");
+  await expect(page.getByLabel("کد پستی")).toHaveValue("7134567890");
+  await expect(page.getByLabel("موبایل")).not.toHaveValue("");
+  await expect(page.getByText("مبلغ تقریبی")).toBeVisible();
+  const editorAxe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).exclude("[data-sonner-toaster]").analyze();
+  expect(editorAxe.violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+  await noHorizontalScroll(page);
+  await page.getByRole("button", { name: "ثبت سفارش" }).click();
+  await expect(page.getByText(/سفارش #[۰-۹]+ ثبت شد\./)).toBeVisible();
+  await page.waitForURL(/\/orders\/[0-9a-f-]{36}$/);
+  await expect(page.getByText("کیسهٔ هدیه")).toBeVisible();
+  // 2 × 1,250,000 + 50,000 + 60,000 shipping
+  await expect(page.getByText("۲٬۶۱۰٬۰۰۰ تومان")).toBeVisible();
+
+  // Ask for payment, then mark it paid with a note.
+  await page.getByRole("button", { name: "در انتظار پرداخت", exact: true }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "در انتظار پرداخت" }).click();
+  await expect(page.getByText("وضعیت سفارش «در انتظار پرداخت» شد.")).toBeVisible();
+  await expect(page.getByRole("link", { name: "ویرایش" })).toHaveCount(0);
+  await page.getByRole("button", { name: "پرداخت‌شده", exact: true }).click();
+  await page.getByRole("dialog").getByLabel("یادداشت (اختیاری)").fill("کارت به کارت، پیگیری ۱۲۳۴");
+  await page.getByRole("dialog").getByRole("button", { name: "پرداخت‌شده" }).click();
+  await expect(page.getByText("وضعیت سفارش «پرداخت‌شده» شد.")).toBeVisible();
+  await expect(page.getByText("کارت به کارت، پیگیری ۱۲۳۴")).toBeVisible();
+  await page.getByLabel("افزودن یادداشت").fill("فردا ارسال شود");
+  await page.getByRole("button", { name: "افزودن یادداشت" }).click();
+  await expect(page.getByText("فردا ارسال شود")).toBeVisible();
+  const detailAxe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).exclude("[data-sonner-toaster]").analyze();
+  expect(detailAxe.violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+  await noHorizontalScroll(page);
+
+  await page.getByRole("link", { name: "فاکتور" }).click();
+  await expect(page.getByRole("heading", { name: "فاکتور فروش" })).toBeVisible();
+  await expect(page.getByText("۲٬۶۱۰٬۰۰۰ تومان")).toBeVisible();
+  await expect(page.getByRole("button", { name: "چاپ" })).toBeEnabled();
+
+  // The conversation's side panel lists it.
+  if (p === "desktop") {
+    await page.goto(`/w/${workspaceId}/inbox/${conversation}`);
+    await expect(page.getByRole("complementary").getByRole("link", { name: /سفارش #[۰-۹]+/ })).toBeVisible();
+  }
+});
+
+test("orders: editing the AI draft reports a missing size on its line", async ({ page }, info) => {
+  test.skip(info.project.name === "mobile", "one run is enough; it edits shared mock state");
+  await login(page);
+  await page.goto(`/w/${workspaceId}/orders/0199b000-0000-7000-a000-000000000001`);
+  await expect(page.getByRole("heading", { name: /سفارش #۱۰۰۱/ })).toBeVisible();
+  await expect(page.getByRole("note")).toContainText("کد پستی");
+  await page.getByRole("link", { name: "ویرایش" }).click();
+  await page.getByLabel("مدل «مانتو کتان تابستانه»").selectOption("");
+  await page.getByRole("button", { name: "ذخیرهٔ تغییرات" }).click();
+  await expect(page.getByText("مدل (رنگ یا سایز) را انتخاب کنید.")).toBeVisible();
+  await page.getByLabel("مدل «مانتو کتان تابستانه»").selectOption({ label: "XL" });
+  await page.getByLabel("کد پستی").fill("7134567890");
+  await page.getByRole("button", { name: "ذخیرهٔ تغییرات" }).click();
+  await expect(page.getByText("سفارش ذخیره شد.")).toBeVisible();
+  await expect(page.getByText("۹۵۰٬۰۰۰ تومان").first()).toBeVisible();
+  await expect(page.getByRole("note")).toHaveCount(0);
+});
+
 test("adds an internal note", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001001`);
@@ -590,7 +681,7 @@ test("saves business hours and shows a saved toast", async ({ page }) => {
 
 test("key pages have no serious accessibility violations", async ({ page }) => {
   await login(page);
-  for (const path of ["", "/inbox", "/channels", "/team", "/settings"]) {
+  for (const path of ["", "/inbox", "/orders", "/channels", "/team", "/settings"]) {
     await page.goto(`/w/${workspaceId}${path}`);
     await page.waitForLoadState("networkidle");
     const result = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).disableRules(["color-contrast"]).analyze();
