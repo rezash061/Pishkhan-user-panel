@@ -656,6 +656,54 @@ test("orders: editing the AI draft reports a missing size on its line", async ({
   await expect(page.getByRole("note")).toHaveCount(0);
 });
 
+test("payments: connect Zarinpal, send a payment link, and the order turns paid when the customer pays", async ({ page }, info) => {
+  await login(page);
+  const p = info.project.name;
+  await page.goto(`/w/${workspaceId}/orders/new`);
+  await page.getByRole("button", { name: "افزودن محصول" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: /شلوار بگ جین/ }).click();
+  await page.getByLabel("نام مشتری").fill(`پرداخت ${p}`);
+  await page.getByRole("button", { name: "ثبت سفارش" }).click();
+  await page.waitForURL(/\/orders\/[0-9a-f-]{36}$/);
+  const orderUrl = page.url();
+  const orderId = orderUrl.split("/").at(-1)!;
+
+  const card = page.getByRole("main");
+  await card.getByRole("button", { name: "ساخت لینک پرداخت" }).click();
+  const outcome = page.getByText(/لینک پرداخت ساخته شد|هنوز درگاه زرین‌پال وصل نشده است/).first();
+  await expect(outcome).toBeVisible();
+  if ((await outcome.textContent())?.includes("وصل نشده")) {
+    // First run: no merchant yet. The card links to the payment settings.
+    await page.getByRole("link", { name: "اتصال درگاه" }).click();
+    await page.waitForURL(/\/settings\/payments$/);
+    await expect(page.getByText("وصل نشده")).toBeVisible();
+    await page.getByLabel("کد مرچنت زرین‌پال").fill("1234");
+    await page.getByRole("button", { name: "اتصال درگاه" }).click();
+    await expect(page.getByText(/کد مرچنت باید ۳۶ نویسه باشد/)).toBeVisible();
+    await page.getByLabel("کد مرچنت زرین‌پال").fill("aaaaaaaa-bbbb-cccc-dddd-eeeeeeee1234");
+    await page.getByRole("button", { name: "اتصال درگاه" }).click();
+    await expect(page.getByText("درگاه زرین‌پال وصل شد.")).toBeVisible();
+    await expect(page.getByText("••••1234")).toBeVisible();
+    const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).exclude("[data-sonner-toaster]").analyze();
+    expect(axe.violations.filter((v) => v.impact === "serious" || v.impact === "critical")).toEqual([]);
+    await page.goto(orderUrl);
+    await card.getByRole("button", { name: "ساخت لینک پرداخت" }).click();
+    await expect(page.getByText("لینک پرداخت ساخته شد. آن را برای مشتری بفرستید.")).toBeVisible();
+  }
+  await expect(page.getByRole("heading", { level: 1 }).getByText("در انتظار پرداخت")).toBeVisible();
+  await expect(page.getByLabel("نشانی لینک پرداخت")).toHaveValue(/^https:\/\/pay\.pishkhan\.example\/pay\//);
+  await expect(page.getByRole("button", { name: "کپی لینک" })).toBeVisible();
+  await noHorizontalScroll(page);
+
+  // The customer pays at Zarinpal; the backend marks the order paid.
+  const paid = await page.request.post(`http://localhost:5080/__mock/orders/${orderId}/pay`);
+  expect(paid.ok()).toBe(true);
+  await page.reload();
+  await expect(page.getByRole("heading", { level: 1 }).getByText("پرداخت‌شده")).toBeVisible();
+  await expect(page.getByText(/کد پیگیری ۵۰۱۲۳۴۵۶/).first()).toBeVisible();
+  await expect(page.getByRole("button", { name: "ساخت لینک پرداخت" })).toHaveCount(0);
+});
+
 test("adds an internal note", async ({ page }) => {
   await login(page);
   await page.goto(`/w/${workspaceId}/inbox/0199b000-0000-7000-8000-000000001001`);

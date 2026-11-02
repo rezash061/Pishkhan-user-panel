@@ -59,4 +59,6 @@ export const qk = {
   orderTimeline: (ws: string, id: string) => ["orders", ws, "one", id, "timeline"] as const,
   orderInvoice: (ws: string, id: string) => ["orders", ws, "one", id, "invoice"] as const,
   provinces: ["provinces"] as const,
+  merchantAccount: (ws: string) => ["payments", ws, "merchant"] as const,
+  paymentLinks: (ws: string, orderId: string) => ["orders", ws, "one", orderId, "payment-links"] as const,
 };

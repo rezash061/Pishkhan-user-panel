@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.15.0 — 2026-11-02
+
+- Payment links (backend #37, BE-2.2, Zarinpal):
+  - Settings «پرداخت»: connect the seller's own Zarinpal merchant account (36-character ID, shown back as its last four characters), pause it, switch the sandbox on, replace the ID or disconnect. Owners and admins change it; others see its state.
+  - Order page «لینک پرداخت»: make a link for the order total (a complete draft moves to awaiting payment), copy or share it, see when it expires, how many attempts were made and the gateway's last error, cancel it, or make a fresh one (which cancels the old). Without a merchant account the card says so and links to the settings.
+  - While a link is active the card checks every 15 seconds; when the customer pays, the order shows as paid with the tracking code and card. Earlier links are listed under «لینک‌های قبلی».
+- API refreshed from the backend payment-links branch.
+
 ## 0.14.0 — 2026-11-01
 
 - Orders (backend #36, BE-2.1, plan 3.8): «سفارش‌ها» in the menu and the mobile tab bar (it takes the channels tab's place; channels moves under «بیشتر»).

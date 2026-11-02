@@ -339,6 +339,13 @@ const orderPhone = (text, errors) => {
   addOrderEvent(paid, "status_changed", "user", { fromStatus: "awaiting_payment", toStatus: "paid", at: paid.paidAt });
   addOrderEvent(ai, "created", "ai", { at: ai.createdAt });
 }
+// Payments (BE-2.2): the seller's Zarinpal account and payment links (3 days, newest first).
+let merchant = { configured: false, provider: null, merchantIdHint: null, sandbox: false, enabled: true, updatedAt: null };
+const paymentLinks = [];
+const expirePaymentLinks = (orderId) => {
+  for (const l of paymentLinks) if (l.orderId === orderId && l.status === "active") l.status = "cancelled";
+};
+
 const kbSource = (kind, title, body, extra = {}) => ({ id: randomUUID(), kind, title, question: kind === "faq" ? title : null, body, productId: null, fileId: null, url: null, enabled: true, status: "indexed", revision: 1, indexedRevision: 1, chunkCount: 1, error: null, indexedAt: ago(2 * H), createdAt: ago(5 * 24 * H), updatedAt: ago(2 * H), ...extra });
 let kbSources = [
   kbSource("faq", "ارسال به شهرستان چند روز طول می‌کشد؟", "ارسال به شهرستان‌ها با پست پیشتاز دو تا چهار روز کاری است."),
@@ -1130,6 +1137,57 @@ const routes = [
     cardSets = cardSets.filter((x) => x.id !== id);
     send(res, 204);
   }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, (req, res) => send(res, 200, merchant)],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, async (req, res) => {
+    const b = await readBody(req);
+    if (b.merchantId != null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(b.merchantId)) return problem(res, 400, "payments.merchant_id_invalid", { merchantId: ["payments.merchant_id_invalid"] });
+    if (b.merchantId == null && !merchant.configured) return problem(res, 400, "payments.merchant_id_required", { merchantId: ["payments.merchant_id_required"] });
+    merchant = { configured: true, provider: "zarinpal", merchantIdHint: b.merchantId ? b.merchantId.slice(-4) : merchant.merchantIdHint, sandbox: Boolean(b.sandbox), enabled: b.enabled !== false, updatedAt: iso(now()) };
+    send(res, 200, merchant);
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, (req, res) => {
+    merchant = { configured: false, provider: null, merchantIdHint: null, sandbox: false, enabled: true, updatedAt: null };
+    for (const l of paymentLinks) if (l.status === "active") l.status = "cancelled";
+    send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/orders\/([^/]+)\/payment-links$/, (req, res, url, [id]) => {
+    if (!orders.some((o) => o.id === id)) return problem(res, 404, "common.not_found");
+    send(res, 200, paymentLinks.filter((l) => l.orderId === id).sort((a, b) => b.createdAt.localeCompare(a.createdAt)));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/orders\/([^/]+)\/payment-links$/, (req, res, url, [id]) => {
+    const o = orders.find((x) => x.id === id);
+    if (!o) return problem(res, 404, "common.not_found");
+    if (!merchant.configured || !merchant.enabled) return problem(res, 422, "payments.merchant_missing");
+    if (!["draft", "awaiting_payment"].includes(o.status)) return problem(res, 409, "orders.not_payable");
+    const total = orderView(o).total;
+    if (!o.items.length || total.amount <= 0) return problem(res, 400, "orders.incomplete", { items: ["orders.incomplete"] });
+    if (o.status === "draft") {
+      Object.assign(o, { status: "awaiting_payment", revision: o.revision + 1, updatedAt: iso(now()) });
+      addOrderEvent(o, "status_changed", "user", { fromStatus: "draft" });
+    }
+    expirePaymentLinks(o.id);
+    const token = randomUUID().replace(/-/g, "");
+    const link = { id: randomUUID(), orderId: o.id, orderNumber: o.number, url: `https://pay.pishkhan.example/pay/${token}`, amount: total, provider: "zarinpal", status: "active", attempts: 0, lastError: null, expiresAt: iso(new Date(Date.now() + 3 * 24 * H)), createdAt: iso(now()), paidAt: null, referenceId: null, cardMask: null };
+    paymentLinks.push(link);
+    send(res, 201, link);
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/payment-links\/([^/]+)\/cancel$/, (req, res, url, [id]) => {
+    const l = paymentLinks.find((x) => x.id === id);
+    if (!l) return problem(res, 404, "common.not_found");
+    if (l.status !== "active") return problem(res, 409, "payments.link_not_active");
+    l.status = "cancelled";
+    send(res, 200, l);
+  }],
+  // Test hook: the customer pays the order's active link at Zarinpal (the backend's verified callback).
+  ["POST", /^\/__mock\/orders\/([^/]+)\/pay$/, (req, res, url, [orderId]) => {
+    const l = paymentLinks.find((x) => x.orderId === orderId && x.status === "active");
+    const o = orders.find((x) => x.id === orderId);
+    if (!l || !o) return problem(res, 404, "common.not_found");
+    Object.assign(l, { status: "paid", attempts: l.attempts + 1, paidAt: iso(now()), referenceId: "50123456", cardMask: "6037-99**-****-1234" });
+    Object.assign(o, { status: "paid", paidAt: iso(now()), revision: o.revision + 1, updatedAt: iso(now()) });
+    addOrderEvent(o, "status_changed", "system", { fromStatus: "awaiting_payment", note: "پرداخت زرین‌پال، کد پیگیری ۵۰۱۲۳۴۵۶" });
+    send(res, 200, l);
+  }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/orders\/provinces$/, (req, res) => send(res, 200, provinces)],
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/orders\/parse-address$/, async (req, res) => {
     const { text } = await readBody(req);
@@ -1196,6 +1254,7 @@ const routes = [
     }
     if (!orderNext[o.status].includes(b.status)) return problem(res, 409, "orders.status_move_invalid");
     const from = o.status;
+    if (from === "awaiting_payment") expirePaymentLinks(o.id);
     Object.assign(o, { status: b.status, revision: o.revision + 1, updatedAt: iso(now()), ...(b.status === "paid" ? { paidAt: iso(now()) } : {}), ...(["cancelled", "refunded", "completed"].includes(b.status) ? { closedAt: iso(now()) } : {}) });
     addOrderEvent(o, "status_changed", "user", { fromStatus: from, note: b.note ?? null });
     send(res, 200, orderView(o));
@@ -1312,7 +1371,7 @@ const routes = [
   }],
 ];
 
-const anonymous = [/^\/files\/exports\//, /^\/api\/v1\/public\//, /^\/api\/v1\/auth\/(otp|token)\//, /^\/api\/v1\/auth\/support-session$/];
+const anonymous = [/^\/__mock\//, /^\/files\/exports\//, /^\/api\/v1\/public\//, /^\/api\/v1\/auth\/(otp|token)\//, /^\/api\/v1\/auth\/support-session$/];
 
 createServer(async (req, res) => {
   const url = new URL(req.url, "http://mock");
