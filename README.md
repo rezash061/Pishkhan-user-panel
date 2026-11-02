@@ -63,7 +63,7 @@ Built against the backend's current API (Phase 0 through BE-1.6, plus backend PR
 | Settings: general, business hours with Jalali closed dates, quick replies, notifications, activity log (owner) | Done |
 | PWA: manifest, icons, service worker with offline page, install prompt | Done; web push per browser (shows the notification and opens its link) |
 | Automations: rules by trigger with priority order, rule editor (Persian keyword preview and tester, message builder with buttons/quick replies/variables and a live DM preview, post picker, actions), comment-to-DM wizard with old-comment backlog, rule stats, rule and flow dry-run testers, flows (list-based builder, server validation, publish), fallback reply (hours come from the workspace business hours) | Done; canvas flow builder is a follow-up |
-| Catalog: products with filters, editor with images, option/variant matrix, Toman prices and stock; categories; storefront card sets with preview; Excel export, template and import job | Done |
+| Catalog: products with filters, editor with images, option/variant matrix, Toman prices and stock; categories; storefront card sets with preview; Excel export, template and import job; bulk price change with preview and 24-hour undo | Done |
 | Billing v1: current plan, trial, usage meters, plan-limit sheet | Done; paying for the plan online comes later |
 | Contacts: list with filters, profile with tags, custom fields, consent and form answers; tags, custom fields, segments with live count, forms, Excel export | Done |
 | Knowledge base: FAQ, text, document and web page sources, product sources on/off, indexing status with retry, test search, unanswered questions | Done; documents (PDF, Word, text) and web pages too |

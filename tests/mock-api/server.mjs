@@ -251,6 +251,79 @@ let products = [
   { id: randomUUID(), title: "شومیز حریر", description: null, categoryId: null, tags: ["حراج"], status: "draft", price: null, imageFileIds: [], linkUrl: null, variants: [], revision: 1, createdAt: ago(3 * 24 * H), updatedAt: ago(3 * 24 * H) },
 ];
 let cardSets = [];
+// Bulk price changes (BE-2.6): preview and apply share one plan; a batch can be undone for 24 hours.
+let priceChanges = [];
+const PRICE_STEPS = [1, 100, 500, 1000, 5000, 10000, 50000, 100000];
+const variantLabel = (v) => Object.values(v.attributes ?? {}).join(" / ") || null;
+function parsePriceChange(body) {
+  const errors = {};
+  const s = body.scope;
+  const tag = s?.tag?.trim() || null;
+  if (!s || (!s.productIds?.length && !s.categoryId && !tag && !s.status && !s.all)) errors.scope = ["catalog.price_change_scope_required"];
+  if (s?.categoryId && !categories.some((c) => c.id === s.categoryId)) errors["scope.categoryId"] = ["catalog.category_not_found"];
+  let value = 0;
+  if (body.kind === "percent") {
+    const p = body.percent;
+    if (typeof p !== "number" || p === 0 || p < -90 || p > 500 || Math.round(p * 100) !== p * 100) errors.percent = ["catalog.price_change_percent_invalid"];
+    else value = p;
+  } else if (body.kind === "amount") {
+    if (!body.amount?.amount || body.amount.currency !== "IRR") errors.amount = ["catalog.price_change_amount_invalid"];
+    else value = body.amount.amount;
+  } else errors.kind = ["catalog.price_change_kind_invalid"];
+  const roundTo = body.roundTo ?? 1;
+  const roundMode = body.roundMode ?? "nearest";
+  if (!PRICE_STEPS.includes(roundTo) || !["nearest", "up", "down"].includes(roundMode)) errors.roundTo = ["catalog.price_change_rounding_invalid"];
+  if (Object.keys(errors).length) return { errors };
+  return { scope: { productIds: s.productIds ?? null, categoryId: s.categoryId ?? null, tag, status: s.status ?? null, all: Boolean(s.all) }, rule: { kind: body.kind, value, roundTo, roundMode } };
+}
+function applyRule(rule, rial) {
+  const raw = rule.kind === "percent" ? rial * (1 + rule.value / 100) : rial + rule.value;
+  const step = rule.roundTo * 10;
+  const steps = raw / step;
+  const r = rule.roundMode === "up" ? Math.ceil(steps - 1e-9) : rule.roundMode === "down" ? Math.floor(steps + 1e-9) : Math.round(steps);
+  const result = r * step;
+  return result <= 0 ? null : result;
+}
+function planPriceChange({ scope, rule }) {
+  const branch = new Set(scope.categoryId ? [scope.categoryId] : []);
+  for (let grew = true; grew; ) {
+    grew = false;
+    for (const c of categories) if (c.parentId && branch.has(c.parentId) && !branch.has(c.id)) { branch.add(c.id); grew = true; }
+  }
+  const matched = products.filter((p) =>
+    (!scope.productIds?.length || scope.productIds.includes(p.id)) && (!scope.categoryId || branch.has(p.categoryId)) && (!scope.tag || p.tags.includes(scope.tag)) && (!scope.status || p.status === scope.status));
+  const items = [];
+  const invalid = [];
+  for (const p of matched) {
+    const own = [...(p.price ? [[null, p.price.amount, null]] : []), ...p.variants.filter((x) => x.price).map((x) => [x.id, x.price.amount, variantLabel(x)])];
+    for (const [variantId, old, label] of own) {
+      const next = applyRule(rule, old);
+      const line = { productId: p.id, title: p.title, variantId, variantLabel: label, oldPrice: { amount: old, currency: "IRR" }, newPrice: next === null ? null : { amount: next, currency: "IRR" } };
+      if (next === null) invalid.push(line);
+      else if (next !== old) items.push(line);
+    }
+  }
+  const fingerprint = createHash("sha256").update(matched.map((p) => `${p.id}:${p.revision}`).join(";") + items.map((i) => `${i.productId}/${i.variantId}=${i.newPrice.amount}`).join(";")).digest("hex").slice(0, 32);
+  return { matched, items, invalid, fingerprint };
+}
+const ownPrice = (p, variantId) => (variantId ? p.variants.find((x) => x.id === variantId)?.price : p.price);
+function setOwnPrice(p, variantId, rial) {
+  const target = variantId ? p.variants.find((x) => x.id === variantId) : p;
+  if (!target) return false;
+  target.price = { amount: rial, currency: "IRR" };
+  p.revision += 1;
+  p.updatedAt = iso(now());
+  return true;
+}
+priceChanges.push({
+  id: randomUUID(), scope: { productIds: null, categoryId: categories[1].id, tag: null, status: null, all: false }, kind: "percent", percent: 10, amount: null, roundTo: 10000, roundMode: "up",
+  productCount: 1, priceCount: 1, createdBy: me.id, createdAt: ago(3 * 24 * H), undoneAt: null, undoneBy: null, undoSkipped: 0,
+  items: [{ productId: products[1].id, title: products[1].title, variantId: null, variantLabel: null, oldPrice: money(1_130_000), newPrice: money(1_250_000) }],
+});
+const batchView = (b, withItems) => {
+  const canUndo = !b.undoneAt && Date.now() - Date.parse(b.createdAt) <= 24 * H;
+  return { ...b, items: withItems ? b.items.map((i) => ({ ...i, title: products.find((p) => p.id === i.productId)?.title ?? i.title })) : null, canUndo, undoDeadline: iso(new Date(Date.parse(b.createdAt) + 24 * H)) };
+};
 
 // Knowledge (BE-1.4 part 1): FAQ and text sources, plus one source per active product. Indexing finishes after a moment.
 // Orders (BE-2.1): numbers count up per workspace; catalog lines are priced from the catalog.
@@ -1107,6 +1180,50 @@ const routes = [
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/imports\/([^/]+)$/, (req, res, url, [id]) => {
     const job = imports.get(id);
     return job ? send(res, 200, job) : problem(res, 404, "common.not_found");
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/price-changes\/preview$/, async (req, res) => {
+    const parsed = parsePriceChange(await readBody(req));
+    if (parsed.errors) return problem(res, 400, "validation.failed", parsed.errors);
+    const plan = planPriceChange(parsed);
+    if (plan.matched.length > 5000) return problem(res, 422, "catalog.price_change_too_large");
+    send(res, 200, { fingerprint: plan.fingerprint, productCount: new Set(plan.items.map((i) => i.productId)).size, priceCount: plan.items.length, items: plan.items, invalid: plan.invalid });
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/price-changes$/, async (req, res) => {
+    const body = await readBody(req);
+    const parsed = parsePriceChange(body);
+    if (parsed.errors) return problem(res, 400, "validation.failed", parsed.errors);
+    const plan = planPriceChange(parsed);
+    if (body.fingerprint && body.fingerprint !== plan.fingerprint) return problem(res, 409, "catalog.price_change_stale");
+    if (plan.invalid.length) return problem(res, 422, "catalog.price_change_below_zero");
+    if (!plan.items.length) return problem(res, 422, "catalog.price_change_empty");
+    for (const i of plan.items) setOwnPrice(products.find((p) => p.id === i.productId), i.variantId, i.newPrice.amount);
+    const { rule } = parsed;
+    const batch = {
+      id: randomUUID(), scope: parsed.scope, kind: rule.kind, percent: rule.kind === "percent" ? rule.value : null, amount: rule.kind === "amount" ? { amount: rule.value, currency: "IRR" } : null,
+      roundTo: rule.roundTo, roundMode: rule.roundMode, productCount: new Set(plan.items.map((i) => i.productId)).size, priceCount: plan.items.length,
+      createdBy: me.id, createdAt: iso(now()), undoneAt: null, undoneBy: null, undoSkipped: 0, items: plan.items,
+    };
+    priceChanges.unshift(batch);
+    send(res, 201, batchView(batch, true));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/price-changes$/, (req, res) => send(res, 200, priceChanges.slice(0, 50).map((b) => batchView(b, false)))],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/price-changes\/([^/]+)$/, (req, res, url, [id]) => {
+    const b = priceChanges.find((x) => x.id === id);
+    return b ? send(res, 200, batchView(b, true)) : problem(res, 404, "common.not_found");
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/price-changes\/([^/]+)\/undo$/, (req, res, url, [id]) => {
+    const b = priceChanges.find((x) => x.id === id);
+    if (!b) return problem(res, 404, "common.not_found");
+    if (b.undoneAt) return problem(res, 409, "catalog.price_change_undone");
+    if (!batchView(b, false).canUndo) return problem(res, 409, "catalog.price_change_undo_expired");
+    let skipped = 0;
+    for (const i of b.items) {
+      const p = products.find((x) => x.id === i.productId);
+      if (p && ownPrice(p, i.variantId)?.amount === i.newPrice.amount) setOwnPrice(p, i.variantId, i.oldPrice.amount);
+      else skipped++;
+    }
+    Object.assign(b, { undoneAt: iso(now()), undoneBy: me.id, undoSkipped: skipped });
+    send(res, 200, batchView(b, true));
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/storefront-cards$/, (req, res) => send(res, 200, cardSets)],
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/storefront-cards$/, async (req, res) => {

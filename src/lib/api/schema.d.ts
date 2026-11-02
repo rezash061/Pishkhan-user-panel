@@ -5962,6 +5962,292 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/catalog/price-changes/preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Preview a bulk price change
+         * @description Nothing is saved. 422 `catalog.price_change_too_large` when more than 5,000 products match.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PriceChangeRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PriceChangePreviewResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/catalog/price-changes": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Recent bulk price changes, newest first (50) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PriceChangeBatchResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        /**
+         * Apply a bulk price change as one batch
+         * @description The result is exactly the preview for the same request. 409 `catalog.price_change_stale` when the fingerprint no longer matches; 422 `catalog.price_change_empty` when no price changes, `catalog.price_change_below_zero` when a price would reach zero, `catalog.price_change_too_large`. Cards, the AI's knowledge and caches are refreshed at once.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description UUID; retries with the same key return the first response. */
+                    "Idempotency-Key"?: string;
+                };
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["PriceChangeRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PriceChangeBatchResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/catalog/price-changes/{batchId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** A bulk price change with every price it changed */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    batchId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PriceChangeBatchResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/catalog/price-changes/{batchId}/undo": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Undo a bulk price change within 24 hours
+         * @description Puts back every price that still has the batch's new value; prices changed since are left alone (`undoSkipped`). 409 `catalog.price_change_undone` or `catalog.price_change_undo_expired`.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    batchId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["PriceChangeBatchResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/orders": {
         parameters: {
             query?: never;
@@ -9212,6 +9498,75 @@ export interface components {
             push: boolean;
             sms: boolean;
             smsAvailable: boolean;
+        };
+        PriceChangeBatchResponse: {
+            /** Format: uuid */
+            id: string;
+            scope: components["schemas"]["PriceChangeScopeRequest"];
+            kind: string;
+            /** Format: double */
+            percent: null | number;
+            amount: null | components["schemas"]["Money"];
+            /** Format: int64 */
+            roundTo: number;
+            roundMode: string;
+            /** Format: int32 */
+            productCount: number;
+            /** Format: int32 */
+            priceCount: number;
+            /** Format: uuid */
+            createdBy: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            canUndo: boolean;
+            /** Format: date-time */
+            undoDeadline: string;
+            /** Format: date-time */
+            undoneAt: null | string;
+            /** Format: uuid */
+            undoneBy: null | string;
+            /** Format: int32 */
+            undoSkipped: number;
+            items: null | components["schemas"]["PriceChangeLine"][];
+        };
+        PriceChangeLine: {
+            /** Format: uuid */
+            productId: string;
+            title: string;
+            /** Format: uuid */
+            variantId: null | string;
+            variantLabel: null | string;
+            oldPrice: components["schemas"]["Money"];
+            newPrice: null | components["schemas"]["Money"];
+        };
+        PriceChangePreviewResponse: {
+            fingerprint: string;
+            /** Format: int32 */
+            productCount: number;
+            /** Format: int32 */
+            priceCount: number;
+            items: components["schemas"]["PriceChangeLine"][];
+            invalid: components["schemas"]["PriceChangeLine"][];
+        };
+        PriceChangeRequest: {
+            scope: null | components["schemas"]["PriceChangeScopeRequest"];
+            kind: null | string;
+            /** Format: double */
+            percent: null | number;
+            amount: null | components["schemas"]["Money"];
+            /** Format: int64 */
+            roundTo: null | number;
+            roundMode: null | string;
+            fingerprint: null | string;
+        };
+        PriceChangeScopeRequest: {
+            productIds: null | string[];
+            /** Format: uuid */
+            categoryId: null | string;
+            tag: null | string;
+            status: null | string;
+            /** @default false */
+            all: boolean;
         };
         ProblemDetails: {
             type?: null | string;

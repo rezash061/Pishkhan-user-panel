@@ -1,5 +1,13 @@
 # Changelog
 
+## 0.16.0 — 2026-11-02
+
+- Bulk price change (backend #38, BE-2.6):
+  - «تغییر گروهی قیمت» on the products page and on the new «تغییر قیمت‌ها» tab: pick products by category (subcategories included), status and tag, or leave them empty for every product; raise or lower by a percent (−90 to 500, two decimals) or a Toman amount; round to 100 … 100,000 Toman, to the nearest, up or down. The products page's category and status filters carry over.
+  - Preview lists every price that changes, old and new (the first 50, then a count), and any price that would reach zero, which blocks applying. Changing the form drops the preview, and applying sends its fingerprint; if the catalog changed in between the dialog refreshes the preview and asks again.
+  - «تغییر قیمت‌ها» lists the last 50 changes with who made them, their scope and rule, and each price; undo within 24 hours restores the prices nobody changed since and says how many it left alone.
+- API refreshed from the backend bulk-price branch.
+
 ## 0.15.0 — 2026-11-02
 
 - Payment links (backend #37, BE-2.2, Zarinpal):
