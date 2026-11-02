@@ -174,9 +174,39 @@ test("imports products from Excel", async ({ page }) => {
   await expect(page.getByRole("cell", { name: "قیمت نامعتبر است." })).toBeVisible();
 });
 
+test("changes prices in bulk with a preview, then undoes it from the history", async ({ page }) => {
+  await login(page);
+  await page.goto(`${base}/catalog`);
+  await page.getByRole("combobox", { name: "دسته‌بندی" }).selectOption({ label: "شلوار" });
+  await page.getByRole("button", { name: "تغییر گروهی قیمت" }).click();
+  const dialog = page.getByRole("dialog", { name: "تغییر گروهی قیمت" });
+  // The products page filter carries over as the scope.
+  await expect(dialog.getByRole("combobox", { name: "دسته‌بندی" })).toHaveValue(/.+/);
+  await dialog.getByRole("button", { name: "پیش‌نمایش" }).click();
+  await expect(dialog.getByText("درصد یا مبلغ را بنویسید.")).toBeVisible();
+  await dialog.getByLabel("چند درصد؟").fill("۱۰");
+  await dialog.getByRole("button", { name: "پیش‌نمایش" }).click();
+  const row = dialog.getByRole("row", { name: /شلوار بگ جین/ });
+  await expect(row).toContainText("۱٬۲۵۰٬۰۰۰ تومان");
+  await expect(row).toContainText("۱٬۳۷۵٬۰۰۰ تومان");
+  await dialog.getByRole("button", { name: /^ثبت .* قیمت$/ }).click();
+  await expect(page.getByText(/قیمت تغییر کرد/)).toBeVisible();
+  await expect(page.getByRole("link", { name: /شلوار بگ جین/ })).toContainText("۱٬۳۷۵٬۰۰۰ تومان");
+
+  await page.getByRole("link", { name: "تغییر قیمت‌ها" }).click();
+  await expect(page.getByText("۱۰٪ افزایش، گرد به ۱٬۰۰۰ تومان (نزدیک‌ترین)").first()).toBeVisible();
+  await page.getByText("قیمت‌ها", { exact: true }).first().click();
+  await expect(page.getByRole("row", { name: /شلوار بگ جین/ }).first()).toBeVisible();
+  await page.getByRole("button", { name: "برگرداندن" }).first().click();
+  await page.getByRole("dialog", { name: "قیمت‌ها برگردانده شوند؟" }).getByRole("button", { name: "برگرداندن" }).click();
+  await expect(page.getByText("قیمت‌ها برگردانده شدند")).toBeVisible();
+  await page.goto(`${base}/catalog`);
+  await expect(page.getByRole("link", { name: /شلوار بگ جین/ })).toContainText("۱٬۲۵۰٬۰۰۰ تومان");
+});
+
 test("automation and catalog pages pass an accessibility scan", async ({ page }) => {
   await login(page);
-  for (const path of ["/automations", "/automations/rules/new?trigger=comment_keyword", "/catalog", "/catalog/products/new"]) {
+  for (const path of ["/automations", "/automations/rules/new?trigger=comment_keyword", "/catalog", "/catalog/products/new", "/catalog/price-changes"]) {
     await page.goto(`${base}${path}`);
     await page.waitForLoadState("networkidle");
     const results = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).disableRules(["color-contrast"]).analyze();

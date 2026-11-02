@@ -1,6 +1,6 @@
 "use client";
 
-import { Download, FileSpreadsheet, ImageOff, Package, Plus, Search, Upload } from "lucide-react";
+import { Download, FileSpreadsheet, ImageOff, Package, Percent, Plus, Search, Upload } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useDeferredValue, useState } from "react";
@@ -18,6 +18,7 @@ import { rialOf } from "@/lib/money";
 import { P } from "@/lib/permissions";
 import { categoryLabels, useCategories, useProducts } from "./data";
 import { ImportDialog } from "./import-dialog";
+import { PriceChangeDialog } from "./price-change-dialog";
 
 const statusTone = { active: "success", draft: "neutral", archived: "warning" } as const;
 
@@ -40,6 +41,7 @@ export function ProductsPage() {
   const [categoryId, setCategoryId] = useState("");
   const [status, setStatus] = useState("");
   const [importing, setImporting] = useState(false);
+  const [pricing, setPricing] = useState(false);
   const query = useDeferredValue(q.trim());
   const products = useProducts(ws, { q: query, categoryId, status });
   const categories = useCategories(ws);
@@ -60,6 +62,12 @@ export function ProductsPage() {
             <Button variant="outline" size="sm" onClick={() => setImporting(true)}>
               <Upload aria-hidden />
               {t("import")}
+            </Button>
+          ) : null}
+          {writable ? (
+            <Button variant="outline" size="sm" onClick={() => setPricing(true)}>
+              <Percent aria-hidden />
+              {t("prices.open")}
             </Button>
           ) : null}
         </div>
@@ -157,6 +165,7 @@ export function ProductsPage() {
       ) : null}
 
       {importing ? <ImportDialog onClose={() => setImporting(false)} /> : null}
+      {pricing ? <PriceChangeDialog open onClose={() => setPricing(false)} initial={{ categoryId, status }} /> : null}
     </div>
   );
 }

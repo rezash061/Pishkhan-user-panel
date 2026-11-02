@@ -142,3 +142,7 @@ export type ParsedAddress = Schemas["ParsedAddress"];
 export type MerchantAccount = Schemas["MerchantAccountResponse"];
 export type MerchantAccountRequest = Schemas["MerchantAccountRequest"];
 export type PaymentLink = Schemas["PaymentLinkResponse"];
+export type PriceChangeRequest = Schemas["PriceChangeRequest"];
+export type PriceChangePreview = Schemas["PriceChangePreviewResponse"];
+export type PriceChangeLine = Schemas["PriceChangeLine"];
+export type PriceChangeBatch = Schemas["PriceChangeBatchResponse"];

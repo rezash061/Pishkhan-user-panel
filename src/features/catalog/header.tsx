@@ -18,6 +18,7 @@ export function CatalogHeader() {
           { href: base, label: t("tabs.products") },
           { href: `${base}/categories`, label: t("tabs.categories") },
           { href: `${base}/storefront-cards`, label: t("tabs.cards") },
+          { href: `${base}/price-changes`, label: t("tabs.prices") },
         ]}
       />
     </>
