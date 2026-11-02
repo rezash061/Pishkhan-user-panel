@@ -139,3 +139,6 @@ export type OrderEvent = Schemas["OrderEventResponse"];
 export type Invoice = Schemas["InvoiceResponse"];
 export type Province = Schemas["ProvinceResponse"];
 export type ParsedAddress = Schemas["ParsedAddress"];
+export type MerchantAccount = Schemas["MerchantAccountResponse"];
+export type MerchantAccountRequest = Schemas["MerchantAccountRequest"];
+export type PaymentLink = Schemas["PaymentLinkResponse"];

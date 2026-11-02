@@ -11,6 +11,7 @@ import { Dialog } from "@/components/ui/dialog";
 import { Field, Textarea } from "@/components/ui/field";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { PageContainer } from "@/components/ui/page";
+import { PaymentLinkCard } from "@/features/payments/payment-link-card";
 import { useMembers } from "@/features/team/data";
 import { useWorkspace } from "@/features/workspace/context";
 import { ApiError } from "@/lib/api/errors";
@@ -126,7 +127,10 @@ function Loaded({ order: o }: { order: Order }) {
           <ItemsCard order={o} />
           <Timeline order={o} writable={writable} />
         </div>
-        <CustomerCard order={o} />
+        <div className="space-y-5">
+          <PaymentLinkCard order={o} />
+          <CustomerCard order={o} />
+        </div>
       </div>
 
       {moving ? <MoveDialog order={o} status={moving} onClose={() => setMoving(null)} /> : null}
