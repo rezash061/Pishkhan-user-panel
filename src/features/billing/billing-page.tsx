@@ -1,28 +1,37 @@
 "use client";
 
-import { CircleAlert, CircleCheck, Gem, Infinity as InfinityIcon } from "lucide-react";
+import { CalendarClock, CircleAlert, CircleCheck, Gem, Infinity as InfinityIcon } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { PageHeader, Skeleton } from "@/components/ui/misc";
 import { PageContainer } from "@/components/ui/page";
 import { useWorkspace } from "@/features/workspace/context";
-import type { CurrentPlan, UsageMeter } from "@/lib/api/types";
+import type { CurrentPlan, Subscription, UsageMeter } from "@/lib/api/types";
 import { cn } from "@/lib/cn";
 import { toPersianDigits } from "@/lib/i18n/digits";
 import { formatDate, formatNumber } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
-import { daysLeft, meterState, shareOf, useCurrentPlan, useUsage } from "./data";
+import { planName } from "./checkout";
+import { daysLeft, meterState, shareOf, useBillingPlans, useCurrentPlan, useUsage } from "./data";
+import { CheckoutHistory } from "./history";
+import { PlansCard } from "./plans";
 
-/** Billing v1 (UP-1.15): the current plan, its limits and this Jalali month's usage. Upgrades go through support for now. */
+/**
+ * «اشتراک»: the current plan with any periods already paid for, this Jalali month's usage (UP-1.15), the plans on sale
+ * with a quote and Zarinpal checkout, and the payments and invoices (BE-2.8).
+ */
 export function BillingPage() {
   const t = useTranslations("billing");
   const { workspace } = useWorkspace();
+  const current = useCurrentPlan(workspace.id);
   return (
-    <PageContainer className="max-w-3xl space-y-5">
+    <PageContainer className="max-w-4xl space-y-5">
       <PageHeader title={t("title")} description={t("subtitle")} />
       <PlanCard ws={workspace.id} />
       <UsageCard ws={workspace.id} />
+      <PlansCard ws={workspace.id} current={current.data} />
+      <CheckoutHistory ws={workspace.id} />
     </PageContainer>
   );
 }
@@ -50,9 +59,36 @@ function PlanCard({ ws }: { ws: string }) {
         description={<PlanDescription plan={p} />}
       />
       <CardBody className="space-y-3 text-sm">
+        {p.subscription?.cycle ? <p>{t("current.cycle", { cycle: t(p.subscription.cycle === "annual" ? "cycle.annual" : "cycle.monthly") })}</p> : null}
+        {p.upcoming?.length ? <Upcoming ws={ws} upcoming={p.upcoming} /> : null}
         <p className="text-muted-foreground">{t("upgradeHint")}</p>
       </CardBody>
     </Card>
+  );
+}
+
+/** Periods already paid for that start later (renewals and downgrades, state `scheduled`), in the order they start. */
+function Upcoming({ ws, upcoming }: { ws: string; upcoming: Subscription[] }) {
+  const t = useTranslations("billing");
+  const plans = useBillingPlans(ws);
+  return (
+    <div className="space-y-1.5 rounded-xl bg-surface-muted p-3">
+      <p className="font-medium">{t("current.upcoming")}</p>
+      <ul className="space-y-1">
+        {upcoming.map((s) => {
+          const plan = planName(plans.data, s.planCode);
+          const cycle = t(s.cycle === "annual" ? "cycle.annual" : "cycle.monthly");
+          return (
+            <li key={s.id} className="flex items-start gap-1.5">
+              <CalendarClock className="mt-0.5 size-4 shrink-0 text-muted-foreground" aria-hidden />
+              {s.endsAt
+                ? t("current.upcomingRow", { plan, cycle, from: formatDate(s.startsAt), to: formatDate(s.endsAt) })
+                : t("current.upcomingNoEnd", { plan, from: formatDate(s.startsAt) })}
+            </li>
+          );
+        })}
+      </ul>
+    </div>
   );
 }
 

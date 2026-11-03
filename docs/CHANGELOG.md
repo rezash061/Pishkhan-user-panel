@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.17.0 — 2026-11-03
+
+- Subscription checkout (backend #39, BE-2.8, Zarinpal): «اشتراک» now sells the plans itself.
+  - «طرح‌ها» lists the plans on sale in display order with their price in Toman, limits and features. The current plan is marked, and each plan says what buying it would be now: buy (new), renew, upgrade or downgrade, with when it starts. A plan that can't be bought says why, in Persian. A monthly or annual toggle shows the annual saving. A plan with only one price stays on it and says so.
+  - Picking a plan opens the quote (`POST /checkout/quote`): the plan's price, the credit an upgrade gets for the unused part of the current period, the amount, and the Jalali start and end. «پرداخت» opens the checkout with one Idempotency-Key per quote and sends the browser to Zarinpal.
+  - Return: the backend redirects to `/billing?checkout={id}&status=…`. That route sends the payer to `/w/{ws}/billing/checkouts/{id}` in the workspace that started the payment (the `pk-checkout` cookie, or the last workspace). The page always reads `GET /checkouts/{id}` and shows one of: paid (invoice number, tracking code, card, and when the period starts), failed with the gateway code, cancelled, expired, or pending. A pending checkout is checked every 5 seconds for two minutes and has «بررسی دوباره». A paid one refreshes the plan and can be printed.
+  - «پرداخت‌ها و فاکتورها» lists the last 100 checkouts with invoice number, status (including expired), plan, kind, cycle, amount, tracking code and card. Each row opens its page.
+  - The plan card shows the paid cycle and «دوره‌های پرداخت‌شدهٔ بعدی» (scheduled renewals and downgrades from `upcoming`).
+- Every BE-2.8 error code has a Persian message (`billing.plan.not_found`, `billing.checkout.*`).
+- Mock Api host: plans, quote, checkout, history, a stand-in Zarinpal page with pay, cancel, bank error and no-answer, and `/__mock/billing/reset`. New e2e spec `billing-checkout.spec.ts`.
+- API refreshed from backend main (BE-2.8).
+
 ## 0.16.0 — 2026-11-02
 
 - Bulk price change (backend #38, BE-2.6):

@@ -7205,6 +7205,313 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/billing/plans": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Plans on sale, in display order, with what buying each would be for this workspace */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["BillingPlanOption"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/billing/checkout/quote": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * What buying a plan costs now, and when it would start
+         * @description 404 `billing.plan.not_found`; 422 `billing.checkout.plan_not_for_sale` or `billing.checkout.cycle_not_offered`; 409 `billing.checkout.managed_subscription` (a plan granted by the Pishkhan team without an end) or `billing.checkout.scheduled_pending` (an upgrade while a later period is already paid for).
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CheckoutRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CheckoutQuoteResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/billing/checkout": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Buy, renew or upgrade: opens the payment at Zarinpal
+         * @description The same errors as the quote, plus 422 `billing.checkout.unavailable` (online payment is not set up) and `billing.checkout.gateway_unavailable` (Zarinpal did not answer; try again). The subscription starts when Zarinpal confirms the payment.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description UUID; retries with the same key return the first response. */
+                    "Idempotency-Key"?: string;
+                };
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["CheckoutRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StartCheckoutResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/billing/checkouts": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Checkouts and invoices, newest first (100) */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CheckoutResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/billing/checkouts/{checkoutId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** One checkout; a paid one is the invoice */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    checkoutId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["CheckoutResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/knowledge/sources": {
         parameters: {
             query?: never;
@@ -8584,6 +8891,12 @@ export interface components {
             /** Format: date-time */
             completedAt: null | string;
         };
+        BillingPlanOption: {
+            plan: components["schemas"]["PublicPlan"];
+            current: boolean;
+            kind: null | string;
+            unavailable: null | string;
+        };
         BusinessHoursDto: {
             days: components["schemas"]["DayHours"][];
             closedDates: string[];
@@ -8657,6 +8970,55 @@ export interface components {
             tokenExpiresAt: null | string;
             /** Format: date-time */
             createdAt: string;
+        };
+        CheckoutQuoteResponse: {
+            kind: string;
+            /** Format: uuid */
+            planId: string;
+            planCode: string;
+            planName: string;
+            cycle: string;
+            price: components["schemas"]["Money"];
+            credit: components["schemas"]["Money"];
+            amount: components["schemas"]["Money"];
+            /** Format: date-time */
+            startsAt: string;
+            /** Format: date-time */
+            endsAt: string;
+        };
+        CheckoutRequest: {
+            /** Format: uuid */
+            planId: string;
+            cycle: null | string;
+        };
+        CheckoutResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            /** Format: uuid */
+            planId: string;
+            planCode: string;
+            planName: string;
+            /** Format: int32 */
+            planVersion: number;
+            cycle: string;
+            price: components["schemas"]["Money"];
+            credit: components["schemas"]["Money"];
+            amount: components["schemas"]["Money"];
+            status: string;
+            error: null | string;
+            /** Format: int64 */
+            invoiceNumber: null | number;
+            referenceId: null | string;
+            cardMask: null | string;
+            /** Format: uuid */
+            subscriptionId: null | string;
+            /** Format: uuid */
+            createdBy: string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            paidAt: null | string;
         };
         ConnectInstagramResponse: {
             /** Format: uri */
@@ -8773,6 +9135,7 @@ export interface components {
                 [key: string]: null | number;
             };
             subscription: null | components["schemas"]["SubscriptionResponse"];
+            upcoming: components["schemas"]["SubscriptionResponse"][];
         };
         DashboardDay: {
             /** Format: date */
@@ -9485,6 +9848,12 @@ export interface components {
             /** Format: date-time */
             expiresAt: string;
         };
+        PlanFeature: {
+            key: string;
+            label: string;
+            included: boolean;
+            limit: null | string;
+        };
         PreferenceItem: {
             kind: string;
             inApp: boolean;
@@ -9629,6 +9998,29 @@ export interface components {
             code: string;
             name: string;
             cities: string[];
+        };
+        PublicPlan: {
+            /** Format: uuid */
+            id: string;
+            code: string;
+            name: string;
+            tagline: null | string;
+            description: null | string;
+            monthly: components["schemas"]["Money"];
+            annual: null | components["schemas"]["Money"];
+            /** Format: int32 */
+            aiConversations: null | number;
+            overagePerConversation: null | components["schemas"]["Money"];
+            /** Format: int32 */
+            channelAccounts: null | number;
+            /** Format: int32 */
+            seats: null | number;
+            highlighted: boolean;
+            isFree: boolean;
+            limits: {
+                [key: string]: null | number;
+            };
+            features: components["schemas"]["PlanFeature"][];
         };
         PushKeyResponse: {
             publicKey: string;
@@ -9960,6 +10352,10 @@ export interface components {
             enabled: null | boolean;
             url?: null | string;
         };
+        StartCheckoutResponse: {
+            checkout: components["schemas"]["CheckoutResponse"];
+            paymentUrl: string;
+        };
         StorefrontCard: {
             /** Format: uuid */
             productId: string;
@@ -9995,6 +10391,9 @@ export interface components {
             /** Format: date-time */
             endedAt: null | string;
             endReason: null | string;
+            cycle: null | string;
+            /** Format: uuid */
+            checkoutId: null | string;
         };
         SupportSessionResponse: {
             accessToken: string;

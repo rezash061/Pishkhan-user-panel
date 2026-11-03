@@ -6,7 +6,7 @@ import { clearSupport, supportToken } from "@/lib/auth/support";
 import { refreshTokens } from "@/lib/auth/tokens";
 
 /** Routes that need a signed-in user. Everything else (login, invite, offline) is public. */
-const protectedPrefixes = ["/w/", "/workspaces", "/onboarding", "/account", "/channels"];
+const protectedPrefixes = ["/w/", "/workspaces", "/onboarding", "/account", "/channels", "/billing"];
 /** Routes a signed-in user has no reason to see. */
 const guestOnly = ["/login"];
 
