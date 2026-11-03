@@ -10072,6 +10072,8 @@ export interface components {
             /** Format: date-time */
             readAt: null | string;
             attachments: components["schemas"]["MessageAttachment"][];
+            transcript?: null | string;
+            transcriptStatus?: null | string;
         };
         Money: {
             /** Format: int64 */

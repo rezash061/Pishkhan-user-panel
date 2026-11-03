@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.22.0 — 2026-11-03
+
+- Voice notes (backend #45, BE-2.4):
+  - Under a customer's voice note in the thread (player, or its placeholder once Instagram's link expires) the transcript shows its state:
+    - «در حال تبدیل صدا به متن…» with a small spinner, as a status for screen readers;
+    - the text the AI and the rules answered, labelled «متن پیام صوتی»;
+    - «تبدیل انجام نشد — گفتگو به همکار شما سپرده شد».
+  - The handoff reason `voice_unavailable` reads «پیام صوتی قابل تبدیل نبود» everywhere handoff reasons are shown.
+- Realtime: the hub pushes a voice note again when its transcript arrives. A pushed message whose id is already loaded, on any page, is replaced in place; fields the push leaves out keep their value. A new message goes where its time belongs. One older than everything loaded is left for the page that holds it, instead of jumping to the top. The logic is the pure `mergeMessage`, with unit tests.
+- Mock Api host: conversation 16 has a transcribed, a pending and a failed voice note, and a `voice_unavailable` handoff. New e2e spec `voice-notes.spec.ts`.
+- API refreshed from backend main (BE-2.4: `transcript` and `transcriptStatus` on messages).
+
 ## 0.21.1 — 2026-11-03
 
 - Fix main after the merges of #21 and #22. CI had failed on main since #21.

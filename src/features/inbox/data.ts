@@ -106,18 +106,47 @@ export function setConversation(qc: QueryClient, ws: string, c: Conversation) {
   patchConversation(qc, ws, c.id, c);
 }
 
-/** Adds a message to the newest page if it is not there yet (the hub also echoes our own sends). */
+/**
+ * Puts a message into the loaded pages (newest page first, each page newest first):
+ * - one already there is replaced in place. The hub pushes a voice note again with its transcript (BE-2.4) and echoes
+ *   our own sends; fields the push leaves out keep their value;
+ * - `replaceLocalId` drops the optimistic copy of a send;
+ * - a new message goes where its `createdAt` belongs, normally the top;
+ * - one older than everything loaded belongs to a page not fetched yet and is left for that page.
+ */
+export function mergeMessage<T extends { items: OptimisticMessage[]; nextCursor?: string | null }>(pages: T[], message: OptimisticMessage, replaceLocalId?: string): T[] {
+  let found = false;
+  const next = pages.map((page) => ({
+    ...page,
+    items: page.items
+      .filter((m) => m.id !== replaceLocalId || m.id === message.id)
+      .map((m) => {
+        if (m.id !== message.id) return m;
+        found = true;
+        const merged: OptimisticMessage = { ...m };
+        for (const [k, v] of Object.entries(message)) if (v !== undefined) (merged as Record<string, unknown>)[k] = v;
+        merged.local = message.local;
+        return merged;
+      }),
+  }));
+  if (found || !next[0]) return next;
+  const at = new Date(message.createdAt).getTime();
+  const last = next.at(-1)!;
+  const oldest = last.items.at(-1);
+  if (oldest && at < new Date(oldest.createdAt).getTime() && last.nextCursor) return next;
+  for (const page of next) {
+    const i = page.items.findIndex((m) => new Date(m.createdAt).getTime() <= at);
+    if (i >= 0) {
+      page.items = [...page.items.slice(0, i), message, ...page.items.slice(i)];
+      return next;
+    }
+  }
+  next.at(-1)!.items = [...next.at(-1)!.items, message];
+  return next;
+}
+
 export function upsertMessage(qc: QueryClient, ws: string, conversationId: string, message: OptimisticMessage, replaceLocalId?: string) {
-  qc.setQueryData<MessagePages>(qk.messages(ws, conversationId), (old) => {
-    if (!old) return old;
-    const pages = old.pages.map((page) => ({
-      ...page,
-      items: page.items.filter((m) => m.id !== replaceLocalId).map((m) => (m.id === message.id ? { ...m, ...message, local: message.local } : m)),
-    }));
-    const exists = pages.some((p) => p.items.some((m) => m.id === message.id));
-    if (!exists && pages[0]) pages[0] = { ...pages[0], items: [message, ...pages[0].items] };
-    return { ...old, pages };
-  });
+  qc.setQueryData<MessagePages>(qk.messages(ws, conversationId), (old) => (old ? { ...old, pages: mergeMessage(old.pages, message, replaceLocalId) } : old));
 }
 
 export function updateMessageStatus(qc: QueryClient, ws: string, conversationId: string, messageId: string, status: string, errorCode: string | null, upTo: boolean) {
