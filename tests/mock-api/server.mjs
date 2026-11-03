@@ -1425,7 +1425,7 @@ const routes = [
     const list = seedTemplates.map(templateSummary);
     send(res, 200, [...list.filter((x) => x.recommended), ...list.filter((x) => !x.recommended)]);
   }],
-  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/templates\/applications$/, (req, res) => send(res, 200, templateApplications.slice(0, 50).map(({ idempotencyKey, ...a }) => a))],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/templates\/applications$/, (req, res) => send(res, 200, templateApplications.slice(0, 50).map((a) => ({ ...a, idempotencyKey: undefined })))],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/templates\/([^/]+)$/, (req, res, url, [id]) => {
     const x = seedTemplates.find((t) => t.id === id);
     if (!x) return problem(res, 404, "common.not_found");
