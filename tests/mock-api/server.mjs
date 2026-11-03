@@ -549,6 +549,28 @@ const kbIndex = (src) => {
 const imports = new Map();
 
 /** A small stand-in for backend `FlowValidator`: enough for the editor to show errors and warnings. */
+// Follow-ups (BE-1.8): scheduled by rules and flows, sent later inside the 24-hour window unless replied or bought first.
+const followUpProblem = (a) =>
+  !Number.isInteger(a.delaySeconds) || a.delaySeconds < 60 || a.delaySeconds > 82_800 ? ["delaySeconds", "automation.followup_delay_invalid"]
+  : !a.message?.text?.trim() ? ["message", "validation.message.empty"] : null;
+const followUp = (i, status, dueInMinutes, text, reason = null) => ({
+  id: `0199f100-0000-7000-8000-${String(i).padStart(12, "0")}`, conversationId: conversations[i % conversations.length].id, source: i % 2 ? `flow:${randomUUID()}` : `rule:${randomUUID()}`,
+  ruleId: null, flowId: null, message: { text }, dueAt: iso(new Date(Date.now() + dueInMinutes * 60_000)), cancelOnReply: true, cancelOnPurchase: i !== 3,
+  status, reason, createdAt: iso(new Date(Date.now() + (dueInMinutes - 60) * 60_000)), completedAt: status === "pending" ? null : iso(new Date(Date.now() + Math.min(dueInMinutes, 0) * 60_000)),
+});
+let followUps = [];
+const resetFollowUps = () => {
+  followUps = [
+    followUp(0, "pending", 45, "سلام نیلوفر جان، هنوز به مانتو کتان فکر می‌کنی؟ سایز M موجوده 🌸"),
+    followUp(1, "pending", 180, "کد تخفیف ۱۰٪ شما تا امشب معتبره: NILOO10"),
+    followUp(2, "sent", -120, "سفارشت ثبت شد؟ اگه سؤالی داری همین‌جا بپرس."),
+    followUp(3, "cancelled", -30, "هنوز به این مدل فکر می‌کنی؟", "replied"),
+    followUp(4, "cancelled", -300, "موجودی شلوار بگ جین رو برات نگه داشتیم.", "purchased"),
+    followUp(5, "skipped", -1500, "سلام! پیامت رو دیدیم، جواب بدی ادامه بدیم؟", "window_closed"),
+  ];
+};
+resetFollowUps();
+
 const validateFlow = (graph) => {
   const errors = [];
   const warnings = [];
@@ -557,6 +579,9 @@ const validateFlow = (graph) => {
   for (const n of graph.nodes) {
     if ((n.type === "message" || n.type === "question") && !n.message?.text?.trim()) errors.push({ code: n.type === "message" ? "flow.message_required" : "flow.prompt_required", nodeId: n.id });
     if (n.type === "question" && !/^[a-z][a-z0-9_]{0,39}$/.test(n.variable ?? "")) errors.push({ code: "flow.variable_invalid", nodeId: n.id });
+    if (n.type === "follow_gate" && !n.message?.text?.trim()) errors.push({ code: "flow.message_required", nodeId: n.id });
+    if ((n.type === "follow_gate" || n.type === "question") && (n.maxRetries ?? 0) > 5) errors.push({ code: "flow.max_retries_invalid", nodeId: n.id });
+    if (n.type === "action" && (n.actions ?? []).some((a) => a.kind === "schedule_followup" && followUpProblem(a))) errors.push({ code: "flow.followup_invalid", nodeId: n.id });
   }
   const seen = new Set([graph.start]);
   const queue = [graph.start];
@@ -1036,11 +1061,36 @@ const routes = [
     send(res, 204);
   }],
   // Automation
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/followups$/, (req, res, url) => {
+    const status = url.searchParams.get("Status");
+    const conversationId = url.searchParams.get("ConversationId");
+    const limit = Math.min(200, Number(url.searchParams.get("Limit") ?? 50));
+    const list = followUps.filter((f) => (!status || f.status === status) && (!conversationId || f.conversationId === conversationId));
+    list.sort((a, b) => (status === "pending" ? a.dueAt.localeCompare(b.dueAt) : b.createdAt.localeCompare(a.createdAt)));
+    send(res, 200, list.slice(0, limit));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/automation\/followups\/([^/]+)\/cancel$/, (req, res, url, [id]) => {
+    const f = followUps.find((x) => x.id === id);
+    if (!f) return problem(res, 404, "common.not_found");
+    if (f.status !== "pending") return problem(res, 409, "automation.followup_not_pending");
+    Object.assign(f, { status: "cancelled", reason: "owner", completedAt: iso(now()) });
+    send(res, 200, f);
+  }],
+  ["POST", /^\/__mock\/followups\/reset$/, (req, res) => {
+    resetFollowUps();
+    send(res, 204);
+  }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/rules$/, (req, res) => send(res, 200, rules)],
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/automation\/rules$/, async (req, res) => {
     const body = await readBody(req);
     if (["dm_keyword", "comment_keyword"].includes(body.triggerKind) && !body.trigger?.keywords?.length && !body.trigger?.pattern)
       return problem(res, 400, "validation.failed", { "trigger.keywords": ["automation.keywords_required"] });
+    const fu = (body.actions ?? []).map((a, i) => [a, i]).filter(([a]) => a.kind === "schedule_followup");
+    if (fu.length > 1) return problem(res, 400, "validation.failed", { actions: ["automation.one_followup"] });
+    for (const [a, i] of fu) {
+      const bad = followUpProblem(a);
+      if (bad) return problem(res, 400, "validation.failed", { [`actions[${i}].${bad[0]}`]: [bad[1]] });
+    }
     const rule = { ...body, id: randomUUID(), postId: body.trigger?.postId ?? null, revision: 1, createdAt: iso(now()), updatedAt: iso(now()) };
     rules.push(rule);
     send(res, 201, rule);

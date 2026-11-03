@@ -1,19 +1,20 @@
 "use client";
 
-import { ArrowDown, ArrowUp, Bell, Bot, GitBranch, Hand, LayoutGrid, Lock, MessageCircle, MessagesSquare, PenLine, Plus, Tag, TagsIcon, Trash2, type LucideIcon } from "lucide-react";
+import { AlarmClock, ArrowDown, ArrowUp, Bell, Bot, GitBranch, Hand, LayoutGrid, Lock, MessageCircle, MessagesSquare, PenLine, Plus, Tag, TagsIcon, Trash2, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Field, Input, Select, Textarea } from "@/components/ui/field";
+import { Switch } from "@/components/ui/misc";
 import { useCardSets } from "@/features/catalog/data";
 import type { ActionKind, RuleAction } from "@/lib/api/types";
 import { commentTriggers } from "@/lib/api/types";
 import { toPersianDigits } from "@/lib/i18n/digits";
 import { useFlows } from "./data";
 import { MessageBuilder } from "./message-builder";
-import { allowedActions, baseVariables, commentVariables, emptyMessage, MAX_ACTIONS, MAX_PUBLIC_REPLIES, newAction } from "./model";
+import { allowedActions, baseVariables, commentVariables, emptyMessage, followUpSeconds, MAX_ACTIONS, MAX_PUBLIC_REPLIES, newAction, splitFollowUpDelay } from "./model";
 
 export const actionIcons: Record<ActionKind, LucideIcon> = {
   send_message: MessageCircle,
@@ -27,6 +28,7 @@ export const actionIcons: Record<ActionKind, LucideIcon> = {
   handoff: Hand,
   pause_ai: Bot,
   notify_team: Bell,
+  schedule_followup: AlarmClock,
 };
 
 export function ActionsEditor({
@@ -52,7 +54,7 @@ export function ActionsEditor({
   const [adding, setAdding] = useState(false);
   const allowed = allowedOverride ?? allowedActions(triggerKind);
   const variables = commentTriggers.includes(triggerKind) ? [...baseVariables, ...commentVariables] : baseVariables;
-  const once: ActionKind[] = ["private_reply", "public_reply", "start_flow"];
+  const once: ActionKind[] = ["private_reply", "public_reply", "start_flow", "schedule_followup"];
   const addable = allowed.filter((k) => !(once.includes(k) && actions.some((a) => a.kind === k)));
 
   const set = (i: number, patch: Partial<RuleAction>) => onChange(actions.map((a, j) => (j === i ? { ...a, ...patch } : a)));
@@ -260,6 +262,8 @@ function ActionBody({
       );
     case "pause_ai":
       return <p className="text-sm text-muted-foreground">{t("hints.pause_ai")}</p>;
+    case "schedule_followup":
+      return <FollowUpBody id={id} path={path} action={a} variables={variables} onChange={onChange} fieldError={fieldError} disabled={disabled} />;
     default:
       return null;
   }
@@ -318,5 +322,63 @@ function CardSetSelect({ ws, id, value, onChange, error, disabled }: { ws: strin
         ))}
       </Select>
     </Field>
+  );
+}
+
+/** «پیگیری»: a message sent later in the same conversation, unless the customer answers or buys first (BE-1.8). */
+export function FollowUpBody({
+  id,
+  path,
+  action: a,
+  variables,
+  onChange,
+  fieldError,
+  disabled,
+}: {
+  id: string;
+  path: string;
+  action: RuleAction;
+  variables: readonly string[];
+  onChange: (patch: Partial<RuleAction>) => void;
+  fieldError: (path: string) => string | null;
+  disabled?: boolean;
+}) {
+  const t = useTranslations("automations.actions.followup");
+  const { amount, unit } = splitFollowUpDelay(Number(a.delaySeconds ?? 3600));
+  const max = unit === "hours" ? 23 : 23 * 60;
+  return (
+    <div className="space-y-3">
+      <p className="text-xs text-muted-foreground">{t("hint")}</p>
+      <MessageBuilder id={`${id}-message`} value={a.message ?? emptyMessage()} onChange={(message) => onChange({ message })} variables={variables} disabled={disabled} error={fieldError(`${path}.message`)} />
+      <Field label={t("delay")} htmlFor={`${id}-delay`} hint={t("delayHint")} error={fieldError(`${path}.delaySeconds`)}>
+        <div className="flex gap-2">
+          <Input
+            id={`${id}-delay`}
+            type="number"
+            dir="ltr"
+            min={1}
+            max={max}
+            className="w-28"
+            disabled={disabled}
+            value={amount}
+            onChange={(e) => onChange({ delaySeconds: followUpSeconds(Number(e.target.value) || 1, unit) })}
+          />
+          <Select aria-label={t("unit")} className="w-32" disabled={disabled} value={unit} onChange={(e) => onChange({ delaySeconds: followUpSeconds(amount, e.target.value as "minutes" | "hours") })}>
+            <option value="minutes">{t("minutes")}</option>
+            <option value="hours">{t("hours")}</option>
+          </Select>
+        </div>
+      </Field>
+      <div className="space-y-2">
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span>{t("cancelOnReply")}</span>
+          <Switch label={t("cancelOnReply")} checked={a.cancelOnReply ?? true} disabled={disabled} onChange={(cancelOnReply) => onChange({ cancelOnReply })} />
+        </label>
+        <label className="flex items-center justify-between gap-3 text-sm">
+          <span>{t("cancelOnPurchase")}</span>
+          <Switch label={t("cancelOnPurchase")} checked={a.cancelOnPurchase ?? true} disabled={disabled} onChange={(cancelOnPurchase) => onChange({ cancelOnPurchase })} />
+        </label>
+      </div>
+    </div>
   );
 }

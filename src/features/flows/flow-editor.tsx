@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bell, Bot, Clock, FlaskConical, Flag, GitFork, HelpCircle, LayoutGrid, MessageCircle, Pencil, Play, Plus, Rocket, Trash2, Zap, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Bot, Clock, FlaskConical, Flag, GitFork, HelpCircle, LayoutGrid, MessageCircle, Pencil, Play, Plus, Rocket, Trash2, UserCheck, Zap, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -36,7 +36,7 @@ export const nodeIcons: Record<string, LucideIcon> = {
   action: Zap,
   ai: Bot,
   end: Flag,
-  follow_gate: Bell,
+  follow_gate: UserCheck,
 };
 
 export function EditFlow({ flowId }: { flowId: string }) {
@@ -272,6 +272,7 @@ function summary(node: FlowNode, t: ReturnType<typeof useTranslations<"flows">>)
   switch (node.type) {
     case "message":
     case "question":
+    case "follow_gate":
       return renderSample(node.message?.text ?? "") || t("emptyStep");
     case "delay": {
       const { amount, unit } = splitDelay(Number(node.delaySeconds ?? 0));
@@ -319,6 +320,7 @@ function NodeCard({
   const codeMessage = useCodeMessage();
   const Icon = nodeIcons[node.type] ?? MessageCircle;
   const exits = handlesFor(node.type);
+  const exitLabel = (h: string) => (node.type === "follow_gate" && (h === "true" || h === "false") ? t(`followHandles.${h}`) : t(`handles.${h}` as "handles.next"));
   const label = (n: FlowNode) => `${t(`types.${n.type}` as "types.message")} · ${n.id}`;
 
   return (
@@ -378,9 +380,9 @@ function NodeCard({
             const to = edgeFrom(graph, node.id, h)?.to ?? "";
             return (
               <div key={h} className="flex items-center gap-2 text-sm">
-                <span className="w-24 shrink-0 text-xs text-muted-foreground">{t(`handles.${h}` as "handles.next")}</span>
+                <span className="w-24 shrink-0 text-xs text-muted-foreground">{exitLabel(h)}</span>
                 <Select
-                  aria-label={`${node.id}: ${t(`handles.${h}` as "handles.next")}`}
+                  aria-label={`${node.id}: ${exitLabel(h)}`}
                   className="h-9 min-w-0 flex-1"
                   disabled={!writable}
                   value={to}

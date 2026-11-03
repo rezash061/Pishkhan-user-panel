@@ -4728,6 +4728,114 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/automation/followups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scheduled follow-ups, soonest first for pending ones and newest first otherwise */
+        get: {
+            parameters: {
+                query?: {
+                    Status?: string;
+                    ConversationId?: string;
+                    Limit?: number;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FollowUpResponse"][];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/automation/followups/{followUpId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a pending follow-up */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    followUpId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FollowUpResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/automation/test": {
         parameters: {
             query?: never;
@@ -9517,6 +9625,28 @@ export interface components {
             warnings: components["schemas"]["FlowIssue"][];
             isValid?: boolean;
         };
+        FollowUpResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            source: string;
+            /** Format: uuid */
+            ruleId: null | string;
+            /** Format: uuid */
+            flowId: null | string;
+            message: components["schemas"]["OutboundContent"];
+            /** Format: date-time */
+            dueAt: string;
+            cancelOnReply: boolean;
+            cancelOnPurchase: boolean;
+            status: string;
+            reason: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
+        };
         FormResponse: {
             /** Format: uuid */
             flowId: string;
@@ -10284,6 +10414,10 @@ export interface components {
             value?: null | string;
             reason?: null | string;
             title?: null | string;
+            /** Format: int32 */
+            delaySeconds?: null | number;
+            cancelOnReply?: null | boolean;
+            cancelOnPurchase?: null | boolean;
         };
         RuleRequest: {
             name: string;
