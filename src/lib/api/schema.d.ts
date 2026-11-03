@@ -8152,6 +8152,164 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/knowledge/score": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The knowledge score (0–100), the required facts still missing and what to do next */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["KnowledgeScoreResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/knowledge/onboarding/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turn the owner's answer to a required fact into a FAQ draft; nothing is saved */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OnboardingDraftRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OnboardingDraftResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/knowledge/onboarding/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save the approved FAQ for a required fact (replacing the fact's earlier FAQ) and return the new score */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OnboardingConfirmRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OnboardingConfirmResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/templates": {
         parameters: {
             query?: never;
@@ -9503,6 +9661,14 @@ export interface components {
             /** Format: date-time */
             expiresAt: null | string;
         };
+        FactStatus: {
+            key: string;
+            label: string;
+            prompt: string;
+            covered: boolean;
+            /** Format: uuid */
+            sourceId: null | string;
+        };
         FieldDefinitionRequest: {
             key: null | string;
             label: string;
@@ -9791,6 +9957,17 @@ export interface components {
             /** Format: uuid */
             productId: null | string;
         };
+        KnowledgeScoreResponse: {
+            /** Format: int32 */
+            score: number;
+            industry: string;
+            parts: components["schemas"]["ScorePart"][];
+            facts: components["schemas"]["FactStatus"][];
+            products: null | components["schemas"]["ProductStats"];
+            /** Format: int32 */
+            openUnanswered: number;
+            suggestions: string[];
+        };
         KnowledgeSearchRequest: {
             query: string;
             /** Format: int32 */
@@ -9930,6 +10107,25 @@ export interface components {
             nextCursor: null | string;
             /** Format: int32 */
             unreadCount: number;
+        };
+        OnboardingConfirmRequest: {
+            factKey: string;
+            question: string;
+            answer: string;
+        };
+        OnboardingConfirmResponse: {
+            source: components["schemas"]["SourceResponse"];
+            score: components["schemas"]["KnowledgeScoreResponse"];
+        };
+        OnboardingDraftRequest: {
+            factKey: string;
+            answer: string;
+        };
+        OnboardingDraftResponse: {
+            factKey: string;
+            question: string;
+            answer: string;
+            drafted: string;
         };
         OrderAddress: {
             recipient: null | string;
@@ -10302,6 +10498,14 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        ProductStats: {
+            /** Format: int32 */
+            active: number;
+            /** Format: int32 */
+            priced: number;
+            /** Format: int32 */
+            inStock: number;
+        };
         ProvinceResponse: {
             code: string;
             name: string;
@@ -10554,6 +10758,13 @@ export interface components {
             role: string;
             text: string;
         };
+        ScorePart: {
+            key: string;
+            /** Format: int32 */
+            points: number;
+            /** Format: int32 */
+            max: number;
+        };
         SegmentCondition: {
             field: string;
             op: string;
@@ -10655,6 +10866,7 @@ export interface components {
             /** Format: uuid */
             fileId: null | string;
             url: null | string;
+            factKey?: null | string;
         };
         SourceUpdateRequest: {
             title: null | string;

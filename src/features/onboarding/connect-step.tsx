@@ -44,6 +44,7 @@ export function ConnectInstagramStep({ workspaceId, status, reason }: { workspac
         </p>
       ) : null}
       {connected ? (
+        <Link href={`/onboarding/teach?ws=${workspaceId}`} className={buttonVariants({ size: "lg", className: "w-full" })}>
         <Link href={`/onboarding/template?ws=${workspaceId}`} className={buttonVariants({ size: "lg", className: "w-full" })}>
           {t("done")}
         </Link>
@@ -66,6 +67,7 @@ export function ConnectInstagramStep({ workspaceId, status, reason }: { workspac
             {busy ? null : <InstagramIcon />}
             {busy ? t("connecting") : t("button")}
           </Button>
+          <Link href={`/onboarding/teach?ws=${workspaceId}`} className={buttonVariants({ variant: "ghost", className: "w-full" })}>
           <Link href={`/onboarding/template?ws=${workspaceId}`} className={buttonVariants({ variant: "ghost", className: "w-full" })}>
             {t("skip")}
           </Link>

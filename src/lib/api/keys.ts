@@ -23,6 +23,7 @@ export const qk = {
   contactConsents: (ws: string, id: string) => ["contacts", ws, "one", id, "consents"] as const,
   contactExports: (ws: string) => ["crm", ws, "exports"] as const,
   knowledge: (ws: string) => ["knowledge", ws] as const,
+  knowledgeScore: (ws: string) => ["knowledge", ws, "score"] as const,
   agentProfile: (ws: string) => ["agent", ws, "profile"] as const,
   agentTraces: (ws: string, filter: object) => ["agent", ws, "traces", filter] as const,
   agentTrace: (ws: string, id: string) => ["agent", ws, "trace", id] as const,
