@@ -153,3 +153,6 @@ export type Checkout = Schemas["CheckoutResponse"];
 export type StartCheckout = Schemas["StartCheckoutResponse"];
 export type Subscription = Schemas["SubscriptionResponse"];
 export type FollowUp = Schemas["FollowUpResponse"];
+export type TemplateSummary = Schemas["TemplateSummaryResponse"];
+export type TemplatePreview = Schemas["TemplatePreviewResponse"];
+export type TemplateApplication = Schemas["TemplateApplicationResponse"];

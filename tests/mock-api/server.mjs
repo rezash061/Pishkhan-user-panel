@@ -5,6 +5,7 @@
 //   node tests/mock-api/server.mjs            # listens on :5080 (PISHKHAN_API_URL default)
 //   MOCK_PORT=5099 node tests/mock-api/server.mjs
 import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 
 const port = Number(process.env.MOCK_PORT ?? 5080);
@@ -491,6 +492,32 @@ const gatewayPage = (c) => `<!doctype html><html lang="fa" dir="rtl"><head><meta
 <li><a href="/__mock/zarinpal/${c.authority}/done?outcome=failed">خطای بانک</a></li>
 <li><a href="/__mock/zarinpal/${c.authority}/done?outcome=pending">بدون پاسخ (در انتظار)</a></li>
 </ul></main></body></html>`;
+// Industry templates (BE-2.9): the backend's built-in seeds (tests/mock-api/fixtures, made from Seeds/*.json), applied by key.
+const seedTemplates = JSON.parse(readFileSync(new URL("./fixtures/industry-templates.json", import.meta.url), "utf8")).map((x, i) => ({
+  ...x, id: `0199f000-0000-7000-8000-00000000000${i + 1}`, version: 1,
+}));
+let templateApplications = [];
+let templateKeys = new Set();
+let agentProfileSet = false;
+const templateSummary = (x) => {
+  const last = templateApplications.find((a) => a.templateId === x.id);
+  return { id: x.id, industry: x.industry, version: x.version, name: x.name, description: x.description, requiredFacts: x.requiredFacts.length, faqs: x.faqs.length, flows: x.flows.length, rules: x.rules.length, hasAgentProfile: Boolean(x.agentProfile), recommended: x.industry === ws.industry, lastApplied: last?.appliedAt ?? null };
+};
+const applyTemplate = (x) => {
+  const add = (kind, items) => items.filter((i) => !templateKeys.has(`${kind}:${i.key}`)).map((i) => templateKeys.add(`${kind}:${i.key}`)).length;
+  const newFaqs = x.faqs.filter((f) => !templateKeys.has(`faq:${f.key}`));
+  const faqsAdded = add("faq", x.faqs);
+  const flowsAdded = add("flow", x.flows);
+  const rulesAdded = add("rule", x.rules);
+  // The FAQs land in the knowledge base switched off, with their blanks.
+  for (const f of newFaqs) kbSources.unshift(kbSource("faq", f.question, f.answer, { enabled: false }));
+  const profileApplied = Boolean(x.agentProfile) && !agentProfileSet;
+  if (profileApplied) agentProfileSet = true;
+  const total = x.faqs.length + x.flows.length + x.rules.length;
+  const app = { id: randomUUID(), templateId: x.id, industry: x.industry, version: x.version, faqsAdded, flowsAdded, rulesAdded, profileApplied, skipped: total - faqsAdded - flowsAdded - rulesAdded, appliedAt: iso(now()) };
+  templateApplications.unshift(app);
+  return app;
+};
 
 // Payments (BE-2.2): the seller's Zarinpal account and payment links (3 days, newest first).
 let merchant = { configured: false, provider: null, merchantIdHint: null, sandbox: false, enabled: true, updatedAt: null };
@@ -1442,6 +1469,33 @@ const routes = [
   }],
   ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/catalog\/storefront-cards\/([^/]+)$/, (req, res, url, [id]) => {
     cardSets = cardSets.filter((x) => x.id !== id);
+    send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/templates$/, (req, res) => {
+    const list = seedTemplates.map(templateSummary);
+    send(res, 200, [...list.filter((x) => x.recommended), ...list.filter((x) => !x.recommended)]);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/templates\/applications$/, (req, res) => send(res, 200, templateApplications.slice(0, 50).map((a) => ({ ...a, idempotencyKey: undefined })))],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/templates\/([^/]+)$/, (req, res, url, [id]) => {
+    const x = seedTemplates.find((t) => t.id === id);
+    if (!x) return problem(res, 404, "common.not_found");
+    send(res, 200, { template: templateSummary(x), requiredFacts: x.requiredFacts, faqs: x.faqs, flows: x.flows, rules: x.rules, agentProfile: x.agentProfile ?? null });
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/templates\/([^/]+)\/apply$/, (req, res, url, [id]) => {
+    const x = seedTemplates.find((t) => t.id === id);
+    if (!x) return problem(res, 404, "common.not_found");
+    const key = req.headers["idempotency-key"];
+    const seen = key && templateApplications.find((a) => a.idempotencyKey === key);
+    if (seen) return send(res, 200, { ...seen, idempotencyKey: undefined });
+    const app = applyTemplate(x);
+    app.idempotencyKey = key ?? null;
+    send(res, 200, { ...app, idempotencyKey: undefined });
+  }],
+  // Test hook: forget every apply.
+  ["POST", /^\/__mock\/templates\/reset$/, (req, res) => {
+    templateApplications = [];
+    templateKeys = new Set();
+    agentProfileSet = false;
     send(res, 204);
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, (req, res) => send(res, 200, merchant)],

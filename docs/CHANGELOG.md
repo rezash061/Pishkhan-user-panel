@@ -1,15 +1,13 @@
 # Changelog
 
-## 0.19.0 — 2026-11-03
+## 0.18.0 — 2026-11-03
 
-- Follow-gate and follow-ups (backend #42, BE-1.8):
-  - Flows: the «شرط فالو» step is no longer marked «به‌زودی». It takes the message sent with the «دنبال کردم ✅» quick reply, the text sent while the customer still doesn't follow, and how many re-checks (0–5, default 2). Its two exits are labelled «دنبال‌کرده» and «دنبال نکرده», and a new gate's «دنبال‌کرده» exit continues where the old exit went. The help text says that every answer is re-checked, that an unknown follow status lets the customer through, and what happens when «دنبال نکرده» is left empty.
-  - «پیگیری» (`schedule_followup`) in DM rules and in flow «کار» steps takes a message, a delay in minutes or hours (1 minute to 23 hours, clamped), and «اگر مشتری پیام داد / خرید کرد، فرستاده نشود», both on by default. The help text explains Instagram's 24-hour window. A rule takes at most one; comment rules don't offer it.
-  - «پیگیری‌ها» tab under automations: pending (soonest first), sent, cancelled and not sent, kept in the URL. Each row has the Jalali due time, the message, rule or flow, a link to the conversation, the reason in Persian (replied, purchased, owner, replaced, handed_off, window_closed, conversation_gone), and «لغو پیگیری» for pending ones (`workspace.automation.write`).
-  - The inbox side panel lists the conversation's pending follow-ups, with cancel.
-- Persian messages for `automation.followup_delay_invalid`, `automation.one_followup`, `flow.followup_invalid` and `automation.followup_not_pending`. The editor checks the delay and the one-follow-up rule before saving.
-- Mock Api host: follow-ups with Persian sample data, list, cancel and `/__mock/followups/reset`, and gate and follow-up validation. New e2e spec `followups.spec.ts`.
-- API refreshed from backend main at the BE-1.8 merge.
+- Industry templates (backend #40, BE-2.9, UP-2.5):
+  - Onboarding step 3 «قالب صنف», after connecting Instagram (or skipping it). It lists the published templates with the workspace's own industry first, marked «پیشنهادی» and picked. A preview shows what applying adds: the facts the assistant needs, FAQs with their answers, flow names, rules with their trigger, and the agent profile (name, tone, brand voice, never-say phrases, handoff words). The step can be skipped.
+  - «اعمال قالب» sends an Idempotency-Key. The result lists the FAQs added (off), flows (published), rules (off), whether the agent profile was set, and what was left alone because the owner had edited or deleted it. It says to fill blanks such as [مبلغ] and switch the items on, and links to the knowledge and automation pages.
+  - Settings «قالب صنف»: the same picker for applying later or again, with each template's last apply, and «سابقهٔ اعمال قالب» from `GET /templates/applications`. Owners and admins apply (`workspace.settings.write`); others see the preview and the history (`workspace.settings.read`).
+- Mock Api host: the five built-in templates, from the backend's `Seeds/*.json` (`tests/mock-api/fixtures/industry-templates.json`). Applying adds by key like the backend, and `/__mock/templates/reset` starts over. New e2e spec `templates.spec.ts`.
+- API refreshed from backend main (BE-2.9).
 
 ## 0.17.0 — 2026-11-03
 
