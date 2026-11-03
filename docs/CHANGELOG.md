@@ -1,5 +1,15 @@
 # Changelog
 
+## 0.21.1 — 2026-11-03
+
+- Fix main after the merges of #21 and #22. CI had failed on main since #21.
+  - `openapi/api.v1.json` and `messages/fa.json` were not valid JSON.
+  - The mock Api host had lost two lines in a merge, so e2e could not start.
+  - The Instagram step had duplicated links.
+  - The OpenAPI copy is restored from backend main at BE-1.9, and the generated client is unchanged.
+- Onboarding now runs workspace → Instagram → industry template → teach the assistant, in four steps. The template step's buttons read «ادامه: آموزش دستیار» and «فعلاً نه، ادامه» and lead to the teach step.
+- The changelog's lost 0.19.0 entry (follow-gate) is back, and the README has one onboarding row.
+
 ## 0.21.0 — 2026-11-03
 
 - Finglish (backend #44, BE-2.3):
@@ -27,6 +37,17 @@
 - `knowledge.fact_unknown` in Persian.
 - Mock Api host: score, draft and confirm (with a no-model fallback) built from the backend seeds' required facts (`tests/mock-api/fixtures/required-facts.json`), `factKey` on sources, `GET /knowledge/sources/{id}`, and `/__mock/knowledge/reset-facts`. New e2e spec `knowledge-score.spec.ts`.
 - API refreshed from backend main (BE-1.9).
+## 0.19.0 — 2026-11-03
+
+- Follow-gate and follow-ups (backend #42, BE-1.8):
+  - Flows: the «شرط فالو» step is no longer marked «به‌زودی». It takes the message sent with the «دنبال کردم ✅» quick reply, the text sent while the customer still doesn't follow, and how many re-checks (0–5, default 2). Its two exits are labelled «دنبال‌کرده» and «دنبال نکرده», and a new gate's «دنبال‌کرده» exit continues where the old exit went. The help text says that every answer is re-checked, that an unknown follow status lets the customer through, and what happens when «دنبال نکرده» is left empty.
+  - «پیگیری» (`schedule_followup`) in DM rules and in flow «کار» steps takes a message, a delay in minutes or hours (1 minute to 23 hours, clamped), and «اگر مشتری پیام داد / خرید کرد، فرستاده نشود», both on by default. The help text explains Instagram's 24-hour window. A rule takes at most one; comment rules don't offer it.
+  - «پیگیری‌ها» tab under automations: pending (soonest first), sent, cancelled and not sent, kept in the URL. Each row has the Jalali due time, the message, rule or flow, a link to the conversation, the reason in Persian (replied, purchased, owner, replaced, handed_off, window_closed, conversation_gone), and «لغو پیگیری» for pending ones (`workspace.automation.write`).
+  - The inbox side panel lists the conversation's pending follow-ups, with cancel.
+- Persian messages for `automation.followup_delay_invalid`, `automation.one_followup`, `flow.followup_invalid` and `automation.followup_not_pending`. The editor checks the delay and the one-follow-up rule before saving.
+- Mock Api host: follow-ups with Persian sample data, list, cancel and `/__mock/followups/reset`, and gate and follow-up validation. New e2e spec `followups.spec.ts`.
+- API refreshed from backend main at the BE-1.8 merge.
+
 ## 0.18.0 — 2026-11-03
 
 - Industry templates (backend #40, BE-2.9, UP-2.5):

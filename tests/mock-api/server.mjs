@@ -1532,6 +1532,8 @@ const routes = [
   }],
   ["POST", /^\/__mock\/knowledge\/reset-facts$/, (req, res) => {
     kbSources = kbSources.filter((s) => !s.factKey || s.factKey === "shipping_time");
+    send(res, 204);
+  }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/templates$/, (req, res) => {
     const list = seedTemplates.map(templateSummary);
     send(res, 200, [...list.filter((x) => x.recommended), ...list.filter((x) => !x.recommended)]);
