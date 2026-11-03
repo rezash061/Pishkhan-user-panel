@@ -412,6 +412,85 @@ const orderPhone = (text, errors) => {
   addOrderEvent(paid, "status_changed", "user", { fromStatus: "awaiting_payment", toStatus: "paid", at: paid.paidAt });
   addOrderEvent(ai, "created", "ai", { at: ai.createdAt });
 }
+// Billing checkout (BE-2.8): plans on sale, the workspace's subscriptions and checkouts paid to Pishkhan's Zarinpal account.
+const panelUrl = process.env.MOCK_PANEL_URL ?? "http://localhost:3001";
+const D = 24 * H;
+const feature = (key, label, limit = null) => ({ key, label, included: true, limit });
+const salePlans = [
+  { id: "0199c000-0000-7000-8000-000000000001", code: "free", name: "رایگان", tagline: "برای شروع و آشنایی", description: null, monthly: money(0), annual: null, aiConversations: 50, overagePerConversation: null, channelAccounts: 1, seats: 1, highlighted: false, isFree: true, limits: { ai_conversations: 50, channel_accounts: 1, seats: 1 }, features: [feature("inbox", "صندوق دایرکت")] },
+  { id: "0199c000-0000-7000-8000-000000000002", code: "starter", name: "پایه", tagline: "برای فروشگاه‌های تازه‌کار", description: null, monthly: money(390_000), annual: money(3_900_000), aiConversations: 300, overagePerConversation: money(700), channelAccounts: 1, seats: 2, highlighted: false, isFree: false, limits: { ai_conversations: 300, channel_accounts: 1, seats: 2 }, features: [feature("inbox", "صندوق دایرکت"), feature("automations", "پاسخ خودکار")] },
+  { id: "0199c000-0000-7000-8000-000000000003", code: "growth", name: "رشد", tagline: "محبوب‌ترین برای فروشگاه‌های اینستاگرامی", description: null, monthly: money(890_000), annual: money(8_900_000), aiConversations: 1000, overagePerConversation: money(500), channelAccounts: 2, seats: 5, highlighted: true, isFree: false, limits: { ai_conversations: 1000, channel_accounts: 2, seats: 5 }, features: [feature("inbox", "صندوق دایرکت"), feature("automations", "پاسخ خودکار"), feature("orders", "سفارش و لینک پرداخت")] },
+  { id: "0199c000-0000-7000-8000-000000000004", code: "pro", name: "حرفه‌ای", tagline: "برای تیم‌های فروش", description: null, monthly: money(1_890_000), annual: null, aiConversations: null, overagePerConversation: null, channelAccounts: 5, seats: null, highlighted: false, isFree: false, limits: { ai_conversations: null, channel_accounts: 5, seats: null }, features: [feature("inbox", "صندوق دایرکت"), feature("automations", "پاسخ خودکار"), feature("orders", "سفارش و لینک پرداخت"), feature("support", "پشتیبانی تلفنی")] },
+];
+let subscriptions = [];
+let checkouts = [];
+let invoiceSeq = 1000;
+const resetBilling = () => {
+  // A 12-day trial of «رشد», as the Billing v1 e2e test expects.
+  const growth = salePlans[2];
+  subscriptions = [{ id: randomUUID(), planId: growth.id, planCode: growth.code, planVersion: 2, state: "trialing", trial: true, startsAt: ago(2 * D), endsAt: iso(new Date(Date.now() + 12 * D)), endedAt: null, endReason: null, cycle: null, checkoutId: null }];
+  checkouts = [];
+  invoiceSeq = 1000;
+};
+resetBilling();
+const currentSub = () => subscriptions.find((s) => s.state === "active" || s.state === "trialing") ?? null;
+const scheduledSubs = () => subscriptions.filter((s) => s.state === "scheduled").sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+const planPrice = (p, cycle) => (cycle === "annual" ? p.annual?.amount : p.monthly.amount) || null;
+const perMonth = (p) => (p.monthly.amount > 0 ? p.monthly.amount : (p.annual?.amount ?? 0) / 12);
+// Mirrors the backend's CheckoutPlanner.Quote.
+const quoteFor = (p, cycle) => {
+  if (p.isFree) return { error: "billing.checkout.plan_not_for_sale" };
+  const price = planPrice(p, cycle);
+  if (!price) return { error: "billing.checkout.cycle_not_offered" };
+  const length = (cycle === "annual" ? 365 : 30) * D;
+  const nowMs = Date.now();
+  const cur = currentSub();
+  const curPlan = cur && salePlans.find((x) => x.code === cur.planCode);
+  const quote = (kind, credit, startMs) => ({ kind, planId: p.id, planCode: p.code, planName: p.name, cycle, price: { amount: price, currency: "IRR" }, credit: { amount: credit, currency: "IRR" }, amount: { amount: Math.max(price - credit, 10_000), currency: "IRR" }, startsAt: iso(new Date(startMs)), endsAt: iso(new Date(startMs + length)) });
+  if (!cur || cur.trial || !curPlan) return { quote: quote("new", 0, nowMs) };
+  if (!cur.endsAt) return { error: "billing.checkout.managed_subscription" };
+  const lastEnd = Math.max(new Date(cur.endsAt).getTime(), ...scheduledSubs().map((s) => new Date(s.endsAt).getTime()));
+  if (p.code !== cur.planCode && perMonth(p) > perMonth(curPlan)) {
+    if (scheduledSubs().length) return { error: "billing.checkout.scheduled_pending" };
+    const paid = checkouts.find((c) => c.id === cur.checkoutId);
+    const start = new Date(cur.startsAt).getTime();
+    const end = new Date(cur.endsAt).getTime();
+    const unused = paid ? Math.floor((paid.amount.amount * Math.max(0, end - nowMs)) / (end - start)) : 0;
+    return { quote: quote("upgrade", Math.min(unused, price), nowMs) };
+  }
+  return { quote: quote(p.code === cur.planCode ? "renewal" : "downgrade", 0, lastEnd) };
+};
+const checkoutView = (c) => {
+  const { authority, startsAt, endsAt, ...view } = c;
+  return { ...view, status: c.status === "pending" && Date.now() - new Date(c.createdAt).getTime() > H ? "expired" : c.status };
+};
+const currentPlanView = () => {
+  const cur = currentSub();
+  const p = cur && salePlans.find((x) => x.code === cur.planCode);
+  if (!cur || !p) return { source: "free", planId: salePlans[0].id, planCode: "free", planName: "رایگان", planVersion: 1, trial: false, endsAt: null, limits: salePlans[0].limits, subscription: null, upcoming: [] };
+  return { source: "subscription", planId: p.id, planCode: p.code, planName: p.name, planVersion: cur.planVersion, trial: cur.trial, endsAt: cur.endsAt, limits: { seats: 3, channel_accounts: 1, ai_conversations: 500, sms: null }, subscription: cur, upcoming: scheduledSubs() };
+};
+// What the backend does when Zarinpal confirms: start the subscription now (new, upgrade) or schedule it (renewal, downgrade).
+const settleCheckout = (c, outcome) => {
+  if (c.status !== "pending") return;
+  if (outcome === "cancelled") return Object.assign(c, { status: "failed", error: "cancelled" });
+  if (outcome === "failed") return Object.assign(c, { status: "failed", error: "-51" });
+  if (outcome === "pending") return;
+  const later = c.kind === "renewal" || c.kind === "downgrade";
+  const sub = { id: randomUUID(), planId: c.planId, planCode: c.planCode, planVersion: c.planVersion, state: later ? "scheduled" : "active", trial: false, startsAt: c.startsAt, endsAt: c.endsAt, endedAt: null, endReason: null, cycle: c.cycle, checkoutId: c.id };
+  if (!later) for (const s of subscriptions) if (s.state === "active" || s.state === "trialing") Object.assign(s, { state: "ended", endedAt: iso(now()), endReason: "replaced" });
+  subscriptions.push(sub);
+  Object.assign(c, { status: "paid", invoiceNumber: ++invoiceSeq, referenceId: String(70_000_000 + invoiceSeq), cardMask: "6219-86**-****-4321", subscriptionId: sub.id, paidAt: iso(now()) });
+};
+const gatewayPage = (c) => `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>درگاه آزمایشی زرین‌پال</title></head>
+<body style="font-family:sans-serif;max-width:28rem;margin:2rem auto;padding:0 1rem"><main><h1>درگاه آزمایشی زرین‌پال</h1><p>پرداخت ${(c.amount.amount / 10).toLocaleString("fa-IR")} تومان به پیشخوان</p>
+<ul style="list-style:none;padding:0;display:grid;gap:.5rem">
+<li><a href="/__mock/zarinpal/${c.authority}/done?outcome=paid">پرداخت</a></li>
+<li><a href="/__mock/zarinpal/${c.authority}/done?outcome=cancelled">انصراف</a></li>
+<li><a href="/__mock/zarinpal/${c.authority}/done?outcome=failed">خطای بانک</a></li>
+<li><a href="/__mock/zarinpal/${c.authority}/done?outcome=pending">بدون پاسخ (در انتظار)</a></li>
+</ul></main></body></html>`;
+
 // Payments (BE-2.2): the seller's Zarinpal account and payment links (3 days, newest first).
 let merchant = { configured: false, provider: null, merchantIdHint: null, sandbox: false, enabled: true, updatedAt: null };
 const paymentLinks = [];
@@ -738,11 +817,72 @@ const routes = [
     if (i >= 0) crmSegments.splice(i, 1);
     send(res, 204);
   }],
-  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/subscription$/, (req, res) => send(res, 200, {
-    source: "subscription", planId: randomUUID(), planCode: "growth", planName: "رشد", planVersion: 2, trial: true, endsAt: iso(new Date(Date.now() + 12 * 24 * H)),
-    limits: { seats: 3, channel_accounts: 1, ai_conversations: 500, sms: null },
-    subscription: null,
-  })],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/subscription$/, (req, res) => send(res, 200, currentPlanView())],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/plans$/, (req, res) => {
+    const cur = currentSub();
+    send(res, 200, salePlans.map((p) => {
+      let r = quoteFor(p, "monthly");
+      if (r.error === "billing.checkout.cycle_not_offered") r = quoteFor(p, "annual");
+      return { plan: p, current: cur && !cur.trial ? cur.planCode === p.code : p.isFree, kind: r.quote?.kind ?? null, unavailable: r.error ?? null };
+    }));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/billing\/checkout\/quote$/, async (req, res) => {
+    const b = await readBody(req);
+    const cycle = b.cycle ?? "monthly";
+    if (!["monthly", "annual"].includes(cycle)) return problem(res, 400, "validation.failed", { cycle: ["billing.checkout.cycle_invalid"] });
+    const p = salePlans.find((x) => x.id === b.planId);
+    if (!p) return problem(res, 404, "billing.plan.not_found");
+    const r = quoteFor(p, cycle);
+    if (r.error) return problem(res, r.error.endsWith("_pending") || r.error.endsWith("managed_subscription") ? 409 : 422, r.error);
+    send(res, 200, r.quote);
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/billing\/checkout$/, async (req, res) => {
+    const key = req.headers["idempotency-key"];
+    const seen = key && checkouts.find((c) => c.idempotencyKey === key);
+    if (seen) return send(res, 201, { checkout: checkoutView(seen), paymentUrl: `http://localhost:${port}/__mock/zarinpal/${seen.authority}` });
+    const b = await readBody(req);
+    const cycle = b.cycle ?? "monthly";
+    const p = salePlans.find((x) => x.id === b.planId);
+    if (!p) return problem(res, 404, "billing.plan.not_found");
+    const r = quoteFor(p, cycle);
+    if (r.error) return problem(res, r.error.endsWith("_pending") || r.error.endsWith("managed_subscription") ? 409 : 422, r.error);
+    const q = r.quote;
+    const c = { id: randomUUID(), kind: q.kind, planId: p.id, planCode: p.code, planName: p.name, planVersion: 2, cycle, price: q.price, credit: q.credit, amount: q.amount, status: "pending", error: null, invoiceNumber: null, referenceId: null, cardMask: null, subscriptionId: null, createdBy: me.id, createdAt: iso(now()), paidAt: null, authority: `A${randomUUID().replace(/-/g, "").slice(0, 35)}`, startsAt: q.startsAt, endsAt: q.endsAt, idempotencyKey: key ?? null };
+    checkouts.unshift(c);
+    send(res, 201, { checkout: checkoutView(c), paymentUrl: `http://localhost:${port}/__mock/zarinpal/${c.authority}` });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/checkouts$/, (req, res) => send(res, 200, checkouts.slice(0, 100).map(checkoutView).map(({ idempotencyKey, ...c }) => c))],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/checkouts\/([^/]+)$/, (req, res, url, [id]) => {
+    const c = checkouts.find((x) => x.id === id);
+    if (!c) return problem(res, 404, "common.not_found");
+    const { idempotencyKey, ...view } = checkoutView(c);
+    send(res, 200, view);
+  }],
+  // Stand-in for Zarinpal's payment page, and the backend callback that verifies and redirects (303) to the panel's /billing.
+  ["GET", /^\/__mock\/zarinpal\/([^/]+)$/, (req, res, url, [authority]) => {
+    const c = checkouts.find((x) => x.authority === authority);
+    if (!c) return problem(res, 404, "common.not_found");
+    res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
+    res.end(gatewayPage(c));
+  }],
+  ["GET", /^\/__mock\/zarinpal\/([^/]+)\/done$/, (req, res, url, [authority]) => {
+    const c = checkouts.find((x) => x.authority === authority);
+    if (!c) return problem(res, 404, "common.not_found");
+    settleCheckout(c, url.searchParams.get("outcome") ?? "paid");
+    res.writeHead(303, { location: `${panelUrl}/billing?checkout=${c.id}&status=${c.status}`, "cache-control": "no-store" });
+    res.end();
+  }],
+  // Test hooks: settle a pending checkout later (Zarinpal reachable again), and start billing over (a trial of «رشد»).
+  ["POST", /^\/__mock\/billing\/checkouts\/([^/]+)\/settle$/, (req, res, url, [id]) => {
+    const c = checkouts.find((x) => x.id === id);
+    if (!c) return problem(res, 404, "common.not_found");
+    settleCheckout(c, url.searchParams.get("outcome") ?? "paid");
+    send(res, 200, checkoutView(c));
+  }],
+  ["POST", /^\/__mock\/billing\/reset$/, (req, res) => {
+    resetBilling();
+    send(res, 204);
+  }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/usage$/, (req, res) => send(res, 200, {
     periodStart: "2026-10-22T20:30:00Z", periodEnd: "2026-11-21T20:30:00Z",
     meters: [

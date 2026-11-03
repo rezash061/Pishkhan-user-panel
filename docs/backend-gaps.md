@@ -49,3 +49,12 @@ Items 12–15 were closed by backend PR #14; the panel now uses one set of hours
     image and test-run endpoints (13, 14). The panel will drop its separate automation-hours editor then.
 16. ✅ **Contact profile picture.** `ConversationContact` has no `profilePicUrl`, so avatars are initials. Backend #35 adds
     `profilePicUrl` (a 6-hour signed URL, or null) to conversations and CRM contacts; older contacts keep initials.
+
+## Subscription checkout (BE-2.8)
+
+Found on 2026-11-03 against backend main after PR #39.
+
+17. **The checkout return URL has no workspace.** `{ReturnUrl}?checkout={id}&status=` is the same for every workspace, and `GET /checkouts/{id}` is scoped to a workspace. The panel therefore saves the workspace in a `pk-checkout` cookie before it leaves for Zarinpal, falling back to the last workspace opened. If the payer comes back in another browser, they land in the wrong workspace and see «پیدا نشد». Adding `&workspace={id}` to the redirect would fix it.
+18. **`Billing:Checkout:ReturnUrl` defaults to `http://localhost:3000/billing`.** The panel runs on :3001, and `appsettings.Development.json` has no `Billing:Checkout` section, unlike `Instagram:PanelReturnUrl`. It should be `http://localhost:3001/billing` (the panel's `/billing` route).
+19. **Upcoming subscriptions have no plan name.** `SubscriptionResponse` carries only `planCode`. The panel looks the name up in `GET /billing/plans`, so a plan taken off sale shows its code. A `planName` field would fix it, as `CheckoutResponse` already has.
+20. **No invoice document.** A paid checkout is the invoice, but there is no Persian invoice endpoint like the orders' `/invoice` (seller's details, Pishkhan's details, VAT). The panel prints the checkout page for now.

@@ -254,14 +254,15 @@ test("owner reads the activity log, with support access and its reason", async (
 
 test("billing shows the plan and this month's usage; a full plan opens the upgrade sheet", async ({ page }) => {
   await login(page);
+  await page.request.post("http://localhost:5080/__mock/billing/reset");
   await page.goto(`/w/${workspaceId}/billing`);
   await expect(page.getByRole("heading", { name: "اشتراک" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: /رشد/ })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /رشد/, level: 2 })).toBeVisible();
   await expect(page.getByText("آزمایشی", { exact: true })).toBeVisible();
   await expect(page.getByRole("meter", { name: "گفتگوهای هوش مصنوعی" })).toHaveAttribute("aria-valuetext", "۴۱۲ از ۵۰۰");
   await expect(page.getByText("نزدیک سقف طرح")).toBeVisible();
   await expect(page.getByText("سقف طرح پر شده است")).toBeVisible();
-  await expect(page.getByText("بدون سقف")).toBeVisible();
+  await expect(page.getByText("بدون سقف", { exact: true })).toBeVisible();
   await noHorizontalScroll(page);
   const axe = await new AxeBuilder({ page }).withTags(["wcag2a", "wcag2aa"]).analyze();
   expect(axe.violations).toEqual([]);
