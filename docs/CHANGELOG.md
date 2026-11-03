@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.21.0 — 2026-11-03
+
+- Finglish (backend #44, BE-2.3):
+  - Inbox: a customer message mostly in Latin letters (at least 70% of its letters, ignoring links and @handles) gets a small «فینگلیش» hint. Its tooltip, also read by screen readers, says the AI and the rules read such messages in Persian script.
+  - AI reply log: a trace's language `finglish` reads «فینگلیش», with a line saying the assistant read it in Persian script. Other languages read «فارسی», «انگلیسی» and «عربی».
+  - Rule editor: under the keyword match, a line says Persian keywords also match Finglish, for example «gheymat» with «قیمت».
+- `src/lib/persian/finglish.ts` mirrors the backend's 70% character test. The backend also checks its word lists before it treats a message as Finglish.
+- Mock Api host: one Finglish customer message and one Finglish trace. New e2e spec `finglish.spec.ts`.
+- The API document is unchanged by BE-2.3.
 ## 0.20.0 — 2026-11-03
 
 - Knowledge score and onboarding interview (backend #43, BE-1.9):

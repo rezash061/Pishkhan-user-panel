@@ -55,6 +55,7 @@ export function KeywordInput({
           options={(["contains", "exact", "any_of", "pattern"] as const).map((m) => ({ value: m, label: t(`match.${m}`) }))}
         />
         <p className="text-xs text-muted-foreground">{t(`matchHint.${match}`)}</p>
+        {match !== "pattern" ? <p className="text-xs text-muted-foreground">{t("finglishHint")}</p> : null}
       </div>
 
       {isPattern ? (
