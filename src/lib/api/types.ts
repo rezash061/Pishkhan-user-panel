@@ -100,12 +100,12 @@ export const matchModes = ["contains", "exact", "any_of", "pattern"] as const;
 export type MatchMode = (typeof matchModes)[number];
 export type CommentScope = "all" | "post" | "next_post";
 
-/** `ActionKinds.Available`; schedule_followup and capture_phone come later. */
-export const actionKinds = ["send_message", "private_reply", "public_reply", "send_cards", "start_flow", "add_tag", "remove_tag", "set_field", "handoff", "pause_ai", "notify_team"] as const;
+/** `ActionKinds.Available`; capture_phone comes later. */
+export const actionKinds = ["send_message", "private_reply", "public_reply", "send_cards", "start_flow", "add_tag", "remove_tag", "set_field", "handoff", "pause_ai", "notify_team", "schedule_followup"] as const;
 export type ActionKind = (typeof actionKinds)[number];
 
-/** `FlowNodeTypes.Available`; follow_gate comes with BE-1.8. */
-export const flowNodeTypes = ["message", "question", "condition", "delay", "storefront", "action", "ai", "end"] as const;
+/** `FlowNodeTypes.Available` (follow_gate since BE-1.8). */
+export const flowNodeTypes = ["message", "question", "condition", "delay", "storefront", "action", "ai", "follow_gate", "end"] as const;
 export type FlowNodeType = (typeof flowNodeTypes)[number];
 export const answerTypes = ["text", "number", "phone", "choice"] as const;
 
@@ -152,3 +152,4 @@ export type CheckoutQuote = Schemas["CheckoutQuoteResponse"];
 export type Checkout = Schemas["CheckoutResponse"];
 export type StartCheckout = Schemas["StartCheckoutResponse"];
 export type Subscription = Schemas["SubscriptionResponse"];
+export type FollowUp = Schemas["FollowUpResponse"];
