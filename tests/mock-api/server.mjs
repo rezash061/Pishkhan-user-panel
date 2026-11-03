@@ -5,6 +5,7 @@
 //   node tests/mock-api/server.mjs            # listens on :5080 (PISHKHAN_API_URL default)
 //   MOCK_PORT=5099 node tests/mock-api/server.mjs
 import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 
 const port = Number(process.env.MOCK_PORT ?? 5080);
@@ -499,13 +500,52 @@ const expirePaymentLinks = (orderId) => {
   for (const l of paymentLinks) if (l.orderId === orderId && l.status === "active") l.status = "cancelled";
 };
 
-const kbSource = (kind, title, body, extra = {}) => ({ id: randomUUID(), kind, title, question: kind === "faq" ? title : null, body, productId: null, fileId: null, url: null, enabled: true, status: "indexed", revision: 1, indexedRevision: 1, chunkCount: 1, error: null, indexedAt: ago(2 * H), createdAt: ago(5 * 24 * H), updatedAt: ago(2 * H), ...extra });
+const kbSource = (kind, title, body, extra = {}) => ({ id: randomUUID(), kind, title, question: kind === "faq" ? title : null, body, factKey: null, productId: null, fileId: null, url: null, enabled: true, status: "indexed", revision: 1, indexedRevision: 1, chunkCount: 1, error: null, indexedAt: ago(2 * H), createdAt: ago(5 * 24 * H), updatedAt: ago(2 * H), ...extra });
 let kbSources = [
-  kbSource("faq", "ارسال به شهرستان چند روز طول می‌کشد؟", "ارسال به شهرستان‌ها با پست پیشتاز دو تا چهار روز کاری است."),
+  kbSource("faq", "ارسال به شهرستان چند روز طول می‌کشد؟", "ارسال به شهرستان‌ها با پست پیشتاز دو تا چهار روز کاری است.", { factKey: "shipping_time" }),
   kbSource("faq", "امکان مرجوعی هست؟", "تا هفت روز پس از تحویل، اگر برچسب کالا جدا نشده باشد، مرجوعی رایگان است."),
   kbSource("text", "راهنمای سایز", "سایز S برای قد تا ۱۶۰، M تا ۱۶۸ و L تا ۱۷۵ سانتی‌متر مناسب است.", { chunkCount: 2, status: "failed", error: "knowledge.embedding_failed", revision: 2 }),
   ...products.filter((p) => p.status === "active").map((p) => kbSource("product", p.title, `${p.title}. ${p.description ?? ""} قیمت ${p.price ? p.price.amount / 10 : "—"} تومان.`, { productId: p.id })),
 ];
+// Knowledge score and onboarding interview (BE-1.9): the required facts of the workspace's industry, from the backend's template
+// seeds (tests/mock-api/fixtures/required-facts.json). Scored like the backend: facts 60, products 25, unanswered 15.
+const requiredFacts = JSON.parse(readFileSync(new URL("./fixtures/required-facts.json", import.meta.url), "utf8"));
+const factsOf = () => requiredFacts[ws.industry] ?? [];
+const knowledgeScore = () => {
+  const facts = factsOf().map((f) => {
+    const src = kbSources.find((s) => s.enabled && s.factKey === f.key);
+    return { ...f, covered: Boolean(src), sourceId: src?.id ?? null };
+  });
+  facts.sort((a, b) => Number(a.covered) - Number(b.covered));
+  const active = products.filter((p) => p.status === "active");
+  const priced = active.filter((p) => p.price || p.variants.some((v) => v.price)).length;
+  const inStock = active.filter((p) => p.variants.some((v) => v.stockPolicy === "unlimited" || (v.stock ?? 0) > 0)).length;
+  const covered = facts.filter((f) => f.covered).length;
+  const factPoints = facts.length ? Math.round((60 * covered) / facts.length) : 0;
+  const productPoints = active.length ? Math.round(12.5 * (priced / active.length) + 12.5 * (inStock / active.length)) : 0;
+  const open = kbUnanswered.filter((q) => q.status === "open").length;
+  const unansweredPoints = Math.max(0, Math.round(15 * (1 - open / 10)));
+  const suggestions = [];
+  if (covered < facts.length) suggestions.push("knowledge.suggest.answer_facts");
+  if (!active.length) suggestions.push("knowledge.suggest.add_products");
+  else {
+    if (priced < active.length) suggestions.push("knowledge.suggest.add_prices");
+    if (inStock < active.length) suggestions.push("knowledge.suggest.add_stock");
+  }
+  if (open) suggestions.push("knowledge.suggest.answer_unanswered");
+  return {
+    score: factPoints + productPoints + unansweredPoints, industry: ws.industry,
+    parts: [{ key: "facts", points: factPoints, max: 60 }, { key: "products", points: productPoints, max: 25 }, { key: "unanswered", points: unansweredPoints, max: 15 }],
+    facts, products: { active: active.length, priced, inStock }, openUnanswered: open, suggestions,
+  };
+};
+// The AI turns the owner's words into a customer-facing FAQ; a «بدون هوش» prefix in the answer makes the mock fall back like the backend with no model.
+const draftFaq = (fact, answer) => {
+  if (answer.startsWith("بدون هوش")) return { factKey: fact.key, question: fact.prompt, answer, drafted: "fallback" };
+  const question = { shipping_cost: "هزینه ارسال چقدره؟", shipping_time: "کی به دستم می‌رسه؟", payment_methods: "چطور پرداخت کنم؟", return_policy: "می‌تونم پس بدم؟" }[fact.key] ?? `${fact.label} چطوره؟`;
+  return { factKey: fact.key, question, answer: `${answer.replace(/[.،\s]+$/, "")}. اگر سؤال دیگری دارید، همین‌جا بپرسید 🌸`, drafted: "ai" };
+};
+
 const kbPages = { "https://niloofar.example/shipping": { title: "قوانین ارسال", body: "ارسال رایگان برای خرید بالای یک میلیون تومان. تهران یک روزه." } };
 const kbIndex = (src) => {
   Object.assign(src, { status: "pending", revision: src.revision + 1, error: null, updatedAt: iso(now()) });
@@ -1394,6 +1434,28 @@ const routes = [
     cardSets = cardSets.filter((x) => x.id !== id);
     send(res, 204);
   }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/score$/, (req, res) => send(res, 200, knowledgeScore())],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/onboarding\/draft$/, async (req, res) => {
+    const b = await readBody(req);
+    const fact = factsOf().find((f) => f.key === b.factKey);
+    if (!fact) return problem(res, 422, "knowledge.fact_unknown");
+    if (!b.answer?.trim() || b.answer.length > 1000) return problem(res, 400, "validation.failed", { answer: ["validation.knowledge.answer"] });
+    send(res, 200, draftFaq(fact, b.answer.trim()));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/onboarding\/confirm$/, async (req, res) => {
+    const b = await readBody(req);
+    const fact = factsOf().find((f) => f.key === b.factKey);
+    if (!fact) return problem(res, 422, "knowledge.fact_unknown");
+    if (!b.question?.trim() || !b.answer?.trim()) return problem(res, 400, "validation.failed", { answer: ["validation.knowledge.answer"] });
+    let src = kbSources.find((s) => s.kind === "faq" && s.factKey === fact.key);
+    if (src) Object.assign(src, { title: b.question, question: b.question, body: b.answer, enabled: true, revision: src.revision + 1, updatedAt: iso(now()) });
+    else kbSources.unshift((src = kbSource("faq", b.question, b.answer, { factKey: fact.key, createdAt: iso(now()), updatedAt: iso(now()) })));
+    send(res, 200, { source: src, score: knowledgeScore() });
+  }],
+  ["POST", /^\/__mock\/knowledge\/reset-facts$/, (req, res) => {
+    kbSources = kbSources.filter((s) => !s.factKey || s.factKey === "shipping_time");
+    send(res, 204);
+  }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, (req, res) => send(res, 200, merchant)],
   ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, async (req, res) => {
     const b = await readBody(req);
@@ -1570,6 +1632,10 @@ const routes = [
     kbSources.unshift(src);
     kbIndex(src);
     send(res, 201, src);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/sources\/([^/]+)$/, (req, res, url, [id]) => {
+    const src = kbSources.find((x) => x.id === id);
+    return src ? send(res, 200, src) : problem(res, 404, "common.not_found");
   }],
   ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/sources\/([^/]+)$/, async (req, res, url, [id]) => {
     const src = kbSources.find((x) => x.id === id);

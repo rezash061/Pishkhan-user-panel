@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.20.0 — 2026-11-03
+
+- Knowledge score and onboarding interview (backend #43, BE-1.9):
+  - «امتیاز دانش» tab under knowledge (`workspace.settings.read`):
+    - a half-ring gauge (0–100, named in text: needs work, getting there, ready);
+    - each part as points out of its maximum: the industry's required facts, products, unanswered questions;
+    - the facts checklist: a covered fact's «مشاهدهٔ جواب» opens its source, a missing one has «پاسخ بده»;
+    - product counts (active, priced, in stock);
+    - the backend's `knowledge.suggest.*` in Persian, each linking to its page (interview, knowledge, new product, catalog, unanswered questions).
+  - «آموزش دستیار» interview (`workspace.knowledge.write`), at `/knowledge/interview` and as onboarding step 3 after Instagram (connected or skipped):
+    - The assistant asks each missing fact's `prompt` in a chat. The owner answers in their own words (up to 1,000 characters).
+    - `POST /onboarding/draft` returns a FAQ, shown as editable question and answer fields with «هوش مصنوعی پیش‌نویس کرد» or «از متن خودتان» (no model).
+    - «تأیید و ذخیره» calls `/onboarding/confirm`, and the gauge rises with «امتیاز از … به … رسید».
+    - «رد شدن» moves on. «پاسخ بده» on the score page starts at that fact.
+  - Knowledge sources that answer a required fact (`factKey`) show «جواب «…»» with the fact's label. `?source=` opens a source's editor.
+- `knowledge.fact_unknown` in Persian.
+- Mock Api host: score, draft and confirm (with a no-model fallback) built from the backend seeds' required facts (`tests/mock-api/fixtures/required-facts.json`), `factKey` on sources, `GET /knowledge/sources/{id}`, and `/__mock/knowledge/reset-facts`. New e2e spec `knowledge-score.spec.ts`.
+- API refreshed from backend main (BE-1.9).
+
 ## 0.17.0 — 2026-11-03
 
 - Subscription checkout (backend #39, BE-2.8, Zarinpal): «اشتراک» now sells the plans itself.

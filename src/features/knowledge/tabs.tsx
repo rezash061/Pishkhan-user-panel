@@ -17,6 +17,7 @@ export function KnowledgeTabs() {
     <SectionTabs
       tabs={[
         { href: base, label: t("sources") },
+        { href: `${base}/score`, label: t("score") },
         { href: `${base}/unanswered`, label: count ? t("unansweredCount", { n: more ? `${count}+` : String(count) }) : t("unanswered") },
       ]}
     />

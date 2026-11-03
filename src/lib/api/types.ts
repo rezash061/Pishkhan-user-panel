@@ -152,3 +152,6 @@ export type CheckoutQuote = Schemas["CheckoutQuoteResponse"];
 export type Checkout = Schemas["CheckoutResponse"];
 export type StartCheckout = Schemas["StartCheckoutResponse"];
 export type Subscription = Schemas["SubscriptionResponse"];
+export type KnowledgeScore = Schemas["KnowledgeScoreResponse"];
+export type FactStatus = Schemas["FactStatus"];
+export type OnboardingDraft = Schemas["OnboardingDraftResponse"];
