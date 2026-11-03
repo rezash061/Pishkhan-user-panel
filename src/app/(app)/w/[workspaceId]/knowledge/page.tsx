@@ -9,10 +9,11 @@ export async function generateMetadata(): Promise<Metadata> {
   return { title: t("title") };
 }
 
-export default function Page() {
+export default async function Page({ searchParams }: { searchParams: Promise<Record<string, string | undefined>> }) {
+  const { source } = await searchParams;
   return (
     <RequirePermission permission={P.knowledgeWrite}>
-      <KnowledgePage />
+      <KnowledgePage openSource={source && /^[0-9a-f-]{36}$/i.test(source) ? source : null} />
     </RequirePermission>
   );
 }

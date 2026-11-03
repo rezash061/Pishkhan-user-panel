@@ -2,6 +2,26 @@ import type { ActionKind, MessageButton, OutboundContent, RuleAction } from "@/l
 import { commentTriggers } from "@/lib/api/types";
 
 export const MAX_ACTIONS = 10;
+
+/** Follow-ups must fit inside Meta's 24-hour window (backend `FollowUps.MinDelaySeconds`/`MaxDelaySeconds`). */
+export const FOLLOWUP_MIN_SECONDS = 60;
+export const FOLLOWUP_MAX_SECONDS = 23 * 3600;
+export const FOLLOWUP_DEFAULT_SECONDS = 3600;
+
+export function followUpDelayValid(seconds: number | null | undefined): boolean {
+  return typeof seconds === "number" && Number.isInteger(seconds) && seconds >= FOLLOWUP_MIN_SECONDS && seconds <= FOLLOWUP_MAX_SECONDS;
+}
+
+/** A delay as minutes or hours for the picker: whole hours show as hours. */
+export function splitFollowUpDelay(seconds: number): { amount: number; unit: "minutes" | "hours" } {
+  return seconds % 3600 === 0 ? { amount: seconds / 3600, unit: "hours" } : { amount: Math.round(seconds / 60), unit: "minutes" };
+}
+
+/** Picker value to seconds, clamped to 1 minute … 23 hours. */
+export function followUpSeconds(amount: number, unit: "minutes" | "hours"): number {
+  const raw = Math.round(amount) * (unit === "hours" ? 3600 : 60);
+  return Math.max(FOLLOWUP_MIN_SECONDS, Math.min(FOLLOWUP_MAX_SECONDS, raw));
+}
 export const MAX_PUBLIC_REPLIES = 20;
 
 /** Instagram limits mirrored from backend `MessageValidator`. */
@@ -60,7 +80,7 @@ export function renderSample(text: string): string {
 export function allowedActions(triggerKind: string): ActionKind[] {
   const comment = commentTriggers.includes(triggerKind);
   const common: ActionKind[] = ["add_tag", "remove_tag", "set_field", "handoff", "pause_ai", "notify_team"];
-  return comment ? ["private_reply", "public_reply", ...common] : ["send_message", "send_cards", "start_flow", ...common];
+  return comment ? ["private_reply", "public_reply", ...common] : ["send_message", "send_cards", "start_flow", "schedule_followup", ...common];
 }
 
 export function newAction(kind: ActionKind): RuleAction {
@@ -70,6 +90,8 @@ export function newAction(kind: ActionKind): RuleAction {
       return { kind, message: emptyMessage() };
     case "public_reply":
       return { kind, replies: [""] };
+    case "schedule_followup":
+      return { kind, message: emptyMessage(), delaySeconds: FOLLOWUP_DEFAULT_SECONDS, cancelOnReply: true, cancelOnPurchase: true };
     default:
       return { kind };
   }

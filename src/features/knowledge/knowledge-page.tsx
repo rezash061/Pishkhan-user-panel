@@ -3,7 +3,8 @@
 import { BookOpen, FileText, FileUp, Globe, MessageCircleQuestion, Package, Pencil, Plus, RefreshCw, Search, Trash2 } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useDeferredValue, useState, type FormEvent } from "react";
+import { useDeferredValue, useEffect, useState, type FormEvent } from "react";
+import { api, unwrap } from "@/lib/api/client";
 import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -22,6 +23,7 @@ import { P } from "@/lib/permissions";
 import { isExtracted, isIndexing, limits, sourceKinds, sourceStatuses, useDeleteSource, useKnowledgeSearch, useReindexSource, useSources, useToggleSource, type SourceKind } from "./data";
 import { ExtractedSourceDialog } from "./extracted-dialog";
 import { SourceDialog } from "./source-dialog";
+import { useKnowledgeScore } from "./score-data";
 import { KnowledgeTabs } from "./tabs";
 
 const kindIcons = { faq: MessageCircleQuestion, text: FileText, file: FileUp, url: Globe, product: Package } as const;
@@ -30,7 +32,7 @@ const kindIcons = { faq: MessageCircleQuestion, text: FileText, file: FileUp, ur
  * Knowledge base (BE-1.4): what the AI agent may answer from. FAQ entries and free text are written here, documents
  * and web pages are read by the backend; active catalog products are added on their own and can only be switched off.
  */
-export function KnowledgePage() {
+export function KnowledgePage({ openSource }: { openSource?: string | null }) {
   const t = useTranslations("knowledge");
   const errorMessage = useErrorMessage();
   const { workspace } = useWorkspace();
@@ -45,6 +47,20 @@ export function KnowledgePage() {
   const del = useDeleteSource(ws);
   const items = sources.data?.pages.flatMap((p) => p.items) ?? [];
   const filtered = Boolean(query || kind || status);
+
+  // `?source=` (from the knowledge score's checklist) opens that source's editor.
+  useEffect(() => {
+    if (!openSource) return;
+    let live = true;
+    void api.GET("/api/v1/workspaces/{workspaceId}/knowledge/sources/{sourceId}", { params: { path: { workspaceId: ws, sourceId: openSource } } }).then((r) => {
+      if (!live || !r.data) return;
+      const s = unwrap(r);
+      setEditing({ kind: s.kind === "faq" || isExtracted(s.kind) ? (s.kind as "faq" | "file" | "url") : "text", source: s });
+    });
+    return () => {
+      live = false;
+    };
+  }, [openSource, ws]);
 
   return (
     <PageContainer className="space-y-5">
@@ -186,6 +202,7 @@ function SourceRow({ source: s, onEdit, onDelete }: { source: KnowledgeSource; o
             {s.title}
           </span>
           <StatusBadge source={s} />
+          {s.factKey ? <FactBadge factKey={s.factKey} /> : null}
           {!s.enabled ? <Badge>{t("off")}</Badge> : null}
         </p>
         {s.kind === "url" && s.url ? (
@@ -307,5 +324,18 @@ function TestBox() {
         </div>
       </CardBody>
     </Card>
+  );
+}
+
+/** The required fact a source answers (`factKey`), by its label from the knowledge score when it is loaded. */
+function FactBadge({ factKey }: { factKey: string }) {
+  const t = useTranslations("knowledge.score");
+  const { workspace } = useWorkspace();
+  const score = useKnowledgeScore(workspace.id);
+  const label = score.data?.facts.find((f) => f.key === factKey)?.label;
+  return (
+    <Badge tone="primary" title={t("factBadgeHint")}>
+      {label ? t("factBadge", { label }) : t("factBadgeKey")}
+    </Badge>
   );
 }

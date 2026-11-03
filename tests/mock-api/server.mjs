@@ -5,6 +5,7 @@
 //   node tests/mock-api/server.mjs            # listens on :5080 (PISHKHAN_API_URL default)
 //   MOCK_PORT=5099 node tests/mock-api/server.mjs
 import { createHash, randomUUID } from "node:crypto";
+import { readFileSync } from "node:fs";
 import { createServer } from "node:http";
 
 const port = Number(process.env.MOCK_PORT ?? 5080);
@@ -493,6 +494,32 @@ const gatewayPage = (c) => `<!doctype html><html lang="fa" dir="rtl"><head><meta
 <li><a href="/__mock/zarinpal/${c.authority}/done?outcome=failed">خطای بانک</a></li>
 <li><a href="/__mock/zarinpal/${c.authority}/done?outcome=pending">بدون پاسخ (در انتظار)</a></li>
 </ul></main></body></html>`;
+// Industry templates (BE-2.9): the backend's built-in seeds (tests/mock-api/fixtures, made from Seeds/*.json), applied by key.
+const seedTemplates = JSON.parse(readFileSync(new URL("./fixtures/industry-templates.json", import.meta.url), "utf8")).map((x, i) => ({
+  ...x, id: `0199f000-0000-7000-8000-00000000000${i + 1}`, version: 1,
+}));
+let templateApplications = [];
+let templateKeys = new Set();
+let agentProfileSet = false;
+const templateSummary = (x) => {
+  const last = templateApplications.find((a) => a.templateId === x.id);
+  return { id: x.id, industry: x.industry, version: x.version, name: x.name, description: x.description, requiredFacts: x.requiredFacts.length, faqs: x.faqs.length, flows: x.flows.length, rules: x.rules.length, hasAgentProfile: Boolean(x.agentProfile), recommended: x.industry === ws.industry, lastApplied: last?.appliedAt ?? null };
+};
+const applyTemplate = (x) => {
+  const add = (kind, items) => items.filter((i) => !templateKeys.has(`${kind}:${i.key}`)).map((i) => templateKeys.add(`${kind}:${i.key}`)).length;
+  const newFaqs = x.faqs.filter((f) => !templateKeys.has(`faq:${f.key}`));
+  const faqsAdded = add("faq", x.faqs);
+  const flowsAdded = add("flow", x.flows);
+  const rulesAdded = add("rule", x.rules);
+  // The FAQs land in the knowledge base switched off, with their blanks.
+  for (const f of newFaqs) kbSources.unshift(kbSource("faq", f.question, f.answer, { enabled: false }));
+  const profileApplied = Boolean(x.agentProfile) && !agentProfileSet;
+  if (profileApplied) agentProfileSet = true;
+  const total = x.faqs.length + x.flows.length + x.rules.length;
+  const app = { id: randomUUID(), templateId: x.id, industry: x.industry, version: x.version, faqsAdded, flowsAdded, rulesAdded, profileApplied, skipped: total - faqsAdded - flowsAdded - rulesAdded, appliedAt: iso(now()) };
+  templateApplications.unshift(app);
+  return app;
+};
 
 // Payments (BE-2.2): the seller's Zarinpal account and payment links (3 days, newest first).
 let merchant = { configured: false, provider: null, merchantIdHint: null, sandbox: false, enabled: true, updatedAt: null };
@@ -501,13 +528,52 @@ const expirePaymentLinks = (orderId) => {
   for (const l of paymentLinks) if (l.orderId === orderId && l.status === "active") l.status = "cancelled";
 };
 
-const kbSource = (kind, title, body, extra = {}) => ({ id: randomUUID(), kind, title, question: kind === "faq" ? title : null, body, productId: null, fileId: null, url: null, enabled: true, status: "indexed", revision: 1, indexedRevision: 1, chunkCount: 1, error: null, indexedAt: ago(2 * H), createdAt: ago(5 * 24 * H), updatedAt: ago(2 * H), ...extra });
+const kbSource = (kind, title, body, extra = {}) => ({ id: randomUUID(), kind, title, question: kind === "faq" ? title : null, body, factKey: null, productId: null, fileId: null, url: null, enabled: true, status: "indexed", revision: 1, indexedRevision: 1, chunkCount: 1, error: null, indexedAt: ago(2 * H), createdAt: ago(5 * 24 * H), updatedAt: ago(2 * H), ...extra });
 let kbSources = [
-  kbSource("faq", "ارسال به شهرستان چند روز طول می‌کشد؟", "ارسال به شهرستان‌ها با پست پیشتاز دو تا چهار روز کاری است."),
+  kbSource("faq", "ارسال به شهرستان چند روز طول می‌کشد؟", "ارسال به شهرستان‌ها با پست پیشتاز دو تا چهار روز کاری است.", { factKey: "shipping_time" }),
   kbSource("faq", "امکان مرجوعی هست؟", "تا هفت روز پس از تحویل، اگر برچسب کالا جدا نشده باشد، مرجوعی رایگان است."),
   kbSource("text", "راهنمای سایز", "سایز S برای قد تا ۱۶۰، M تا ۱۶۸ و L تا ۱۷۵ سانتی‌متر مناسب است.", { chunkCount: 2, status: "failed", error: "knowledge.embedding_failed", revision: 2 }),
   ...products.filter((p) => p.status === "active").map((p) => kbSource("product", p.title, `${p.title}. ${p.description ?? ""} قیمت ${p.price ? p.price.amount / 10 : "—"} تومان.`, { productId: p.id })),
 ];
+// Knowledge score and onboarding interview (BE-1.9): the required facts of the workspace's industry, from the backend's template
+// seeds (tests/mock-api/fixtures/required-facts.json). Scored like the backend: facts 60, products 25, unanswered 15.
+const requiredFacts = JSON.parse(readFileSync(new URL("./fixtures/required-facts.json", import.meta.url), "utf8"));
+const factsOf = () => requiredFacts[ws.industry] ?? [];
+const knowledgeScore = () => {
+  const facts = factsOf().map((f) => {
+    const src = kbSources.find((s) => s.enabled && s.factKey === f.key);
+    return { ...f, covered: Boolean(src), sourceId: src?.id ?? null };
+  });
+  facts.sort((a, b) => Number(a.covered) - Number(b.covered));
+  const active = products.filter((p) => p.status === "active");
+  const priced = active.filter((p) => p.price || p.variants.some((v) => v.price)).length;
+  const inStock = active.filter((p) => p.variants.some((v) => v.stockPolicy === "unlimited" || (v.stock ?? 0) > 0)).length;
+  const covered = facts.filter((f) => f.covered).length;
+  const factPoints = facts.length ? Math.round((60 * covered) / facts.length) : 0;
+  const productPoints = active.length ? Math.round(12.5 * (priced / active.length) + 12.5 * (inStock / active.length)) : 0;
+  const open = kbUnanswered.filter((q) => q.status === "open").length;
+  const unansweredPoints = Math.max(0, Math.round(15 * (1 - open / 10)));
+  const suggestions = [];
+  if (covered < facts.length) suggestions.push("knowledge.suggest.answer_facts");
+  if (!active.length) suggestions.push("knowledge.suggest.add_products");
+  else {
+    if (priced < active.length) suggestions.push("knowledge.suggest.add_prices");
+    if (inStock < active.length) suggestions.push("knowledge.suggest.add_stock");
+  }
+  if (open) suggestions.push("knowledge.suggest.answer_unanswered");
+  return {
+    score: factPoints + productPoints + unansweredPoints, industry: ws.industry,
+    parts: [{ key: "facts", points: factPoints, max: 60 }, { key: "products", points: productPoints, max: 25 }, { key: "unanswered", points: unansweredPoints, max: 15 }],
+    facts, products: { active: active.length, priced, inStock }, openUnanswered: open, suggestions,
+  };
+};
+// The AI turns the owner's words into a customer-facing FAQ; a «بدون هوش» prefix in the answer makes the mock fall back like the backend with no model.
+const draftFaq = (fact, answer) => {
+  if (answer.startsWith("بدون هوش")) return { factKey: fact.key, question: fact.prompt, answer, drafted: "fallback" };
+  const question = { shipping_cost: "هزینه ارسال چقدره؟", shipping_time: "کی به دستم می‌رسه؟", payment_methods: "چطور پرداخت کنم؟", return_policy: "می‌تونم پس بدم؟" }[fact.key] ?? `${fact.label} چطوره؟`;
+  return { factKey: fact.key, question, answer: `${answer.replace(/[.،\s]+$/, "")}. اگر سؤال دیگری دارید، همین‌جا بپرسید 🌸`, drafted: "ai" };
+};
+
 const kbPages = { "https://niloofar.example/shipping": { title: "قوانین ارسال", body: "ارسال رایگان برای خرید بالای یک میلیون تومان. تهران یک روزه." } };
 const kbIndex = (src) => {
   Object.assign(src, { status: "pending", revision: src.revision + 1, error: null, updatedAt: iso(now()) });
@@ -524,6 +590,28 @@ const kbIndex = (src) => {
 const imports = new Map();
 
 /** A small stand-in for backend `FlowValidator`: enough for the editor to show errors and warnings. */
+// Follow-ups (BE-1.8): scheduled by rules and flows, sent later inside the 24-hour window unless replied or bought first.
+const followUpProblem = (a) =>
+  !Number.isInteger(a.delaySeconds) || a.delaySeconds < 60 || a.delaySeconds > 82_800 ? ["delaySeconds", "automation.followup_delay_invalid"]
+  : !a.message?.text?.trim() ? ["message", "validation.message.empty"] : null;
+const followUp = (i, status, dueInMinutes, text, reason = null) => ({
+  id: `0199f100-0000-7000-8000-${String(i).padStart(12, "0")}`, conversationId: conversations[i % conversations.length].id, source: i % 2 ? `flow:${randomUUID()}` : `rule:${randomUUID()}`,
+  ruleId: null, flowId: null, message: { text }, dueAt: iso(new Date(Date.now() + dueInMinutes * 60_000)), cancelOnReply: true, cancelOnPurchase: i !== 3,
+  status, reason, createdAt: iso(new Date(Date.now() + (dueInMinutes - 60) * 60_000)), completedAt: status === "pending" ? null : iso(new Date(Date.now() + Math.min(dueInMinutes, 0) * 60_000)),
+});
+let followUps = [];
+const resetFollowUps = () => {
+  followUps = [
+    followUp(0, "pending", 45, "سلام نیلوفر جان، هنوز به مانتو کتان فکر می‌کنی؟ سایز M موجوده 🌸"),
+    followUp(1, "pending", 180, "کد تخفیف ۱۰٪ شما تا امشب معتبره: NILOO10"),
+    followUp(2, "sent", -120, "سفارشت ثبت شد؟ اگه سؤالی داری همین‌جا بپرس."),
+    followUp(3, "cancelled", -30, "هنوز به این مدل فکر می‌کنی؟", "replied"),
+    followUp(4, "cancelled", -300, "موجودی شلوار بگ جین رو برات نگه داشتیم.", "purchased"),
+    followUp(5, "skipped", -1500, "سلام! پیامت رو دیدیم، جواب بدی ادامه بدیم؟", "window_closed"),
+  ];
+};
+resetFollowUps();
+
 const validateFlow = (graph) => {
   const errors = [];
   const warnings = [];
@@ -532,6 +620,9 @@ const validateFlow = (graph) => {
   for (const n of graph.nodes) {
     if ((n.type === "message" || n.type === "question") && !n.message?.text?.trim()) errors.push({ code: n.type === "message" ? "flow.message_required" : "flow.prompt_required", nodeId: n.id });
     if (n.type === "question" && !/^[a-z][a-z0-9_]{0,39}$/.test(n.variable ?? "")) errors.push({ code: "flow.variable_invalid", nodeId: n.id });
+    if (n.type === "follow_gate" && !n.message?.text?.trim()) errors.push({ code: "flow.message_required", nodeId: n.id });
+    if ((n.type === "follow_gate" || n.type === "question") && (n.maxRetries ?? 0) > 5) errors.push({ code: "flow.max_retries_invalid", nodeId: n.id });
+    if (n.type === "action" && (n.actions ?? []).some((a) => a.kind === "schedule_followup" && followUpProblem(a))) errors.push({ code: "flow.followup_invalid", nodeId: n.id });
   }
   const seen = new Set([graph.start]);
   const queue = [graph.start];
@@ -1011,11 +1102,36 @@ const routes = [
     send(res, 204);
   }],
   // Automation
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/followups$/, (req, res, url) => {
+    const status = url.searchParams.get("Status");
+    const conversationId = url.searchParams.get("ConversationId");
+    const limit = Math.min(200, Number(url.searchParams.get("Limit") ?? 50));
+    const list = followUps.filter((f) => (!status || f.status === status) && (!conversationId || f.conversationId === conversationId));
+    list.sort((a, b) => (status === "pending" ? a.dueAt.localeCompare(b.dueAt) : b.createdAt.localeCompare(a.createdAt)));
+    send(res, 200, list.slice(0, limit));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/automation\/followups\/([^/]+)\/cancel$/, (req, res, url, [id]) => {
+    const f = followUps.find((x) => x.id === id);
+    if (!f) return problem(res, 404, "common.not_found");
+    if (f.status !== "pending") return problem(res, 409, "automation.followup_not_pending");
+    Object.assign(f, { status: "cancelled", reason: "owner", completedAt: iso(now()) });
+    send(res, 200, f);
+  }],
+  ["POST", /^\/__mock\/followups\/reset$/, (req, res) => {
+    resetFollowUps();
+    send(res, 204);
+  }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/automation\/rules$/, (req, res) => send(res, 200, rules)],
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/automation\/rules$/, async (req, res) => {
     const body = await readBody(req);
     if (["dm_keyword", "comment_keyword"].includes(body.triggerKind) && !body.trigger?.keywords?.length && !body.trigger?.pattern)
       return problem(res, 400, "validation.failed", { "trigger.keywords": ["automation.keywords_required"] });
+    const fu = (body.actions ?? []).map((a, i) => [a, i]).filter(([a]) => a.kind === "schedule_followup");
+    if (fu.length > 1) return problem(res, 400, "validation.failed", { actions: ["automation.one_followup"] });
+    for (const [a, i] of fu) {
+      const bad = followUpProblem(a);
+      if (bad) return problem(res, 400, "validation.failed", { [`actions[${i}].${bad[0]}`]: [bad[1]] });
+    }
     const rule = { ...body, id: randomUUID(), postId: body.trigger?.postId ?? null, revision: 1, createdAt: iso(now()), updatedAt: iso(now()) };
     rules.push(rule);
     send(res, 201, rule);
@@ -1396,6 +1512,53 @@ const routes = [
     cardSets = cardSets.filter((x) => x.id !== id);
     send(res, 204);
   }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/score$/, (req, res) => send(res, 200, knowledgeScore())],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/onboarding\/draft$/, async (req, res) => {
+    const b = await readBody(req);
+    const fact = factsOf().find((f) => f.key === b.factKey);
+    if (!fact) return problem(res, 422, "knowledge.fact_unknown");
+    if (!b.answer?.trim() || b.answer.length > 1000) return problem(res, 400, "validation.failed", { answer: ["validation.knowledge.answer"] });
+    send(res, 200, draftFaq(fact, b.answer.trim()));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/onboarding\/confirm$/, async (req, res) => {
+    const b = await readBody(req);
+    const fact = factsOf().find((f) => f.key === b.factKey);
+    if (!fact) return problem(res, 422, "knowledge.fact_unknown");
+    if (!b.question?.trim() || !b.answer?.trim()) return problem(res, 400, "validation.failed", { answer: ["validation.knowledge.answer"] });
+    let src = kbSources.find((s) => s.kind === "faq" && s.factKey === fact.key);
+    if (src) Object.assign(src, { title: b.question, question: b.question, body: b.answer, enabled: true, revision: src.revision + 1, updatedAt: iso(now()) });
+    else kbSources.unshift((src = kbSource("faq", b.question, b.answer, { factKey: fact.key, createdAt: iso(now()), updatedAt: iso(now()) })));
+    send(res, 200, { source: src, score: knowledgeScore() });
+  }],
+  ["POST", /^\/__mock\/knowledge\/reset-facts$/, (req, res) => {
+    kbSources = kbSources.filter((s) => !s.factKey || s.factKey === "shipping_time");
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/templates$/, (req, res) => {
+    const list = seedTemplates.map(templateSummary);
+    send(res, 200, [...list.filter((x) => x.recommended), ...list.filter((x) => !x.recommended)]);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/templates\/applications$/, (req, res) => send(res, 200, templateApplications.slice(0, 50).map((a) => ({ ...a, idempotencyKey: undefined })))],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/templates\/([^/]+)$/, (req, res, url, [id]) => {
+    const x = seedTemplates.find((t) => t.id === id);
+    if (!x) return problem(res, 404, "common.not_found");
+    send(res, 200, { template: templateSummary(x), requiredFacts: x.requiredFacts, faqs: x.faqs, flows: x.flows, rules: x.rules, agentProfile: x.agentProfile ?? null });
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/templates\/([^/]+)\/apply$/, (req, res, url, [id]) => {
+    const x = seedTemplates.find((t) => t.id === id);
+    if (!x) return problem(res, 404, "common.not_found");
+    const key = req.headers["idempotency-key"];
+    const seen = key && templateApplications.find((a) => a.idempotencyKey === key);
+    if (seen) return send(res, 200, { ...seen, idempotencyKey: undefined });
+    const app = applyTemplate(x);
+    app.idempotencyKey = key ?? null;
+    send(res, 200, { ...app, idempotencyKey: undefined });
+  }],
+  // Test hook: forget every apply.
+  ["POST", /^\/__mock\/templates\/reset$/, (req, res) => {
+    templateApplications = [];
+    templateKeys = new Set();
+    agentProfileSet = false;
+    send(res, 204);
+  }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, (req, res) => send(res, 200, merchant)],
   ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, async (req, res) => {
     const b = await readBody(req);
@@ -1572,6 +1735,10 @@ const routes = [
     kbSources.unshift(src);
     kbIndex(src);
     send(res, 201, src);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/sources\/([^/]+)$/, (req, res, url, [id]) => {
+    const src = kbSources.find((x) => x.id === id);
+    return src ? send(res, 200, src) : problem(res, 404, "common.not_found");
   }],
   ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/sources\/([^/]+)$/, async (req, res, url, [id]) => {
     const src = kbSources.find((x) => x.id === id);

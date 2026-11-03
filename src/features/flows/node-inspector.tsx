@@ -14,7 +14,7 @@ import type { ActionKind, FlowCondition, FlowNode, FlowNodeType } from "@/lib/ap
 import { answerTypes, flowNodeTypes } from "@/lib/api/types";
 import { MAX_DELAY_SECONDS, MIN_DELAY_SECONDS, splitDelay, unitSeconds, VARIABLE_PATTERN } from "./model";
 
-const flowActionKinds: ActionKind[] = ["add_tag", "remove_tag", "set_field", "handoff", "pause_ai", "notify_team"];
+const flowActionKinds: ActionKind[] = ["add_tag", "remove_tag", "set_field", "handoff", "pause_ai", "notify_team", "schedule_followup"];
 const subjects = ["tag", "field", "variable", "time"] as const;
 const opsFor: Record<string, string[]> = {
   tag: ["has", "not_has"],
@@ -103,6 +103,30 @@ export function NodeInspector({
               <Input id={`${id}-retries`} type="number" dir="ltr" min={0} max={5} disabled={disabled} value={node.maxRetries ?? 0} onChange={(e) => onChange({ maxRetries: Math.max(0, Math.min(5, Number(e.target.value) || 0)) })} />
             </Field>
           </div>
+        </>
+      ) : null}
+
+      {node.type === "follow_gate" ? (
+        <>
+          <p className="rounded-xl bg-surface-muted p-3 text-xs text-muted-foreground">{t("inspector.followGateHelp")}</p>
+          <MessageBuilder
+            id={`${id}-gate`}
+            value={node.message ?? emptyMessage()}
+            onChange={(message) => onChange({ message })}
+            variables={allVariables}
+            disabled={disabled}
+            allowExtras={false}
+            placeholder={t("inspector.followGatePlaceholder")}
+          />
+          <div className="grid gap-3 sm:grid-cols-[1fr_8rem]">
+            <Field label={t("inspector.followRetryText")} htmlFor={`${id}-gate-retry`} hint={t("inspector.followRetryHint")}>
+              <Input id={`${id}-gate-retry`} dir="auto" maxLength={1000} disabled={disabled} value={node.retryText ?? ""} onChange={(e) => onChange({ retryText: e.target.value || null })} />
+            </Field>
+            <Field label={t("inspector.followMaxRetries")} htmlFor={`${id}-gate-retries`}>
+              <Input id={`${id}-gate-retries`} type="number" dir="ltr" min={0} max={5} disabled={disabled} value={node.maxRetries ?? 2} onChange={(e) => onChange({ maxRetries: Math.max(0, Math.min(5, Number(e.target.value) || 0)) })} />
+            </Field>
+          </div>
+          <p className="text-xs text-muted-foreground">{t("inspector.followGateExits")}</p>
         </>
       ) : null}
 

@@ -17,6 +17,7 @@ export function AutomationsHeader() {
         tabs={[
           { href: base, label: t("tabs.rules") },
           { href: `${base}/flows`, label: t("tabs.flows") },
+          { href: `${base}/followups`, label: t("tabs.followups") },
           { href: `${base}/settings`, label: t("tabs.settings") },
         ]}
       />

@@ -4728,6 +4728,114 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/automation/followups": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Scheduled follow-ups, soonest first for pending ones and newest first otherwise */
+        get: {
+            parameters: {
+                query?: {
+                    Status?: string;
+                    ConversationId?: string;
+                    Limit?: number;
+                };
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FollowUpResponse"][];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/automation/followups/{followUpId}/cancel": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Cancel a pending follow-up */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    followUpId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["FollowUpResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Conflict */
+                409: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/automation/test": {
         parameters: {
             query?: never;
@@ -8044,6 +8152,342 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/knowledge/score": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The knowledge score (0–100), the required facts still missing and what to do next */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["KnowledgeScoreResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/knowledge/onboarding/draft": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Turn the owner's answer to a required fact into a FAQ draft; nothing is saved */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OnboardingDraftRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OnboardingDraftResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/knowledge/onboarding/confirm": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Save the approved FAQ for a required fact (replacing the fact's earlier FAQ) and return the new score */
+        post: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    "application/json": components["schemas"]["OnboardingConfirmRequest"];
+                };
+            };
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["OnboardingConfirmResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Industry templates the workspace can apply, its own industry's first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TemplateSummaryResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/templates/{templateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What applying the template would add */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    templateId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TemplatePreviewResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/templates/{templateId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply an industry template
+         * @description Adds the template's FAQs (switched off), flows (published), rules (switched off) and, when the workspace has none, the AI agent profile. Applying again adds only what the workspace never had; nothing it changed or deleted is touched.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description UUID; retries with the same key return the first response. */
+                    "Idempotency-Key"?: string;
+                };
+                path: {
+                    workspaceId: string;
+                    templateId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TemplateApplicationResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/templates/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Templates applied to the workspace, newest first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TemplateApplicationResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/agent/profile": {
         parameters: {
             query?: never;
@@ -9217,6 +9661,14 @@ export interface components {
             /** Format: date-time */
             expiresAt: null | string;
         };
+        FactStatus: {
+            key: string;
+            label: string;
+            prompt: string;
+            covered: boolean;
+            /** Format: uuid */
+            sourceId: null | string;
+        };
         FieldDefinitionRequest: {
             key: null | string;
             label: string;
@@ -9338,6 +9790,28 @@ export interface components {
             errors: components["schemas"]["FlowIssue"][];
             warnings: components["schemas"]["FlowIssue"][];
             isValid?: boolean;
+        };
+        FollowUpResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            conversationId: string;
+            source: string;
+            /** Format: uuid */
+            ruleId: null | string;
+            /** Format: uuid */
+            flowId: null | string;
+            message: components["schemas"]["OutboundContent"];
+            /** Format: date-time */
+            dueAt: string;
+            cancelOnReply: boolean;
+            cancelOnPurchase: boolean;
+            status: string;
+            reason: null | string;
+            /** Format: date-time */
+            createdAt: string;
+            /** Format: date-time */
+            completedAt: null | string;
         };
         FormResponse: {
             /** Format: uuid */
@@ -9483,6 +9957,17 @@ export interface components {
             /** Format: uuid */
             productId: null | string;
         };
+        KnowledgeScoreResponse: {
+            /** Format: int32 */
+            score: number;
+            industry: string;
+            parts: components["schemas"]["ScorePart"][];
+            facts: components["schemas"]["FactStatus"][];
+            products: null | components["schemas"]["ProductStats"];
+            /** Format: int32 */
+            openUnanswered: number;
+            suggestions: string[];
+        };
         KnowledgeSearchRequest: {
             query: string;
             /** Format: int32 */
@@ -9622,6 +10107,25 @@ export interface components {
             nextCursor: null | string;
             /** Format: int32 */
             unreadCount: number;
+        };
+        OnboardingConfirmRequest: {
+            factKey: string;
+            question: string;
+            answer: string;
+        };
+        OnboardingConfirmResponse: {
+            source: components["schemas"]["SourceResponse"];
+            score: components["schemas"]["KnowledgeScoreResponse"];
+        };
+        OnboardingDraftRequest: {
+            factKey: string;
+            answer: string;
+        };
+        OnboardingDraftResponse: {
+            factKey: string;
+            question: string;
+            answer: string;
+            drafted: string;
         };
         OrderAddress: {
             recipient: null | string;
@@ -9994,6 +10498,14 @@ export interface components {
             /** Format: date-time */
             updatedAt: string;
         };
+        ProductStats: {
+            /** Format: int32 */
+            active: number;
+            /** Format: int32 */
+            priced: number;
+            /** Format: int32 */
+            inStock: number;
+        };
         ProvinceResponse: {
             code: string;
             name: string;
@@ -10106,6 +10618,10 @@ export interface components {
             value?: null | string;
             reason?: null | string;
             title?: null | string;
+            /** Format: int32 */
+            delaySeconds?: null | number;
+            cancelOnReply?: null | boolean;
+            cancelOnPurchase?: null | boolean;
         };
         RuleRequest: {
             name: string;
@@ -10242,6 +10758,13 @@ export interface components {
             role: string;
             text: string;
         };
+        ScorePart: {
+            key: string;
+            /** Format: int32 */
+            points: number;
+            /** Format: int32 */
+            max: number;
+        };
         SegmentCondition: {
             field: string;
             op: string;
@@ -10343,6 +10866,7 @@ export interface components {
             /** Format: uuid */
             fileId: null | string;
             url: null | string;
+            factKey?: null | string;
         };
         SourceUpdateRequest: {
             title: null | string;
@@ -10417,6 +10941,81 @@ export interface components {
             defined: boolean;
             /** Format: int32 */
             contactCount: number;
+        };
+        TemplateAgentProfile: {
+            name: string;
+            tone: string;
+            brandVoice: null | string;
+            neverSay: string[];
+            handoffKeywords: string[];
+        };
+        TemplateApplicationResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            templateId: string;
+            industry: string;
+            /** Format: int32 */
+            version: number;
+            /** Format: int32 */
+            faqsAdded: number;
+            /** Format: int32 */
+            flowsAdded: number;
+            /** Format: int32 */
+            rulesAdded: number;
+            profileApplied: boolean;
+            /** Format: int32 */
+            skipped: number;
+            /** Format: date-time */
+            appliedAt: string;
+        };
+        TemplateFactPreview: {
+            key: string;
+            label: string;
+            prompt: string;
+        };
+        TemplateFaqPreview: {
+            key: string;
+            question: string;
+            answer: string;
+        };
+        TemplateItemPreview: {
+            key: string;
+            name: string;
+        };
+        TemplatePreviewResponse: {
+            template: components["schemas"]["TemplateSummaryResponse"];
+            requiredFacts: components["schemas"]["TemplateFactPreview"][];
+            faqs: components["schemas"]["TemplateFaqPreview"][];
+            flows: components["schemas"]["TemplateItemPreview"][];
+            rules: components["schemas"]["TemplateRulePreview"][];
+            agentProfile: null | components["schemas"]["TemplateAgentProfile"];
+        };
+        TemplateRulePreview: {
+            key: string;
+            name: string;
+            triggerKind: string;
+        };
+        TemplateSummaryResponse: {
+            /** Format: uuid */
+            id: string;
+            industry: string;
+            /** Format: int32 */
+            version: number;
+            name: string;
+            description: null | string;
+            /** Format: int32 */
+            requiredFacts: number;
+            /** Format: int32 */
+            faqs: number;
+            /** Format: int32 */
+            flows: number;
+            /** Format: int32 */
+            rules: number;
+            hasAgentProfile: boolean;
+            recommended: boolean;
+            /** Format: date-time */
+            lastApplied: null | string;
         };
         TimeRange: {
             /** Format: time */
