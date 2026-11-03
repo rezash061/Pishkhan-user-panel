@@ -8044,6 +8044,184 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/api/v1/workspaces/{workspaceId}/templates": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Industry templates the workspace can apply, its own industry's first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TemplateSummaryResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/templates/{templateId}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** What applying the template would add */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                    templateId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TemplatePreviewResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/templates/{templateId}/apply": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Apply an industry template
+         * @description Adds the template's FAQs (switched off), flows (published), rules (switched off) and, when the workspace has none, the AI agent profile. Applying again adds only what the workspace never had; nothing it changed or deleted is touched.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description UUID; retries with the same key return the first response. */
+                    "Idempotency-Key"?: string;
+                };
+                path: {
+                    workspaceId: string;
+                    templateId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TemplateApplicationResponse"];
+                    };
+                };
+                /** @description Not Found */
+                404: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/templates/applications": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Templates applied to the workspace, newest first */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["TemplateApplicationResponse"][];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/api/v1/workspaces/{workspaceId}/agent/profile": {
         parameters: {
             query?: never;
@@ -10417,6 +10595,81 @@ export interface components {
             defined: boolean;
             /** Format: int32 */
             contactCount: number;
+        };
+        TemplateAgentProfile: {
+            name: string;
+            tone: string;
+            brandVoice: null | string;
+            neverSay: string[];
+            handoffKeywords: string[];
+        };
+        TemplateApplicationResponse: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            templateId: string;
+            industry: string;
+            /** Format: int32 */
+            version: number;
+            /** Format: int32 */
+            faqsAdded: number;
+            /** Format: int32 */
+            flowsAdded: number;
+            /** Format: int32 */
+            rulesAdded: number;
+            profileApplied: boolean;
+            /** Format: int32 */
+            skipped: number;
+            /** Format: date-time */
+            appliedAt: string;
+        };
+        TemplateFactPreview: {
+            key: string;
+            label: string;
+            prompt: string;
+        };
+        TemplateFaqPreview: {
+            key: string;
+            question: string;
+            answer: string;
+        };
+        TemplateItemPreview: {
+            key: string;
+            name: string;
+        };
+        TemplatePreviewResponse: {
+            template: components["schemas"]["TemplateSummaryResponse"];
+            requiredFacts: components["schemas"]["TemplateFactPreview"][];
+            faqs: components["schemas"]["TemplateFaqPreview"][];
+            flows: components["schemas"]["TemplateItemPreview"][];
+            rules: components["schemas"]["TemplateRulePreview"][];
+            agentProfile: null | components["schemas"]["TemplateAgentProfile"];
+        };
+        TemplateRulePreview: {
+            key: string;
+            name: string;
+            triggerKind: string;
+        };
+        TemplateSummaryResponse: {
+            /** Format: uuid */
+            id: string;
+            industry: string;
+            /** Format: int32 */
+            version: number;
+            name: string;
+            description: null | string;
+            /** Format: int32 */
+            requiredFacts: number;
+            /** Format: int32 */
+            faqs: number;
+            /** Format: int32 */
+            flows: number;
+            /** Format: int32 */
+            rules: number;
+            hasAgentProfile: boolean;
+            recommended: boolean;
+            /** Format: date-time */
+            lastApplied: null | string;
         };
         TimeRange: {
             /** Format: time */

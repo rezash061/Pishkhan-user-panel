@@ -152,3 +152,6 @@ export type CheckoutQuote = Schemas["CheckoutQuoteResponse"];
 export type Checkout = Schemas["CheckoutResponse"];
 export type StartCheckout = Schemas["StartCheckoutResponse"];
 export type Subscription = Schemas["SubscriptionResponse"];
+export type TemplateSummary = Schemas["TemplateSummaryResponse"];
+export type TemplatePreview = Schemas["TemplatePreviewResponse"];
+export type TemplateApplication = Schemas["TemplateApplicationResponse"];

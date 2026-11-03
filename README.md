@@ -57,7 +57,7 @@ Built against the backend's current API (Phase 0 through BE-1.6, plus backend PR
 |---|---|
 | Phone OTP login with ALTCHA, password + TOTP login, sessions, profile, password, TOTP setup | Done |
 | Workspace creation, picker, invitations (accept), team (invite, pending invitations with revoke, roles, remove) | Done |
-| Onboarding: workspace → Instagram connect (official OAuth) | Done; template, import, teach and test steps wait for their backend modules |
+| Onboarding: workspace → Instagram connect (official OAuth) → industry template (preview, apply, skip); templates again from settings | Done; import, teach and test steps wait for their backend modules |
 | Inbox: filters, virtualized list, thread, optimistic send with retry, 24-hour/7-day window, quick replies (`/`), notes, assign, status, AI pause, live updates, keyboard shortcuts, customer names, search, handoff reason and suggested reply, attachments and story replies | Done |
 | Channels: status, reconnect, disconnect, recent posts; banners for disconnected/expiring accounts | Done |
 | Settings: general, business hours with Jalali closed dates, quick replies, notifications, activity log (owner) | Done |
