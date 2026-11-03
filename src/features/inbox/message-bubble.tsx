@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, Bot, Check, CheckCheck, Clock, RotateCcw, Workflow } from "lucide-react";
+import { AlertCircle, Bot, Check, CheckCheck, Clock, Loader2, RotateCcw, Workflow } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
@@ -47,6 +47,7 @@ export function MessageBubble({ message, senderName, onRetry }: { message: Optim
     <div className={cn("flex", outbound ? "justify-end" : "justify-start")}>
       <div className={cn("max-w-[85%] space-y-1 sm:max-w-[70%]", outbound ? "items-end" : "items-start")}>
         <Attachments items={attachments} outbound={outbound} />
+        {message.transcriptStatus ? <Transcript status={message.transcriptStatus} text={message.transcript ?? null} /> : null}
         {message.text || kindLabel ? (
           <div
             className={cn(
@@ -89,4 +90,36 @@ export function MessageBubble({ message, senderName, onRetry }: { message: Optim
       </div>
     </div>
   );
+}
+
+/**
+ * A voice note's transcript (BE-2.4), under its player: being transcribed, the text the AI and the rules answered, or
+ * a failure (the backend then hands the conversation to the team).
+ */
+export function Transcript({ status, text }: { status: string; text: string | null }) {
+  const t = useTranslations("inbox.voice");
+  if (status === "pending")
+    return (
+      <p role="status" className="inline-flex items-center gap-1.5 px-1 text-xs text-muted-foreground">
+        <Loader2 className="size-3 animate-spin motion-reduce:animate-none" aria-hidden />
+        {t("pending")}
+      </p>
+    );
+  if (status === "failed")
+    return (
+      <p className="inline-flex items-start gap-1.5 rounded-xl bg-warning-soft px-3 py-1.5 text-xs">
+        <AlertCircle className="mt-0.5 size-3.5 shrink-0" aria-hidden />
+        {t("failed")}
+      </p>
+    );
+  if (status === "done" && text)
+    return (
+      <div className="rounded-2xl rounded-es-md bg-bubble-in px-3.5 py-2 text-sm leading-7">
+        <p className="text-[11px] font-medium text-muted-foreground">{t("label")}</p>
+        <p dir="auto" className="whitespace-pre-wrap break-words">
+          {text}
+        </p>
+      </div>
+    );
+  return null;
 }

@@ -59,6 +59,8 @@ const conversations = Array.from({ length: 24 }, (_, i) => {
     lastMessagePreview: previews[i % previews.length],
     handoff: statuses[i % statuses.length] !== "handed_off" ? null
       // Conversation 8 was handed off by the AI agent (BE-1.4 part 2), with its unsure draft as the suggestion.
+      // Conversation 16's voice note could not be transcribed (BE-2.4), so it went to the team.
+      : i === 16 ? { reason: "voice_unavailable", suggestedReply: null, at: iso(lastInbound) }
       : i === 8 ? { reason: "ai:low_confidence", suggestedReply: "سلام! سایز M برای قد ۱۶۵ مناسب است.", at: iso(lastInbound) }
       : { reason: "مشتری درخواست تخفیف عمده دارد", suggestedReply: "سلام! برای خرید عمده ۱۰٪ تخفیف داریم، چند عدد لازم دارید؟", at: iso(lastInbound) },
   };
@@ -168,6 +170,17 @@ for (const c of conversations) {
     m(-2, "outbound", "بله کرم موجوده، براتون رزرو کنم؟", { handledBy: "human", sentBy: teammate.userId }),
     m(0, "inbound", c.lastMessagePreview),
   ].reverse());
+}
+// Voice notes (BE-2.4) in conversation 16: one transcribed, one still being transcribed, one that failed.
+{
+  const c = conversations[16];
+  const base = new Date(c.lastInboundAt).getTime();
+  const voice = (offsetMin, transcriptStatus, transcript = null) => ({
+    id: randomUUID(), createdAt: iso(new Date(base + offsetMin * 60_000)), direction: "inbound", kind: "audio", text: null, status: "received", errorCode: null,
+    handledBy: null, sentBy: null, tag: null, sentAt: null, readAt: null, attachments: [{ type: "audio", url: "https://cdn.instagram.example/voice/note.mp4" }],
+    transcript, transcriptStatus,
+  });
+  messages.get(c.id).unshift(voice(3, "failed"), voice(2, "pending"), voice(1, "done", "سلام، این مانتو سایز ال داره؟ برای شیراز هم می‌فرستید؟"));
 }
 const notes = new Map([[conversations[0].id, [{ id: randomUUID(), authorId: teammate.userId, text: "مشتری قبلاً هم خرید داشته، تخفیف ۱۰٪ بدیم.", createdAt: ago(H) }]]]);
 let quickReplies = [
