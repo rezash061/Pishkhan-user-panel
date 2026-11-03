@@ -3,6 +3,7 @@ import { toPersianDigits } from "@/lib/i18n/digits";
 import { cn } from "@/lib/cn";
 
 /** Onboarding: workspace → Instagram → teach the assistant. Import and test steps arrive with their backend modules. */
+/** Onboarding: workspace → Instagram → industry template. Import, teach and test steps arrive with their backend modules. */
 export function Stepper({ step, total = 3 }: { step: number; total?: number }) {
   const t = useTranslations("onboarding");
   return (

@@ -6,6 +6,7 @@ export function handlesFor(type: string): string[] {
     case "question":
       return ["next", "invalid"];
     case "condition":
+    case "follow_gate":
       return ["true", "false"];
     case "ai":
     case "end":
@@ -56,6 +57,8 @@ export function nodeDefaults(type: FlowNodeType, id: string): FlowNode {
       return { id, type, cardSetId: null };
     case "ai":
       return { id, type, goal: "" };
+    case "follow_gate":
+      return { id, type, message: { text: "" }, retryText: null, maxRetries: 2 };
     default:
       return { id, type };
   }

@@ -18,6 +18,14 @@
 - `knowledge.fact_unknown` in Persian.
 - Mock Api host: score, draft and confirm (with a no-model fallback) built from the backend seeds' required facts (`tests/mock-api/fixtures/required-facts.json`), `factKey` on sources, `GET /knowledge/sources/{id}`, and `/__mock/knowledge/reset-facts`. New e2e spec `knowledge-score.spec.ts`.
 - API refreshed from backend main (BE-1.9).
+## 0.18.0 — 2026-11-03
+
+- Industry templates (backend #40, BE-2.9, UP-2.5):
+  - Onboarding step 3 «قالب صنف», after connecting Instagram (or skipping it). It lists the published templates with the workspace's own industry first, marked «پیشنهادی» and picked. A preview shows what applying adds: the facts the assistant needs, FAQs with their answers, flow names, rules with their trigger, and the agent profile (name, tone, brand voice, never-say phrases, handoff words). The step can be skipped.
+  - «اعمال قالب» sends an Idempotency-Key. The result lists the FAQs added (off), flows (published), rules (off), whether the agent profile was set, and what was left alone because the owner had edited or deleted it. It says to fill blanks such as [مبلغ] and switch the items on, and links to the knowledge and automation pages.
+  - Settings «قالب صنف»: the same picker for applying later or again, with each template's last apply, and «سابقهٔ اعمال قالب» from `GET /templates/applications`. Owners and admins apply (`workspace.settings.write`); others see the preview and the history (`workspace.settings.read`).
+- Mock Api host: the five built-in templates, from the backend's `Seeds/*.json` (`tests/mock-api/fixtures/industry-templates.json`). Applying adds by key like the backend, and `/__mock/templates/reset` starts over. New e2e spec `templates.spec.ts`.
+- API refreshed from backend main (BE-2.9).
 
 ## 0.17.0 — 2026-11-03
 

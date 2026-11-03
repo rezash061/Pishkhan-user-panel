@@ -50,6 +50,8 @@ export const qk = {
   ruleStats: (ws: string, id: string, days: number) => ["rule-stats", ws, id, days] as const,
   flows: (ws: string) => ["flows", ws] as const,
   flow: (ws: string, id: string) => ["flow", ws, id] as const,
+  followUps: (ws: string) => ["followups", ws] as const,
+  followUpList: (ws: string, filter: object) => ["followups", ws, filter] as const,
   automationSettings: (ws: string) => ["automation-settings", ws] as const,
   categories: (ws: string) => ["categories", ws] as const,
   productLists: (ws: string) => ["products", ws] as const,
@@ -66,6 +68,9 @@ export const qk = {
   orderTimeline: (ws: string, id: string) => ["orders", ws, "one", id, "timeline"] as const,
   orderInvoice: (ws: string, id: string) => ["orders", ws, "one", id, "invoice"] as const,
   provinces: ["provinces"] as const,
+  templates: (ws: string) => ["templates", ws] as const,
+  template: (ws: string, id: string) => ["templates", ws, "one", id] as const,
+  templateApplications: (ws: string) => ["templates", ws, "applications"] as const,
   merchantAccount: (ws: string) => ["payments", ws, "merchant"] as const,
   paymentLinks: (ws: string, orderId: string) => ["orders", ws, "one", orderId, "payment-links"] as const,
 };

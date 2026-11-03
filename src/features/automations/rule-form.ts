@@ -1,7 +1,7 @@
 import type { CommentScope, MatchMode, Rule, RuleAction, RuleRequest, TriggerConfig, TriggerKind } from "@/lib/api/types";
 import { commentTriggers } from "@/lib/api/types";
 import { compilePattern, isUsableKeyword } from "@/lib/persian/keywords";
-import { allowedActions, cleanMessage, MAX_ACTIONS, MAX_PUBLIC_REPLIES, messageProblem } from "./model";
+import { allowedActions, cleanMessage, followUpDelayValid, MAX_ACTIONS, MAX_PUBLIC_REPLIES, messageProblem } from "./model";
 
 /** Editor state for a rule. Converted to the backend `RuleRequest` only on save. */
 export interface RuleForm {
@@ -116,6 +116,8 @@ export function ruleRequestFromForm(f: RuleForm): RuleRequest {
         return { kind: a.kind, reason: a.reason?.trim() || null };
       case "notify_team":
         return { kind: a.kind, title: a.title?.trim() || null };
+      case "schedule_followup":
+        return { kind: a.kind, message: a.message ? cleanMessage(a.message) : null, delaySeconds: a.delaySeconds ?? null, cancelOnReply: a.cancelOnReply ?? true, cancelOnPurchase: a.cancelOnPurchase ?? true };
       default:
         return { kind: a.kind };
     }
@@ -154,11 +156,13 @@ export function ruleProblems(f: RuleForm): Record<string, string> {
   if (f.triggerKind === "postback" && !f.payload.trim()) p["trigger.payload"] = "automation.payload_required";
 
   if (f.actions.length === 0 || f.actions.length > MAX_ACTIONS) p.actions = "automation.actions_count";
+  else if (f.actions.filter((a) => a.kind === "schedule_followup").length > 1) p.actions = "automation.one_followup";
   const allowed = allowedActions(f.triggerKind);
   f.actions.forEach((a, i) => {
     const at = `actions[${i}]`;
     if (!allowed.includes(a.kind as never)) p[at] = isCommentTrigger(f.triggerKind) ? "automation.action_needs_conversation" : "automation.action_needs_comment";
-    if (a.kind === "send_message" || a.kind === "private_reply") {
+    if (a.kind === "schedule_followup" && !followUpDelayValid(a.delaySeconds)) p[`${at}.delaySeconds`] = "automation.followup_delay_invalid";
+    if (a.kind === "send_message" || a.kind === "private_reply" || a.kind === "schedule_followup") {
       const problem = messageProblem(a.message);
       if (problem) p[`${at}.message`] = `automation.message.${problem}`;
     }

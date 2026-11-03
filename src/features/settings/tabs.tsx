@@ -17,6 +17,7 @@ export function SettingsTabs() {
         ...(can(P.inboxRead) ? [{ href: `${base}/quick-replies`, label: t("quickReplies") }] : []),
         { href: `${base}/notifications`, label: t("notifications") },
         { href: `${base}/payments`, label: t("payments") },
+        { href: `${base}/templates`, label: t("templates") },
         ...(can(P.auditRead) ? [{ href: `${base}/audit`, label: t("audit") }] : []),
       ]}
     />

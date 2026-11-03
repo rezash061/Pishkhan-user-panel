@@ -58,3 +58,10 @@ Found on 2026-11-03 against backend main after PR #39.
 18. **`Billing:Checkout:ReturnUrl` defaults to `http://localhost:3000/billing`.** The panel runs on :3001, and `appsettings.Development.json` has no `Billing:Checkout` section, unlike `Instagram:PanelReturnUrl`. It should be `http://localhost:3001/billing` (the panel's `/billing` route).
 19. **Upcoming subscriptions have no plan name.** `SubscriptionResponse` carries only `planCode`. The panel looks the name up in `GET /billing/plans`, so a plan taken off sale shows its code. A `planName` field would fix it, as `CheckoutResponse` already has.
 20. **No invoice document.** A paid checkout is the invoice, but there is no Persian invoice endpoint like the orders' `/invoice` (seller's details, Pishkhan's details, VAT). The panel prints the checkout page for now.
+
+## Industry templates (BE-2.9)
+
+Found on 2026-11-03 against backend main after PR #40.
+
+21. **Onboarding progress is not stored.** Plan 3.1 asks for every step to be resumable "state from backend". There is no onboarding state endpoint, so a user who leaves the template step lands on the dashboard next time. Today `lastApplied` on the templates is the only trace.
+22. **Template FAQs and rules are not marked in their own lists.** Applied FAQs and rules carry a template key on the backend, but `SourceResponse` and the rule response do not expose it. The knowledge and automation pages therefore cannot filter «from the template, still off» or point at the items with blanks to fill.
