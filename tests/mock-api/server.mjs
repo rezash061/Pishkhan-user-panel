@@ -461,7 +461,8 @@ const quoteFor = (p, cycle) => {
   return { quote: quote(p.code === cur.planCode ? "renewal" : "downgrade", 0, lastEnd) };
 };
 const checkoutView = (c) => {
-  const { authority, startsAt, endsAt, ...view } = c;
+  // The gateway authority, the period and the idempotency key are the mock's own bookkeeping, not part of the response.
+  const view = { ...c, authority: undefined, startsAt: undefined, endsAt: undefined, idempotencyKey: undefined };
   return { ...view, status: c.status === "pending" && Date.now() - new Date(c.createdAt).getTime() > H ? "expired" : c.status };
 };
 const currentPlanView = () => {
@@ -851,12 +852,11 @@ const routes = [
     checkouts.unshift(c);
     send(res, 201, { checkout: checkoutView(c), paymentUrl: `http://localhost:${port}/__mock/zarinpal/${c.authority}` });
   }],
-  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/checkouts$/, (req, res) => send(res, 200, checkouts.slice(0, 100).map(checkoutView).map(({ idempotencyKey, ...c }) => c))],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/checkouts$/, (req, res) => send(res, 200, checkouts.slice(0, 100).map(checkoutView))],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/checkouts\/([^/]+)$/, (req, res, url, [id]) => {
     const c = checkouts.find((x) => x.id === id);
     if (!c) return problem(res, 404, "common.not_found");
-    const { idempotencyKey, ...view } = checkoutView(c);
-    send(res, 200, view);
+    send(res, 200, checkoutView(c));
   }],
   // Stand-in for Zarinpal's payment page, and the backend callback that verifies and redirects (303) to the panel's /billing.
   ["GET", /^\/__mock\/zarinpal\/([^/]+)$/, (req, res, url, [authority]) => {
