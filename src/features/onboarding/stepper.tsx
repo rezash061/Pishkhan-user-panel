@@ -2,9 +2,8 @@ import { useTranslations } from "next-intl";
 import { toPersianDigits } from "@/lib/i18n/digits";
 import { cn } from "@/lib/cn";
 
-/** Onboarding: workspace → Instagram → teach the assistant. Import and test steps arrive with their backend modules. */
-/** Onboarding: workspace → Instagram → industry template. Import, teach and test steps arrive with their backend modules. */
-export function Stepper({ step, total = 3 }: { step: number; total?: number }) {
+/** Onboarding: workspace → Instagram → industry template → teach the assistant. Import and test steps arrive with their backend modules. */
+export function Stepper({ step, total = 4 }: { step: number; total?: number }) {
   const t = useTranslations("onboarding");
   return (
     <div className="mb-6 space-y-2">
