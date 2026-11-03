@@ -103,7 +103,10 @@ export function TraceView({ trace: x, sandbox }: { trace: TraceDetail; sandbox?:
             <Row label={t("classifierConfidence")}>{pct(x.classifierConfidence)}</Row>
             <Row label={t("intent")}>{label("intents", x.intent)}</Row>
             <Row label={t("sentiment")}>{label("sentiments", x.sentiment)}</Row>
-            <Row label={t("language")}>{x.language ? <span dir="ltr">{x.language}</span> : "—"}</Row>
+            <Row label={t("language")}>
+              {!x.language ? "—" : t.has(`languages.${x.language}`) ? t(`languages.${x.language}` as "languages.finglish") : <span dir="ltr">{x.language}</span>}
+              {x.language === "finglish" ? <span className="block text-xs text-muted-foreground">{t("finglishHint")}</span> : null}
+            </Row>
             {x.goal ? (
               <Row label={t("goal")}>
                 <span dir="auto">{x.goal}</span>

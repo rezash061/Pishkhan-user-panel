@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/cn";
 import { formatDateTime, formatTime } from "@/lib/i18n/format";
 import { useCodeMessage } from "@/lib/i18n/use-error-message";
+import { looksFinglish } from "@/lib/persian/finglish";
 import { Attachments } from "./attachments";
 import type { OptimisticMessage } from "./data";
 
@@ -62,6 +63,12 @@ export function MessageBubble({ message, senderName, onRetry }: { message: Optim
         ) : null}
         <div className={cn("flex flex-wrap items-center gap-x-2 gap-y-0.5 px-1 text-[11px] text-muted-foreground", outbound ? "justify-end" : "justify-start")}>
           {outbound && by ? by : null}
+          {!outbound && looksFinglish(message.text) ? (
+            <span className="rounded-full bg-surface-muted px-1.5 font-medium" title={t("finglishHint")}>
+              {t("finglish")}
+              <span className="sr-only">: {t("finglishHint")}</span>
+            </span>
+          ) : null}
           {message.tag === "HUMAN_AGENT" ? <span title={t("humanAgentTag")}>· HUMAN_AGENT</span> : null}
           <time dateTime={message.createdAt} title={formatDateTime(message.createdAt)}>
             {formatTime(message.createdAt)}

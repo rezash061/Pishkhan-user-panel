@@ -160,7 +160,7 @@ for (const c of conversations) {
   messages.set(c.id, [
     m(-26 * 60, "inbound", "سلام، این مانتو کتان رو دیدم"),
     m(-26 * 60 + 1, "outbound", "سلام! خوش اومدید 🌸 قیمت مانتو کتان ۸۹۰ هزار تومانه و سایزهای M تا XL موجوده.", { handledBy: "ai" }),
-    m(-30, "inbound", "رنگ کرم هم دارید؟", { kind: "text" }),
+    m(-30, "inbound", "rang kerem ham darid?", { kind: "text" }),
     m(-29, "outbound", "برای دیدن رنگ‌ها کلمه «رنگ» رو بفرستید.", { handledBy: "rule" }),
     m(-40, "inbound", null, { kind: "attachment", attachments: [{ type: "image", url: svgThumb(330, "عکس مشتری") }] }),
     m(-5, "inbound", "این استوری رو می‌خوام", { kind: "story_reply", attachments: [{ type: "story_reply", url: svgThumb(20, "استوری") }] }),
@@ -207,6 +207,8 @@ const agentDefaults = { name: "دستیار", tone: "friendly", brandVoice: null
 let agentProfileUpdatedAt = null;
 const traceBase = { messageId: randomUUID(), flowRunId: null, goal: null, language: "fa", sentiment: "neutral", classifierConfidence: 0.9, toolCalls: [], guardIssues: [], selfConfidence: 0.8, threshold: 0.6, prompts: "intent.classify@2, agent.reply@1", models: "gpt-4o-mini", inputTokens: 1840, outputTokens: 96, costIrr: 41_000, latencyMs: 2300 };
 const agentTraces = [
+  // A Finglish turn (BE-2.3): the AI read it in Persian script.
+  { ...traceBase, id: randomUUID(), language: "finglish", conversationId: "0199b000-0000-7000-8000-000000001004", input: "salam gheymatesh chande?", intent: "price_question", outcome: "sent", handoffReason: null, reply: "سلام! قیمت مانتو کتان ۸۹۰ هزار تومانه 🌸", confidence: 0.82, facts: [], createdAt: ago(20 * 60_000) },
   { ...traceBase, id: randomUUID(), conversationId: "0199b000-0000-7000-8000-000000001001", input: "ارسال به شیراز چند روز طول می‌کشه؟", intent: "shipping", outcome: "sent", handoffReason: null, reply: "سلام! ارسال به شهرستان‌ها با پست پیشتاز دو تا چهار روز کاری است 🌸", confidence: 0.88, facts: [{ chunkId: randomUUID(), sourceId: randomUUID(), sourceKind: "faq", title: "ارسال به شهرستان چند روز طول می‌کشد؟", score: 0.03, similarity: 0.91 }], createdAt: ago(40 * 60_000) },
   { ...traceBase, id: randomUUID(), conversationId: "0199b000-0000-7000-8000-000000001008", input: "قدم ۱۶۵ه، کدوم سایز رو بگیرم؟", intent: "other", outcome: "handed_off", handoffReason: "low_confidence", reply: "سلام! سایز M برای قد ۱۶۵ مناسب است.", selfConfidence: 0.5, classifierConfidence: 0.4, confidence: 0.45, facts: [], createdAt: ago(25 * H) },
   { ...traceBase, id: randomUUID(), conversationId: "0199b000-0000-7000-8000-000000001003", input: "مانتو کتان چنده؟", intent: "price_question", outcome: "handed_off", handoffReason: "guard_price", reply: null, confidence: null, toolCalls: [{ name: "get_product", arguments: "{\"query\":\"مانتو کتان\"}", result: "{\"title\":\"مانتو کتان تابستانه\",\"price\":\"۸۹۰٬۰۰۰ تومان\"}", error: null }], guardIssues: [{ attempt: 1, kind: "price", detail: "۷۹۰ هزار" }, { attempt: 2, kind: "price", detail: "۷۹۰ هزار" }], facts: [], createdAt: ago(30 * H) },
