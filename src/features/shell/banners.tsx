@@ -6,6 +6,9 @@ import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, type ReactNode } from "react";
 import { useChannels } from "@/features/channels/data";
+import { useOutageStatus } from "@/features/outage/data";
+import { isDown } from "@/features/outage/model";
+import { P } from "@/lib/permissions";
 import { useWorkspace } from "@/features/workspace/context";
 import { cn } from "@/lib/cn";
 import { useHubStatus } from "@/lib/realtime/hub";
@@ -16,7 +19,7 @@ function Banner({ tone, icon, children, action }: { tone: "danger" | "warning" |
       role={tone === "danger" ? "alert" : "status"}
       className={cn(
         "flex items-center gap-2 px-4 py-2 text-sm [&_svg]:size-4 [&_svg]:shrink-0",
-        tone === "danger" && "bg-danger-soft text-danger",
+        tone === "danger" && "bg-danger-soft text-[oklch(0.45_0.17_25)] dark:text-danger",
         tone === "warning" && "bg-warning-soft text-[oklch(0.45_0.11_70)] dark:text-warning",
         tone === "neutral" && "bg-surface-muted text-muted-foreground",
       )}
@@ -46,8 +49,9 @@ function useOnline() {
 /** Never silent (plan principle 4): disconnected Instagram, expiring tokens, no channel, offline, realtime down. */
 export function Banners() {
   const t = useTranslations("banners");
-  const { workspace } = useWorkspace();
+  const { workspace, can } = useWorkspace();
   const channels = useChannels(workspace.id);
+  const outage = useOutageStatus(workspace.id, can(P.inboxRead));
   const hub = useHubStatus();
   const online = useOnline();
   const pathname = usePathname();
@@ -74,6 +78,7 @@ export function Banners() {
   const broken = list.filter((c) => c.status === "reauth_required");
   const expiring = list.filter((c) => c.status === "token_expiring");
   const onChannels = pathname.startsWith(`${base}/channels`);
+  const onOutage = pathname.startsWith(`${base}/settings/outage`);
 
   return (
     <div className="shrink-0">
@@ -84,6 +89,21 @@ export function Banners() {
       ) : hubDownLong ? (
         <Banner tone="neutral" icon={<CloudOff />}>
           {t("realtimeDown")}
+        </Banner>
+      ) : null}
+      {isDown(outage.data?.status) ? (
+        <Banner
+          tone="danger"
+          icon={<CloudOff />}
+          action={
+            can(P.crmRead) && !onOutage ? (
+              <Link href={`${base}/settings/outage`} className="shrink-0 font-semibold underline-offset-4 hover:underline">
+                {t("outageAction")}
+              </Link>
+            ) : null
+          }
+        >
+          <span className="font-semibold">{t("outage")}</span> {t("outageBody")}
         </Banner>
       ) : null}
       {broken.map((c) => (

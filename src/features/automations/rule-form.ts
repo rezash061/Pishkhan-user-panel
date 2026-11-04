@@ -160,7 +160,8 @@ export function ruleProblems(f: RuleForm): Record<string, string> {
   const allowed = allowedActions(f.triggerKind);
   f.actions.forEach((a, i) => {
     const at = `actions[${i}]`;
-    if (!allowed.includes(a.kind as never)) p[at] = isCommentTrigger(f.triggerKind) ? "automation.action_needs_conversation" : "automation.action_needs_comment";
+    if (a.kind === "capture_phone") p[at] = "automation.capture_phone_flow_only";
+    else if (!allowed.includes(a.kind as never)) p[at] = isCommentTrigger(f.triggerKind) ? "automation.action_needs_conversation" : "automation.action_needs_comment";
     if (a.kind === "schedule_followup" && !followUpDelayValid(a.delaySeconds)) p[`${at}.delaySeconds`] = "automation.followup_delay_invalid";
     if (a.kind === "send_message" || a.kind === "private_reply" || a.kind === "schedule_followup") {
       const problem = messageProblem(a.message);

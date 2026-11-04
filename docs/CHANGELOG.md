@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.24.0 — 2026-11-04
+
+- Instagram outage (backend #47, BE-2.7 part 1):
+  - While `GET /channels/outage` says `down`, a red banner across the panel reads «اینستاگرام در دسترس نیست» and links to the campaign page. The status is checked every minute and refreshed at once when a `channel_outage` notification arrives.
+  - Settings «قطعی اینستاگرام» (`/settings/outage`, the backend notification's link; `workspace.crm.read`, sending needs `workspace.crm.write`):
+    - Instagram's status and since when.
+    - The audience: contacts, with a mobile, and agreed to SMS.
+    - The text (5–300 characters) with a live SMS preview that puts the shop's name in front, as the backend does, and the number of SMS parts. A hint appears when the text has no Bale or website link.
+    - «فرستادن پیامک» asks to confirm and names how many people will get it, then sends with an Idempotency-Key.
+    - `outage.not_down` and `outage.campaign_cooldown` are in Persian; the next allowed time (`nextAllowedAt`) shows in Jalali.
+    - History with progress (polled while `sending`) and `limit_reached` explained.
+  - Flows: the «کار» step offers «ذخیره شماره با رضایت» (`capture_phone`). Its `value` defaults to `{{flow.phone}}` and it takes `consentText`, the question the customer agreed to (5–500 characters). The help explains that the consent is recorded with that question and that rules cannot use it. `flow.capture_phone_invalid` and `automation.capture_phone_flow_only` are in Persian, and the rule editor never offers it.
+- The red banner's text is darker in light mode, for contrast (WCAG AA).
+- Mock Api host: outage status (up unless a test turns it down with `/__mock/outage`), audience, campaigns texting 2 people a second, the 24-hour cooldown, and `capture_phone` validation. New e2e spec `outage.spec.ts`.
+- API refreshed from backend main (BE-2.7 part 1).
+
 ## 0.23.0 — 2026-11-03
 
 - Feed import (backend #46, BE-2.5, UP-2.5 "feed import review"):

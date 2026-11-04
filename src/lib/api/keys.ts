@@ -73,6 +73,9 @@ export const qk = {
   templates: (ws: string) => ["templates", ws] as const,
   template: (ws: string, id: string) => ["templates", ws, "one", id] as const,
   templateApplications: (ws: string) => ["templates", ws, "applications"] as const,
+  outageStatus: (ws: string) => ["outage", ws, "status"] as const,
+  outageAudience: (ws: string) => ["outage", ws, "audience"] as const,
+  outageCampaigns: (ws: string) => ["outage", ws, "campaigns"] as const,
   merchantAccount: (ws: string) => ["payments", ws, "merchant"] as const,
   paymentLinks: (ws: string, orderId: string) => ["orders", ws, "one", orderId, "payment-links"] as const,
 };

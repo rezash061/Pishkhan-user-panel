@@ -24,6 +24,13 @@ export function followUpSeconds(amount: number, unit: "minutes" | "hours"): numb
 }
 export const MAX_PUBLIC_REPLIES = 20;
 
+/** `capture_phone` (BE-2.7): the number (usually a question's answer) and the consent question, 5–500 characters. */
+export function capturePhoneProblem(a: Pick<RuleAction, "value" | "consentText">): "value" | "consentText" | null {
+  if (!a.value?.trim() || a.value.length > 100) return "value";
+  const n = a.consentText?.trim().length ?? 0;
+  return n < 5 || n > 500 ? "consentText" : null;
+}
+
 /** Instagram limits mirrored from backend `MessageValidator`. */
 export const messageLimits = { text: 1000, textWithButtons: 640, buttons: 3, quickReplies: 13, title: 20 } as const;
 
@@ -92,6 +99,8 @@ export function newAction(kind: ActionKind): RuleAction {
       return { kind, replies: [""] };
     case "schedule_followup":
       return { kind, message: emptyMessage(), delaySeconds: FOLLOWUP_DEFAULT_SECONDS, cancelOnReply: true, cancelOnPurchase: true };
+    case "capture_phone":
+      return { kind, value: "{{flow.phone}}", consentText: "" };
     default:
       return { kind };
   }

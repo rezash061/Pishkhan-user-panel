@@ -100,8 +100,8 @@ export const matchModes = ["contains", "exact", "any_of", "pattern"] as const;
 export type MatchMode = (typeof matchModes)[number];
 export type CommentScope = "all" | "post" | "next_post";
 
-/** `ActionKinds.Available`; capture_phone comes later. */
-export const actionKinds = ["send_message", "private_reply", "public_reply", "send_cards", "start_flow", "add_tag", "remove_tag", "set_field", "handoff", "pause_ai", "notify_team", "schedule_followup"] as const;
+/** `ActionKinds.Available`. `capture_phone` is for flows only. */
+export const actionKinds = ["send_message", "private_reply", "public_reply", "send_cards", "start_flow", "add_tag", "remove_tag", "set_field", "handoff", "pause_ai", "notify_team", "schedule_followup", "capture_phone"] as const;
 export type ActionKind = (typeof actionKinds)[number];
 
 /** `FlowNodeTypes.Available` (follow_gate since BE-1.8). */
@@ -163,3 +163,6 @@ export type FeedImport = Schemas["FeedImportResponse"];
 export type FeedImportDetail = Schemas["FeedImportDetail"];
 export type FeedItem = Schemas["FeedItemResponse"];
 export type FeedItemUpdate = Schemas["FeedItemUpdate"];
+export type OutageStatus = Schemas["OutageStatusResponse"];
+export type CampaignAudience = Schemas["CampaignAudienceResponse"];
+export type OutageCampaign = Schemas["CampaignResponse"];

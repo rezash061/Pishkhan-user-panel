@@ -14,7 +14,7 @@ import type { ActionKind, FlowCondition, FlowNode, FlowNodeType } from "@/lib/ap
 import { answerTypes, flowNodeTypes } from "@/lib/api/types";
 import { MAX_DELAY_SECONDS, MIN_DELAY_SECONDS, splitDelay, unitSeconds, VARIABLE_PATTERN } from "./model";
 
-const flowActionKinds: ActionKind[] = ["add_tag", "remove_tag", "set_field", "handoff", "pause_ai", "notify_team", "schedule_followup"];
+const flowActionKinds: ActionKind[] = ["add_tag", "remove_tag", "set_field", "handoff", "pause_ai", "notify_team", "schedule_followup", "capture_phone"];
 const subjects = ["tag", "field", "variable", "time"] as const;
 const opsFor: Record<string, string[]> = {
   tag: ["has", "not_has"],

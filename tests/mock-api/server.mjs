@@ -626,6 +626,28 @@ const acceptFeedItem = (it, activate) => {
   return p.id;
 };
 
+// Outage (BE-2.7 part 1): Instagram's platform status and the «move my customers» SMS. Up by default; tests turn it down
+// with /__mock/outage. A campaign texts 2 people a second and stops at the SMS allowance; one per 24 hours.
+let outage = { kind: "instagram", status: "up", mode: "auto", since: ago(6 * 24 * H) };
+let outageCampaigns = [];
+const outageAudience = { contacts: 24, withPhone: 11, reachable: 7 };
+const SMS_ALLOWANCE = 500;
+const campaignView = (c) => {
+  if (c.status === "sending") {
+    const done = Math.min(c.scanned, Math.floor(((Date.now() - new Date(c.createdAt).getTime()) / 1000) * 2));
+    c.failed = done >= 3 ? 1 : 0;
+    c.sent = done - c.failed;
+    if (done >= c.scanned) Object.assign(c, { status: c.scanned > SMS_ALLOWANCE ? "limit_reached" : "completed", completedAt: iso(now()) });
+  }
+  return { ...c, idempotencyKey: undefined };
+};
+const nextCampaignAt = () => {
+  const last = outageCampaigns[0];
+  if (!last) return null;
+  const next = new Date(last.createdAt).getTime() + 24 * H;
+  return next > Date.now() ? iso(new Date(next)) : null;
+};
+
 const kbPages = { "https://niloofar.example/shipping": { title: "قوانین ارسال", body: "ارسال رایگان برای خرید بالای یک میلیون تومان. تهران یک روزه." } };
 const kbIndex = (src) => {
   Object.assign(src, { status: "pending", revision: src.revision + 1, error: null, updatedAt: iso(now()) });
@@ -675,6 +697,7 @@ const validateFlow = (graph) => {
     if (n.type === "follow_gate" && !n.message?.text?.trim()) errors.push({ code: "flow.message_required", nodeId: n.id });
     if ((n.type === "follow_gate" || n.type === "question") && (n.maxRetries ?? 0) > 5) errors.push({ code: "flow.max_retries_invalid", nodeId: n.id });
     if (n.type === "action" && (n.actions ?? []).some((a) => a.kind === "schedule_followup" && followUpProblem(a))) errors.push({ code: "flow.followup_invalid", nodeId: n.id });
+    if (n.type === "action" && (n.actions ?? []).some((a) => a.kind === "capture_phone" && (!a.value?.trim() || (a.consentText?.trim().length ?? 0) < 5 || a.consentText.trim().length > 500))) errors.push({ code: "flow.capture_phone_invalid", nodeId: n.id });
   }
   const seen = new Set([graph.start]);
   const queue = [graph.start];
@@ -1178,6 +1201,8 @@ const routes = [
     const body = await readBody(req);
     if (["dm_keyword", "comment_keyword"].includes(body.triggerKind) && !body.trigger?.keywords?.length && !body.trigger?.pattern)
       return problem(res, 400, "validation.failed", { "trigger.keywords": ["automation.keywords_required"] });
+    const phoneAt = (body.actions ?? []).findIndex((a) => a.kind === "capture_phone");
+    if (phoneAt >= 0) return problem(res, 400, "validation.failed", { [`actions[${phoneAt}]`]: ["automation.capture_phone_flow_only"] });
     const fu = (body.actions ?? []).map((a, i) => [a, i]).filter(([a]) => a.kind === "schedule_followup");
     if (fu.length > 1) return problem(res, 400, "validation.failed", { actions: ["automation.one_followup"] });
     for (const [a, i] of fu) {
@@ -1682,6 +1707,31 @@ const routes = [
   ["POST", /^\/__mock\/feed\/reset$/, (req, res) => {
     resetFeed();
     send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/channels\/outage$/, (req, res) => send(res, 200, outage)],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/outage\/audience$/, (req, res) => send(res, 200, { ...outageAudience, outage: outage.status === "down", nextAllowedAt: nextCampaignAt() })],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/outage\/campaigns$/, (req, res) => send(res, 200, outageCampaigns.map(campaignView))],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/outage\/campaigns\/([^/]+)$/, (req, res, url, [id]) => {
+    const c = outageCampaigns.find((x) => x.id === id);
+    return c ? send(res, 200, campaignView(c)) : problem(res, 404, "common.not_found");
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/outage\/campaigns$/, async (req, res) => {
+    const key = req.headers["idempotency-key"];
+    const seen = key && outageCampaigns.find((c) => c.idempotencyKey === key);
+    if (seen) return send(res, 202, campaignView(seen));
+    const text = (await readBody(req)).text?.trim() ?? "";
+    if (text.length < 5 || text.length > 300) return problem(res, 400, "validation.failed", { text: ["validation.text.length"] });
+    if (outage.status !== "down") return problem(res, 422, "outage.not_down");
+    if (nextCampaignAt()) return problem(res, 409, "outage.campaign_cooldown");
+    const c = { id: randomUUID(), channel: "sms", text: `${ws.name}:\n${text}`, status: "sending", scanned: outageAudience.reachable, sent: 0, failed: 0, createdAt: iso(now()), completedAt: null, idempotencyKey: key ?? null };
+    outageCampaigns.unshift(c);
+    send(res, 202, campaignView(c));
+  }],
+  // Test hooks: Instagram down or up again (as the detector would decide), and forget every campaign.
+  ["POST", /^\/__mock\/outage$/, (req, res, url) => {
+    outage = { ...outage, status: url.searchParams.get("status") === "down" ? "down" : "up", since: iso(now()) };
+    if (url.searchParams.get("reset")) outageCampaigns = [];
+    send(res, 200, outage);
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, (req, res) => send(res, 200, merchant)],
   ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, async (req, res) => {

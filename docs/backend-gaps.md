@@ -65,3 +65,10 @@ Found on 2026-11-03 against backend main after PR #40.
 
 21. **Onboarding progress is not stored.** Plan 3.1 asks for every step to be resumable "state from backend". There is no onboarding state endpoint, so a user who leaves the template step lands on the dashboard next time. Today `lastApplied` on the templates is the only trace.
 22. **Template FAQs and rules are not marked in their own lists.** Applied FAQs and rules carry a template key on the backend, but `SourceResponse` and the rule response do not expose it. The knowledge and automation pages therefore cannot filter «from the template, still off» or point at the items with blanks to fill.
+
+## Instagram outage (BE-2.7 part 1)
+
+Found on 2026-11-04 against backend main after PR #47.
+
+23. **The cooldown refusal does not say until when.** 409 `outage.campaign_cooldown` has no `nextAllowedAt`, so the panel reads it from `GET /outage/audience` again after the refusal. Putting it in the problem's `detail` or extensions would save a round trip.
+24. **The banner and the campaign disagree about "down".** `GET /channels/outage` is the platform status, while campaigns are also allowed when only one of the workspace's accounts cannot send (`audience.outage`). A workspace in that state sees no banner, though the campaign page lets it send. `channels/outage` could include the workspace's own reachability.
