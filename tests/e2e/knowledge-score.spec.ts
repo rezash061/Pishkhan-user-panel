@@ -89,15 +89,17 @@ test("interview: answer, AI draft, edit, confirm and the score rises; skip moves
   await expect(page.getByText("۲ از ۸ جواب داده شده")).toBeVisible();
 });
 
-test("onboarding: after Instagram and the template, the teach step runs the interview", async ({ page }) => {
+test("onboarding: after Instagram, the template and the import, the teach step runs the interview", async ({ page }) => {
   await login(page);
   await page.goto(`/onboarding/connect?ws=${workspaceId}`);
   await page.getByRole("link", { name: "بعداً وصل می‌کنم" }).click();
   await page.waitForURL(`**/onboarding/template?ws=${workspaceId}`);
   await page.getByRole("link", { name: "فعلاً نه، ادامه" }).click();
+  await page.waitForURL(`**/onboarding/import?ws=${workspaceId}`);
+  await page.getByRole("link", { name: "فعلاً نه، ادامه" }).click();
   await page.waitForURL(`**/onboarding/teach?ws=${workspaceId}`);
   await expect(page.getByRole("heading", { name: "به دستیار یاد بدهید" })).toBeVisible();
-  await expect(page.getByText("مرحلهٔ ۴ از ۴")).toBeVisible();
+  await expect(page.getByText("مرحلهٔ ۵ از ۵")).toBeVisible();
   await expect(page.locator("#interview-question")).toBeVisible();
   await page.getByRole("link", { name: "بعداً، رفتن به پیشخوان" }).click();
   await page.waitForURL(`**${base}`);

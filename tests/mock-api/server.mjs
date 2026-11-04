@@ -587,6 +587,45 @@ const draftFaq = (fact, answer) => {
   return { factKey: fact.key, question, answer: `${answer.replace(/[.،\s]+$/, "")}. اگر سؤال دیگری دارید، همین‌جا بپرسید 🌸`, drafted: "ai" };
 };
 
+// Feed import (BE-2.5): past posts read into product and FAQ suggestions (tests/mock-api/fixtures/feed-import.json). A new import
+// reads its posts over a few polls, then completes.
+const feedPosts = JSON.parse(readFileSync(new URL("./fixtures/feed-import.json", import.meta.url), "utf8"));
+let feedImports = [];
+const feedItemsOf = (posts) =>
+  posts.flatMap((p) => p.items.map((it) => ({
+    id: randomUUID(), kind: it.kind, status: "pending", mediaId: p.mediaId, permalink: p.permalink, imageUrl: svgThumb(p.hue, "پست"),
+    title: it.title ?? null, description: it.description ?? null, price: it.price == null ? null : money(it.price), priceInCaption: Boolean(it.priceInCaption),
+    tags: it.tags ?? [], question: it.question ?? null, answer: it.answer ?? null, createdId: null,
+  })));
+const feedView = (f) => ({ ...f, items: undefined, pending: f.items.filter((i) => i.status === "pending").length });
+const resetFeed = () => {
+  const items = feedItemsOf(feedPosts.slice(0, 1)).map((i, n) => (n === 0 ? { ...i, status: "accepted", createdId: randomUUID() } : i));
+  feedImports = [{ id: "0199f200-0000-7000-8000-000000000001", channelAccountId: channel.id, status: "completed", maxPosts: 20, postsRead: 20, postsAnalyzed: 18, postsFailed: 0, itemsFound: items.length, error: null, createdAt: ago(3 * 24 * H), completedAt: ago(3 * 24 * H - 120_000), items }];
+};
+resetFeed();
+// A running import reads 10 posts a second; after 4 seconds it completes with the fixture's suggestions.
+const advanceFeed = (f) => {
+  if (f.status !== "running") return;
+  const seconds = (Date.now() - new Date(f.createdAt).getTime()) / 1000;
+  f.postsRead = Math.min(f.maxPosts, Math.floor(seconds) * 10);
+  f.postsAnalyzed = Math.max(0, f.postsRead - 1);
+  if (seconds >= 4) {
+    f.items = feedItemsOf(feedPosts);
+    Object.assign(f, { status: "completed", postsRead: Math.min(f.maxPosts, 30), postsAnalyzed: Math.min(f.maxPosts, 28), postsFailed: 1, itemsFound: f.items.length, completedAt: iso(now()) });
+  }
+};
+const feedItemProblems = (it) => (it.kind === "product" && !it.title?.trim() ? ["validation.required"] : it.kind === "faq" && (!it.question?.trim() || !it.answer?.trim()) ? ["validation.required"] : []);
+const acceptFeedItem = (it, activate) => {
+  if (it.kind === "faq") {
+    const src = kbSource("faq", it.question, it.answer, { createdAt: iso(now()), updatedAt: iso(now()) });
+    kbSources.unshift(src);
+    return src.id;
+  }
+  const p = { id: randomUUID(), title: it.title, description: it.description, categoryId: null, tags: it.tags, status: activate && it.priceInCaption && it.price ? "active" : "draft", price: it.price, imageFileIds: [], linkUrl: null, variants: [], revision: 1, createdAt: iso(now()), updatedAt: iso(now()) };
+  products.push(p);
+  return p.id;
+};
+
 const kbPages = { "https://niloofar.example/shipping": { title: "قوانین ارسال", body: "ارسال رایگان برای خرید بالای یک میلیون تومان. تهران یک روزه." } };
 const kbIndex = (src) => {
   Object.assign(src, { status: "pending", revision: src.revision + 1, error: null, updatedAt: iso(now()) });
@@ -1572,6 +1611,76 @@ const routes = [
     templateApplications = [];
     templateKeys = new Set();
     agentProfileSet = false;
+    send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/feed-imports$/, (req, res) => {
+    for (const f of feedImports) advanceFeed(f);
+    send(res, 200, feedImports.slice(0, 20).map(feedView));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/feed-imports$/, async (req, res) => {
+    const b = await readBody(req);
+    if (b.channelAccountId !== channel.id) return problem(res, 404, "knowledge.channel_not_found");
+    if (feedImports.some((f) => f.status === "running")) return problem(res, 409, "knowledge.feed_import_running");
+    const maxPosts = b.maxPosts ?? 50;
+    if (maxPosts < 1 || maxPosts > 200) return problem(res, 400, "validation.failed", { maxPosts: ["validation.too_many"] });
+    const f = { id: randomUUID(), channelAccountId: channel.id, status: "running", maxPosts, postsRead: 0, postsAnalyzed: 0, postsFailed: 0, itemsFound: 0, error: null, createdAt: iso(now()), completedAt: null, items: [] };
+    feedImports.unshift(f);
+    send(res, 202, feedView(f));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/feed-imports\/([^/]+)$/, (req, res, url, [id]) => {
+    const f = feedImports.find((x) => x.id === id);
+    if (!f) return problem(res, 404, "common.not_found");
+    advanceFeed(f);
+    const items = [...f.items].sort((a, b) => Number(b.status === "pending") - Number(a.status === "pending"));
+    send(res, 200, { import: feedView(f), items });
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/feed-imports\/([^/]+)\/items\/([^/]+)$/, async (req, res, url, [id, itemId]) => {
+    const it = feedImports.find((x) => x.id === id)?.items.find((x) => x.id === itemId);
+    if (!it) return problem(res, 404, "common.not_found");
+    if (it.status !== "pending") return problem(res, 409, "knowledge.feed_item_not_pending");
+    const b = await readBody(req);
+    const priceChanged = b.price !== undefined && (b.price?.amount ?? null) !== (it.price?.amount ?? null);
+    for (const k of ["title", "description", "tags", "question", "answer"]) if (b[k] !== undefined && b[k] !== null) it[k] = b[k];
+    if (it.kind === "product" && b.price !== undefined) it.price = b.price;
+    // A price the owner sets here counts as theirs.
+    if (priceChanged && it.price) it.priceInCaption = true;
+    send(res, 200, it);
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/feed-imports\/([^/]+)\/items\/([^/]+)\/accept$/, async (req, res, url, [id, itemId]) => {
+    const it = feedImports.find((x) => x.id === id)?.items.find((x) => x.id === itemId);
+    if (!it) return problem(res, 404, "common.not_found");
+    if (it.status !== "pending") return problem(res, 409, "knowledge.feed_item_not_pending");
+    const b = await readBody(req);
+    const issues = feedItemProblems(it);
+    if (issues.length) return problem(res, 422, "knowledge.feed_item_invalid", { [it.kind === "faq" ? "question" : "title"]: issues });
+    Object.assign(it, { status: "accepted", createdId: acceptFeedItem(it, b.activate !== false) });
+    send(res, 200, it);
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/feed-imports\/([^/]+)\/accept$/, async (req, res, url, [id]) => {
+    const f = feedImports.find((x) => x.id === id);
+    if (!f) return problem(res, 404, "common.not_found");
+    const b = await readBody(req);
+    if (!b.itemIds?.length || b.itemIds.length > 100) return problem(res, 400, "validation.failed", { itemIds: ["validation.too_many"] });
+    const accepted = [];
+    const failed = {};
+    for (const itemId of b.itemIds) {
+      const it = f.items.find((x) => x.id === itemId);
+      if (!it) failed[itemId] = ["common.not_found"];
+      else if (it.status !== "pending") failed[itemId] = ["knowledge.feed_item_not_pending"];
+      else if (feedItemProblems(it).length) failed[itemId] = feedItemProblems(it);
+      else accepted.push(Object.assign(it, { status: "accepted", createdId: acceptFeedItem(it, b.activate !== false) }));
+    }
+    send(res, 200, { accepted, failed });
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/knowledge\/feed-imports\/([^/]+)\/items\/([^/]+)\/reject$/, (req, res, url, [id, itemId]) => {
+    const it = feedImports.find((x) => x.id === id)?.items.find((x) => x.id === itemId);
+    if (!it) return problem(res, 404, "common.not_found");
+    if (it.status !== "pending") return problem(res, 409, "knowledge.feed_item_not_pending");
+    it.status = "rejected";
+    send(res, 200, it);
+  }],
+  ["POST", /^\/__mock\/feed\/reset$/, (req, res) => {
+    resetFeed();
     send(res, 204);
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, (req, res) => send(res, 200, merchant)],

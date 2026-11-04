@@ -159,3 +159,7 @@ export type FollowUp = Schemas["FollowUpResponse"];
 export type TemplateSummary = Schemas["TemplateSummaryResponse"];
 export type TemplatePreview = Schemas["TemplatePreviewResponse"];
 export type TemplateApplication = Schemas["TemplateApplicationResponse"];
+export type FeedImport = Schemas["FeedImportResponse"];
+export type FeedImportDetail = Schemas["FeedImportDetail"];
+export type FeedItem = Schemas["FeedItemResponse"];
+export type FeedItemUpdate = Schemas["FeedItemUpdate"];
