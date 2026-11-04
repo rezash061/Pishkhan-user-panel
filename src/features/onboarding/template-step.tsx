@@ -20,7 +20,7 @@ export function TemplateStep({ workspaceId, role }: { workspaceId: string; role:
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>
       </div>
       <TemplatePicker ws={workspaceId} writable={can(role, P.settingsWrite)} onApplied={() => setApplied(true)} />
-      <Link href={`/onboarding/teach?ws=${workspaceId}`} className={buttonVariants({ variant: applied ? "primary" : "ghost", size: applied ? "lg" : "md", className: "w-full" })}>
+      <Link href={`/onboarding/import?ws=${workspaceId}`} className={buttonVariants({ variant: applied ? "primary" : "ghost", size: applied ? "lg" : "md", className: "w-full" })}>
         {applied ? t("done") : t("skip")}
       </Link>
     </div>

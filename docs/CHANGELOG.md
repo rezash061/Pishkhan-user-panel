@@ -1,5 +1,21 @@
 # Changelog
 
+## 0.23.0 — 2026-11-03
+
+- Feed import (backend #46, BE-2.5, UP-2.5 "feed import review"):
+  - «ورود از پست‌ها» tab under knowledge, and onboarding step 4 between the template and the teach steps (now five steps):
+    - Pick a connected Instagram account and how many recent posts to read (50 by default, kept within 1–200). It says that nothing goes live until the owner accepts it.
+    - `knowledge.feed_import_running` links to the running import, and `knowledge.channel_not_found` is in Persian.
+  - Progress: polled every 3 seconds while `running`, with posts read, analyzed and failed, the suggestions found, and a bar. A failed import shows its `error`.
+  - Review: suggestions grouped by post, with the post's image (Instagram's CDN, or a placeholder) and a link to the post.
+    - Product cards edit the title, description, price in Toman and tags inline (PUT). FAQ cards edit the question and answer.
+    - A price that was not in the caption shows «این قیمت در متن پست نبود؛ بررسی کنید». Accepted as is, the product becomes a catalog draft; once the owner edits the price it is theirs, and the product goes on sale. Each product card says which it will be.
+    - «پذیرفتن» (saves edits first), «رد کردن», and «پذیرفتن همه انتخاب‌شده‌ها» (up to 100) with each failed item's reasons on its own card. `knowledge.feed_item_invalid` shows the catalog's own error keys, and `knowledge.feed_item_not_pending` is in Persian.
+    - Accepting needs both `workspace.knowledge.write` and `workspace.catalog.write`. An accepted card links to its product or FAQ.
+  - «ورودهای قبلی»: the last 20 imports with status, posts, suggestions and how many still wait.
+- Mock Api host: a Persian three-post import (`tests/mock-api/fixtures/feed-import.json`) with products and FAQs, one price not in the caption and one product without a name. A run completes after about 4 seconds, and `/__mock/feed/reset` starts over. New e2e spec `feed-import.spec.ts`.
+- API refreshed from backend main (BE-2.5).
+
 ## 0.22.0 — 2026-11-03
 
 - Voice notes (backend #45, BE-2.4):

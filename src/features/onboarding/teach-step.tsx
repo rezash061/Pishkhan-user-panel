@@ -15,7 +15,7 @@ export function TeachStep({ workspaceId, role }: { workspaceId: string; role: st
   const home = `/w/${workspaceId}`;
   return (
     <div className="space-y-6">
-      <Stepper step={4} />
+      <Stepper step={5} />
       <div className="space-y-1">
         <h1 className="text-xl font-bold">{t("title")}</h1>
         <p className="text-sm text-muted-foreground">{t("subtitle")}</p>

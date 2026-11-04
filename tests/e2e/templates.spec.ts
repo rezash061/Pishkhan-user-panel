@@ -28,7 +28,7 @@ test("onboarding: previews the clothing template, applies it and links to the bl
   await page.getByRole("link", { name: "بعداً وصل می‌کنم" }).click();
   await page.waitForURL(`**/onboarding/template?ws=${workspaceId}`);
   await expect(page.getByRole("heading", { name: "با قالب صنف خود شروع کنید" })).toBeVisible();
-  await expect(page.getByText("مرحلهٔ ۳ از ۴")).toBeVisible();
+  await expect(page.getByText("مرحلهٔ ۳ از ۵")).toBeVisible();
 
   // The workspace sells clothing: its template comes first, recommended and picked.
   const first = page.getByRole("radio").first();
@@ -61,9 +61,9 @@ test("onboarding: previews the clothing template, applies it and links to the bl
   await expect(result).toContainText("۳ قانون (خاموش)");
   await expect(result).toContainText("تنظیمات دستیار هوشمند");
   await expect(result.getByRole("link", { name: "دانش کسب‌وکار" })).toHaveAttribute("href", `${base}/knowledge`);
-  // On to the last step, teaching the assistant.
-  await page.getByRole("link", { name: "ادامه: آموزش دستیار" }).click();
-  await page.waitForURL(`**/onboarding/teach?ws=${workspaceId}`);
+  // On to importing from posts.
+  await page.getByRole("link", { name: "ادامه", exact: true }).click();
+  await page.waitForURL(`**/onboarding/import?ws=${workspaceId}`);
 });
 
 test("settings: applying again adds nothing new and shows the history", async ({ page }) => {

@@ -18,6 +18,7 @@ export function KnowledgeTabs() {
       tabs={[
         { href: base, label: t("sources") },
         { href: `${base}/score`, label: t("score") },
+        { href: `${base}/import`, label: t("import"), prefix: true },
         { href: `${base}/unanswered`, label: count ? t("unansweredCount", { n: more ? `${count}+` : String(count) }) : t("unanswered") },
       ]}
     />
