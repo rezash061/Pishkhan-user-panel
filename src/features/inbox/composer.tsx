@@ -8,20 +8,11 @@ import { Button } from "@/components/ui/button";
 import type { Conversation, QuickReply } from "@/lib/api/types";
 import { cn } from "@/lib/cn";
 import { formatCountdown } from "@/lib/i18n/format";
-import { messagingWindow } from "./window";
+import { messagingWindow, useNow } from "./window";
 
 export interface ComposerHandle {
   focus: () => void;
   setText: (text: string) => void;
-}
-
-function useNow(intervalMs: number) {
-  const [now, setNow] = useState(() => new Date());
-  useEffect(() => {
-    const timer = setInterval(() => setNow(new Date()), intervalMs);
-    return () => clearInterval(timer);
-  }, [intervalMs]);
-  return now;
 }
 
 const MAX_LENGTH = 1000;
@@ -109,6 +100,7 @@ export const Composer = forwardRef<ComposerHandle, {
 
   return (
     <div className="shrink-0 border-t bg-surface p-2 safe-bottom sm:p-3">
+      {win.kind === "always" && canReply ? null : (
       <div
         className={cn(
           "mb-2 flex items-center gap-1.5 px-1 text-xs",
@@ -128,6 +120,7 @@ export const Composer = forwardRef<ComposerHandle, {
                   : t("windowNone")}
         </span>
       </div>
+      )}
 
       {pickerOpen ? (
         <div role="listbox" aria-label={t("quickReplies")} className="mb-2 max-h-56 overflow-y-auto rounded-xl border bg-surface shadow-lg">

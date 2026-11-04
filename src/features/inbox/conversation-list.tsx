@@ -6,6 +6,7 @@ import Link from "next/link";
 import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useDeferredValue, useEffect, useMemo, useRef, useState } from "react";
+import { BaleIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/field";
@@ -148,6 +149,12 @@ function Row({ conversation: c, href, active }: { conversation: Conversation; hr
           <span className={cn("min-w-0 flex-1 truncate text-sm", unread ? "font-bold" : "font-medium")} dir="auto">
             {title}
           </span>
+          {c.channelKind === "bale" ? (
+            <Badge tone="success" title={t("channelKinds.bale")}>
+              <BaleIcon className="size-3" />
+              {t("channelKinds.bale")}
+            </Badge>
+          ) : null}
           {time ? <span className="shrink-0 text-xs text-muted-foreground">{formatRelative(time)}</span> : null}
         </div>
         <div className="mt-0.5 flex items-center gap-1.5">

@@ -31,9 +31,32 @@ export function smsParts(body: string): { parts: number; unicode: boolean; lengt
   return { parts: length <= 160 ? 1 : Math.ceil(length / 153), unicode, length };
 }
 
-/** Whether the text already points somewhere customers can still reach the shop (a link, or Bale). */
+/** Placeholder the backend replaces with each recipient's own Bale link (BE-2.7 part 2). */
+export const BALE_LINK = "{link}";
+
+/** Whether the text already points somewhere customers can still reach the shop (a link, the Bale placeholder, or Bale). */
 export function hasLink(text: string): boolean {
-  return /https?:\/\/|www\.|\b[\w-]+\.(ir|com|net|org|shop|store)\b|ble\.ir|بله/i.test(text);
+  return text.includes(BALE_LINK) || /https?:\/\/|www\.|\b[\w-]+\.(ir|com|net|org|shop|store)\b|ble\.ir|بله/i.test(text);
+}
+
+/** Puts `{link}` at the cursor (or the end), with a space on each side where needed. Returns the text and the new cursor. */
+export function insertLink(text: string, start = text.length, end = start): { text: string; cursor: number } {
+  const before = text.slice(0, start);
+  const after = text.slice(end);
+  const lead = before && !/\s$/.test(before) ? " " : "";
+  const trail = after && !/^\s/.test(after) ? " " : "";
+  const value = `${before}${lead}${BALE_LINK}${trail}${after}`;
+  return { text: value, cursor: before.length + lead.length + BALE_LINK.length };
+}
+
+/** A sample of what `{link}` becomes, for the preview. */
+export function sampleBaleLink(botUsername: string | null | undefined): string {
+  return `https://ble.ir/${botUsername || "shop_bot"}?start=Xa7…`;
+}
+
+/** The SMS a recipient gets, with `{link}` shown as a sample link. */
+export function previewBody(shop: string, text: string, botUsername?: string | null): string {
+  return smsBody(shop, text.split(BALE_LINK).join(sampleBaleLink(botUsername)));
 }
 
 export const isDown = (status: string | undefined) => status === "down";

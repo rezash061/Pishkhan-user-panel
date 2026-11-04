@@ -4,7 +4,8 @@ import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState, type FormEvent, type ReactNode } from "react";
 import { toast } from "sonner";
-import { InstagramIcon } from "@/components/icons";
+import { ChannelIcon } from "@/components/icons";
+import { BaleInvite } from "@/features/channels/bale";
 import { Button } from "@/components/ui/button";
 import { Select, Textarea } from "@/components/ui/field";
 import { Skeleton } from "@/components/ui/misc";
@@ -55,19 +56,26 @@ export function SidePanel({ conversation: c, members, canReply, onAssign, idPref
           ) : null}
           <Row label={t("side.channel")}>
             <span className="inline-flex items-center gap-1" dir="ltr">
-              <InstagramIcon className="size-3.5" />@{channel?.username ?? "…"}
+              <ChannelIcon kind={c.channelKind} className="size-3.5" />@{channel?.username ?? "…"}
             </span>
           </Row>
           <Row label={t("side.status")}>{t(`status.${c.status}` as "status.open")}</Row>
           <Row label={t("side.lastMessage")}>{c.lastInboundAt ? <span title={formatDateTime(c.lastInboundAt)}>{formatRelative(c.lastInboundAt)}</span> : "—"}</Row>
           <Row label={t("side.window")}>
-            {win.kind === "open" ? formatCountdown(win.until) : win.kind === "human" ? t("side.windowHuman", { time: formatCountdown(win.until) ?? "" }) : win.kind === "closed" ? t("side.windowClosed") : "—"}
+            {win.kind === "always"
+              ? t("side.windowAlways")
+              : win.kind === "open" ? formatCountdown(win.until) : win.kind === "human" ? t("side.windowHuman", { time: formatCountdown(win.until) ?? "" }) : win.kind === "closed" ? t("side.windowClosed") : "—"}
           </Row>
         </dl>
         {can(P.crmRead) ? (
           <Link href={`/w/${workspace.id}/contacts/${c.contactId}`} className="mt-2 inline-block text-sm text-primary hover:underline">
             {t("side.profile")}
           </Link>
+        ) : null}
+        {can(P.crmWrite) && c.channelKind !== "bale" ? (
+          <div className="mt-3">
+            <BaleInvite contactId={c.contactId} sendIn={{ conversationId: c.id, windowOpen: canReply && win.kind === "open" }} />
+          </div>
         ) : null}
       </section>
 
