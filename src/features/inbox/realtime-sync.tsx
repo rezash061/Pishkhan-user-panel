@@ -72,6 +72,11 @@ export function RealtimeSync({ workspaceId }: { workspaceId: string }) {
   // Sent to the user (not the workspace group), so it can be for another of their workspaces.
   useHubEvent<{ workspaceId: string; id: string; kind: string; title: string; body: string | null; link: string | null }>(HubEvents.notificationCreated, (p) => {
     void qc.invalidateQueries({ queryKey: qk.notifications(p.workspaceId) });
+    // Instagram went down or came back: the banner and the campaign page read the outage status.
+    if (p.kind === "channel_outage") {
+      void qc.invalidateQueries({ queryKey: qk.outageStatus(p.workspaceId) });
+      void qc.invalidateQueries({ queryKey: qk.outageAudience(p.workspaceId) });
+    }
     // Handoffs already have their own toast (handoff.requested); others announce themselves here.
     if (p.workspaceId !== workspaceId || p.kind === "handoff") return;
     const href = notificationHref(workspaceId, p.link);

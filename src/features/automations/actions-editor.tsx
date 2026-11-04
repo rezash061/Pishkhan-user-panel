@@ -1,6 +1,6 @@
 "use client";
 
-import { AlarmClock, ArrowDown, ArrowUp, Bell, Bot, GitBranch, Hand, LayoutGrid, Lock, MessageCircle, MessagesSquare, PenLine, Plus, Tag, TagsIcon, Trash2, type LucideIcon } from "lucide-react";
+import { AlarmClock, ArrowDown, ShieldCheck, ArrowUp, Bell, Bot, GitBranch, Hand, LayoutGrid, Lock, MessageCircle, MessagesSquare, PenLine, Plus, Tag, TagsIcon, Trash2, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -14,7 +14,7 @@ import { commentTriggers } from "@/lib/api/types";
 import { toPersianDigits } from "@/lib/i18n/digits";
 import { useFlows } from "./data";
 import { MessageBuilder } from "./message-builder";
-import { allowedActions, baseVariables, commentVariables, emptyMessage, followUpSeconds, MAX_ACTIONS, MAX_PUBLIC_REPLIES, newAction, splitFollowUpDelay } from "./model";
+import { allowedActions, baseVariables, capturePhoneProblem, commentVariables, emptyMessage, followUpSeconds, MAX_ACTIONS, MAX_PUBLIC_REPLIES, newAction, splitFollowUpDelay } from "./model";
 
 export const actionIcons: Record<ActionKind, LucideIcon> = {
   send_message: MessageCircle,
@@ -29,6 +29,7 @@ export const actionIcons: Record<ActionKind, LucideIcon> = {
   pause_ai: Bot,
   notify_team: Bell,
   schedule_followup: AlarmClock,
+  capture_phone: ShieldCheck,
 };
 
 export function ActionsEditor({
@@ -262,6 +263,8 @@ function ActionBody({
       );
     case "pause_ai":
       return <p className="text-sm text-muted-foreground">{t("hints.pause_ai")}</p>;
+    case "capture_phone":
+      return <CapturePhoneBody id={id} action={a} onChange={onChange} disabled={disabled} />;
     case "schedule_followup":
       return <FollowUpBody id={id} path={path} action={a} variables={variables} onChange={onChange} fieldError={fieldError} disabled={disabled} />;
     default:
@@ -379,6 +382,24 @@ export function FollowUpBody({
           <Switch label={t("cancelOnPurchase")} checked={a.cancelOnPurchase ?? true} disabled={disabled} onChange={(cancelOnPurchase) => onChange({ cancelOnPurchase })} />
         </label>
       </div>
+    </div>
+  );
+}
+
+/** «ذخیره شماره با رضایت» (BE-2.7, flows only): saves the mobile on the contact and records the SMS consent. */
+export function CapturePhoneBody({ id, action: a, onChange, disabled }: { id: string; action: RuleAction; onChange: (patch: Partial<RuleAction>) => void; disabled?: boolean }) {
+  const t = useTranslations("automations.actions.capturePhone");
+  const problem = capturePhoneProblem(a);
+  const consentLength = a.consentText?.trim().length ?? 0;
+  return (
+    <div className="space-y-3">
+      <p className="rounded-xl bg-surface-muted p-3 text-xs text-muted-foreground">{t("help")}</p>
+      <Field label={t("value")} htmlFor={`${id}-phone`} hint={t("valueHint")} error={problem === "value" ? t("valueInvalid") : null}>
+        <Input id={`${id}-phone`} dir="ltr" maxLength={100} disabled={disabled} value={a.value ?? ""} onChange={(e) => onChange({ value: e.target.value })} />
+      </Field>
+      <Field label={t("consentText")} htmlFor={`${id}-consent`} hint={t("consentHint")} error={problem === "consentText" && consentLength > 0 ? t("consentInvalid") : null}>
+        <Textarea id={`${id}-consent`} dir="auto" rows={2} maxLength={500} disabled={disabled} value={a.consentText ?? ""} placeholder={t("consentPlaceholder")} onChange={(e) => onChange({ consentText: e.target.value })} />
+      </Field>
     </div>
   );
 }

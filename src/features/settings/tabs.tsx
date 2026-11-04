@@ -18,6 +18,7 @@ export function SettingsTabs() {
         { href: `${base}/notifications`, label: t("notifications") },
         { href: `${base}/payments`, label: t("payments") },
         { href: `${base}/templates`, label: t("templates") },
+        ...(can(P.crmRead) ? [{ href: `${base}/outage`, label: t("outage") }] : []),
         ...(can(P.auditRead) ? [{ href: `${base}/audit`, label: t("audit") }] : []),
       ]}
     />
