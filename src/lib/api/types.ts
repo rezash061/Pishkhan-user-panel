@@ -172,3 +172,5 @@ export type ReceiptSettings = Schemas["ReceiptSettingsResponse"];
 export type ReceiptSettingsRequest = Schemas["ReceiptSettingsRequest"];
 export type Receipt = Schemas["ReceiptResponse"];
 export type ReceiptCheck = Schemas["ReceiptCheck"];
+export type Overage = Schemas["OverageResponse"];
+export type OverageCharge = Schemas["OverageChargeResponse"];

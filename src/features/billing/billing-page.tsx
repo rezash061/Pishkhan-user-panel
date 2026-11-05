@@ -15,6 +15,7 @@ import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { planName } from "./checkout";
 import { daysLeft, meterState, shareOf, useBillingPlans, useCurrentPlan, useUsage } from "./data";
 import { CheckoutHistory } from "./history";
+import { OverageBlockedBanner, OverageCard } from "./overage";
 import { PlansCard } from "./plans";
 
 /**
@@ -28,9 +29,13 @@ export function BillingPage() {
   return (
     <PageContainer className="max-w-4xl space-y-5">
       <PageHeader title={t("title")} description={t("subtitle")} />
+      <OverageBlockedBanner ws={workspace.id} onBilling />
       <PlanCard ws={workspace.id} />
       <UsageCard ws={workspace.id} />
-      <PlansCard ws={workspace.id} current={current.data} />
+      <OverageCard ws={workspace.id} />
+      <div id="plans" className="scroll-mt-4">
+        <PlansCard ws={workspace.id} current={current.data} />
+      </div>
       <CheckoutHistory ws={workspace.id} />
     </PageContainer>
   );

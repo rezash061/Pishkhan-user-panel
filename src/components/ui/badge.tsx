@@ -7,7 +7,8 @@ const badge = cva("inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-
     tone: {
       neutral: "bg-surface-muted text-muted-foreground",
       primary: "bg-primary-soft text-primary",
-      success: "bg-success-soft text-success",
+      // The success colour is too light for small text on its soft background (3.2:1); badges use a darker shade (WCAG AA).
+      success: "bg-success-soft text-[oklch(0.45_0.12_155)] dark:text-success",
       warning: "bg-warning-soft text-[oklch(0.5_0.12_70)] dark:text-warning",
       danger: "bg-danger-soft text-danger",
     },
