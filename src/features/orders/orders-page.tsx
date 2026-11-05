@@ -1,6 +1,6 @@
 "use client";
 
-import { Plus, Search, ShoppingBag } from "lucide-react";
+import { FileCheck2, Plus, Search, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 import { usePathname, useRouter, useSearchParams } from "next/navigation";
 import { useTranslations } from "next-intl";
@@ -67,12 +67,18 @@ export function OrdersPage() {
         title={t("title")}
         description={t("subtitle")}
         action={
-          can(P.ordersWrite) ? (
-            <Link href={`/w/${ws}/orders/new`} className={buttonVariants()}>
-              <Plus aria-hidden />
-              {t("new")}
+          <div className="flex flex-wrap gap-2">
+            <Link href={`/w/${ws}/orders/receipts`} className={buttonVariants({ variant: "outline" })}>
+              <FileCheck2 aria-hidden />
+              {t("receipts")}
             </Link>
-          ) : null
+            {can(P.ordersWrite) ? (
+              <Link href={`/w/${ws}/orders/new`} className={buttonVariants()}>
+                <Plus aria-hidden />
+                {t("new")}
+              </Link>
+            ) : null}
+          </div>
         }
       />
       <div role="tablist" aria-label={t("tabsLabel")} className="-mx-4 flex gap-1 overflow-x-auto border-b px-4 scrollbar-thin sm:mx-0 sm:px-0">

@@ -12,6 +12,7 @@ import { Field, Textarea } from "@/components/ui/field";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
 import { PageContainer } from "@/components/ui/page";
 import { PaymentLinkCard } from "@/features/payments/payment-link-card";
+import { OrderReceipts } from "@/features/receipts/receipts-page";
 import { useMembers } from "@/features/team/data";
 import { useWorkspace } from "@/features/workspace/context";
 import { ApiError } from "@/lib/api/errors";
@@ -129,6 +130,7 @@ function Loaded({ order: o }: { order: Order }) {
         </div>
         <div className="space-y-5">
           <PaymentLinkCard order={o} />
+          <OrderReceipts orderId={o.id} orderStatus={o.status} />
           <CustomerCard order={o} />
         </div>
       </div>

@@ -586,6 +586,63 @@ const applyTemplate = (x) => {
 // Payments (BE-2.2): the seller's Zarinpal account and payment links (3 days, newest first).
 let merchant = { configured: false, provider: null, merchantIdHint: null, sandbox: false, enabled: true, updatedAt: null };
 const paymentLinks = [];
+
+// Card-to-card receipts (BE-2.10). `/__mock/receipts?scenario=seed` adds an order awaiting payment for Niloofar and three
+// receipts (one waiting for review with a wrong amount, one rejected automatically as a duplicate, one approved);
+// `scenario=reset` takes them away again. Bank accounts and settings are kept until a reset.
+const luhn = (d) => /^\d{16}$/.test(d) && [...d].reverse().reduce((s, c, i) => { let n = Number(c); if (i % 2) { n *= 2; if (n > 9) n -= 9; } return s + n; }, 0) % 10 === 0;
+const mod97 = (iban) => /^IR\d{24}$/.test(iban) && [...`${iban.slice(4)}1827${iban.slice(2, 4)}`].reduce((r, c) => (r * 10 + Number(c)) % 97, 0) === 1;
+let bankAccounts = [];
+let receiptSettings = { autoApprove: false, threshold: 0.9, amountTolerance: 0, windowHours: 72 };
+let receipts = [];
+const RECEIPT_ORDER_ID = "0199b000-0000-7000-a000-0000000000f1";
+const receiptImage = () => svgThumb(220, "رسید انتقال وجه");
+const check = (key, result, detail = null) => ({ key, result, detail });
+const passChecks = () => ["extraction", "order", "amount", "destination", "time_window", "format", "duplicate"].map((k) => check(k, "pass"));
+const newReceipt = (extra) => ({
+  id: randomUUID(), source: "panel", status: "needs_review", orderId: null, contactId: null, conversationId: null, messageId: null, fileId: randomUUID(),
+  amount: null, paidAt: null, reference: null, sourceCard: null, destinationCard: null, destinationSheba: null, bank: null, confidence: null, checks: [],
+  duplicateOfId: null, rejectReason: null, submittedBy: null, decidedBy: null, decidedAt: null, createdAt: iso(now()), ...extra,
+});
+const receiptView = (r, withImage) => ({ ...r, imageUrl: withImage ? receiptImage() : null });
+const seedReceipts = () => {
+  const c = conversations[0];
+  if (!orders.some((o) => o.id === RECEIPT_ORDER_ID)) {
+    const p = products[1];
+    const o = { id: RECEIPT_ORDER_ID, number: ++orderSeq, source: "ai", status: "awaiting_payment", contactId: c.contactId, conversationId: c.id, customerName: "نیلوفر احمدی", phone: "+989121112233",
+      address: { recipient: null, provinceCode: "THR", province: "تهران", city: "تهران", line: "خیابان ولیعصر، کوچهٔ نسترن، پلاک ۴", postalCode: "1234567890" },
+      items: [{ productId: p.id, variantId: null, title: p.title, variantLabel: null, sku: null, unitPrice: money(1_250_000), quantity: 2, lineTotal: money(2_500_000) }],
+      shippingFee: money(0), discount: money(0), note: null, revision: 2, createdAt: ago(3 * H), updatedAt: ago(3 * H), paidAt: null, closedAt: null };
+    orders.unshift(o);
+    addOrderEvent(o, "created", "ai", { at: o.createdAt });
+  }
+  const first = newReceipt({ source: "panel", status: "approved", amount: money(990_000), paidAt: ago(30 * 24 * H), reference: "778899001122", destinationCard: "6037-99**-****-7893", bank: "ملت", confidence: 0.95, checks: passChecks(), decidedBy: me.id, decidedAt: ago(30 * 24 * H), createdAt: ago(30 * 24 * H) });
+  const review = newReceipt({ source: "message", orderId: RECEIPT_ORDER_ID, contactId: c.contactId, conversationId: c.id, amount: money(2_400_000), paidAt: ago(2 * H), reference: "123456789012", sourceCard: "5022-29**-****-1111", destinationCard: "6037-99**-****-7893", bank: "ملت", confidence: 0.94,
+    checks: [check("extraction", "pass"), check("order", "pass"), check("amount", "fail", "less"), check("destination", "pass"), check("time_window", "pass"), check("format", "pass"), check("duplicate", "pass")], createdAt: ago(H) });
+  const dup = newReceipt({ source: "message", orderId: RECEIPT_ORDER_ID, contactId: c.contactId, conversationId: c.id, status: "rejected", rejectReason: "duplicate", duplicateOfId: first.id, amount: money(990_000), reference: "778899001122", destinationCard: "6037-99**-****-7893", confidence: 0.9,
+    checks: [...passChecks().slice(0, 6), check("duplicate", "fail", "same_reference")], decidedAt: ago(30 * 60_000), createdAt: ago(30 * 60_000) });
+  receipts = [dup, review, first];
+};
+// A receipt being read becomes «needs review» on the next read, as the checks would finish (the model unavailable here).
+const settleReceipts = () => {
+  for (const r of receipts) if (r.status === "processing") Object.assign(r, { status: "needs_review", checks: [check("extraction", "unknown", "unavailable"), check("order", r.orderId ? "pass" : "unknown", r.orderId ? null : "no_order"), check("amount", "unknown"), check("destination", "unknown"), check("time_window", "unknown"), check("format", "unknown"), check("duplicate", "pass")] });
+};
+const resetReceipts = () => {
+  receipts = [];
+  bankAccounts = [];
+  receiptSettings = { autoApprove: false, threshold: 0.9, amountTolerance: 0, windowHours: 72 };
+  const i = orders.findIndex((o) => o.id === RECEIPT_ORDER_ID);
+  if (i >= 0) orders.splice(i, 1);
+};
+const bankError = (b) => {
+  const card = b.cardNumber ? String(b.cardNumber).replace(/\D/g, "") : null;
+  const sheba = b.sheba ? String(b.sheba).toUpperCase() : null;
+  if (!card && !sheba) return { cardNumber: ["payments.bank_account.empty"] };
+  if (card && !luhn(card)) return { cardNumber: ["payments.bank_account.card_invalid"] };
+  if (sheba && !mod97(sheba)) return { sheba: ["payments.bank_account.sheba_invalid"] };
+  return null;
+};
+const bankView = (a) => ({ ...a, cardMask: a.cardNumber ? `${a.cardNumber.slice(0, 4)}-${a.cardNumber.slice(4, 6)}**-****-${a.cardNumber.slice(-4)}` : null, bank: a.cardNumber?.startsWith("603799") ? "melli" : a.sheba ? "eghtesad_novin" : null, bankName: a.cardNumber?.startsWith("603799") ? "بانک ملی ایران" : a.sheba ? "بانک اقتصاد نوین" : null });
 const expirePaymentLinks = (orderId) => {
   for (const l of paymentLinks) if (l.orderId === orderId && l.status === "active") l.status = "cancelled";
 };
@@ -1833,6 +1890,107 @@ const routes = [
     send(res, 200, outage);
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, (req, res) => send(res, 200, merchant)],
+  // Receipts (BE-2.10)
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/payments\/bank-accounts$/, (req, res) => send(res, 200, bankAccounts.map(bankView))],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/payments\/bank-accounts$/, async (req, res) => {
+    const b = await readBody(req);
+    const errors = bankError(b);
+    if (errors) return problem(res, 400, "validation.failed", errors);
+    if (bankAccounts.length >= 10) return problem(res, 409, "payments.bank_account.limit");
+    if (bankAccounts.some((a) => (b.cardNumber && a.cardNumber === b.cardNumber) || (b.sheba && a.sheba === b.sheba))) return problem(res, 409, "payments.bank_account.duplicate");
+    const a = { id: randomUUID(), cardNumber: b.cardNumber ?? null, sheba: b.sheba ?? null, holderName: b.holderName ?? null, enabled: b.enabled !== false, createdAt: iso(now()) };
+    bankAccounts.push(a);
+    send(res, 201, bankView(a));
+  }],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/payments\/bank-accounts\/([^/]+)$/, async (req, res, url, [id]) => {
+    const a = bankAccounts.find((x) => x.id === id);
+    if (!a) return problem(res, 404, "common.not_found");
+    const b = await readBody(req);
+    const errors = bankError(b);
+    if (errors) return problem(res, 400, "validation.failed", errors);
+    Object.assign(a, { cardNumber: b.cardNumber ?? null, sheba: b.sheba ?? null, holderName: b.holderName ?? null, enabled: b.enabled !== false });
+    send(res, 200, bankView(a));
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/payments\/bank-accounts\/([^/]+)$/, (req, res, url, [id]) => {
+    bankAccounts = bankAccounts.filter((a) => a.id !== id);
+    send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/payments\/receipt-settings$/, (req, res) =>
+    send(res, 200, { ...receiptSettings, amountTolerance: money(receiptSettings.amountTolerance / 10), autoApproveAvailable: false })],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/payments\/receipt-settings$/, async (req, res) => {
+    const b = await readBody(req);
+    if (b.autoApprove) return problem(res, 422, "payments.receipts.auto_approve_unavailable");
+    if (!(b.threshold >= 0.8 && b.threshold <= 1)) return problem(res, 400, "validation.failed", { threshold: ["payments.receipts.threshold_invalid"] });
+    if (!(b.amountTolerance >= 0 && b.amountTolerance <= 1_000_000)) return problem(res, 400, "validation.failed", { amountTolerance: ["payments.receipts.tolerance_invalid"] });
+    if (!(b.windowHours >= 1 && b.windowHours <= 720)) return problem(res, 400, "validation.failed", { windowHours: ["payments.receipts.window_invalid"] });
+    receiptSettings = { autoApprove: false, threshold: b.threshold, amountTolerance: b.amountTolerance, windowHours: b.windowHours };
+    send(res, 200, { ...receiptSettings, amountTolerance: money(receiptSettings.amountTolerance / 10), autoApproveAvailable: false });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/receipts$/, (req, res, url) => {
+    const status = url.searchParams.get("status");
+    const orderId = url.searchParams.get("orderId");
+    settleReceipts();
+    const items = receipts.filter((r) => (!status || r.status === status) && (!orderId || r.orderId === orderId));
+    send(res, 200, { items: items.map((r) => receiptView(r, false)), nextCursor: null });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/receipts\/([^/]+)$/, (req, res, url, [id]) => {
+    settleReceipts();
+    const r = receipts.find((x) => x.id === id);
+    if (!r) return problem(res, 404, "common.not_found");
+    send(res, 200, receiptView(r, true));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/receipts$/, async (req, res) => {
+    const b = await readBody(req);
+    if (!b.fileId === !b.messageId) return problem(res, 400, "validation.failed", { fileId: ["payments.receipt.file_or_message"] });
+    let extra;
+    if (b.fileId) {
+      const f = files.get(b.fileId);
+      if (!f || f.status !== "clean" || f.purpose !== "receipt") return problem(res, 422, "payments.receipt.file_not_clean");
+      extra = { source: "panel", fileId: f.id, orderId: b.orderId ?? null, submittedBy: me.id };
+    } else {
+      const found = [...messages.entries()].map(([cid, list]) => [cid, list.find((m) => m.id === b.messageId)]).find(([, m]) => m);
+      const m = found?.[1];
+      if (!m || !m.attachments?.some((a) => a.type === "image" && a.url)) return problem(res, 422, "payments.receipt.no_image");
+      if (receipts.some((r) => r.messageId === m.id)) return problem(res, 409, "payments.receipt.already_submitted");
+      const conv = conversations.find((c) => c.id === found[0]);
+      const awaiting = orders.find((o) => o.contactId === conv?.contactId && o.status === "awaiting_payment");
+      extra = { source: "message", messageId: m.id, conversationId: conv?.id ?? null, contactId: conv?.contactId ?? null, orderId: b.orderId ?? awaiting?.id ?? null, submittedBy: me.id };
+    }
+    const r = newReceipt({ status: "processing", ...extra });
+    receipts.unshift(r);
+    send(res, 201, receiptView(r, false));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/receipts\/([^/]+)\/approve$/, async (req, res, url, [id]) => {
+    const r = receipts.find((x) => x.id === id);
+    if (!r) return problem(res, 404, "common.not_found");
+    const b = await readBody(req);
+    const auto = r.status === "rejected" && r.rejectReason === "duplicate" && !r.decidedBy;
+    if (r.status !== "needs_review" && !auto) return problem(res, 409, "payments.receipt.not_reviewable");
+    const orderId = b?.orderId ?? r.orderId;
+    if (!orderId) return problem(res, 422, "payments.receipt.order_required");
+    const o = orders.find((x) => x.id === orderId);
+    if (!o) return problem(res, 404, "payments.receipt.order_not_found");
+    Object.assign(r, { status: "approved", orderId, rejectReason: null, decidedBy: me.id, decidedAt: iso(now()) });
+    if (o.status === "awaiting_payment") {
+      Object.assign(o, { status: "paid", paidAt: iso(now()), revision: o.revision + 1, updatedAt: iso(now()) });
+      addOrderEvent(o, "status_changed", "system", { fromStatus: "awaiting_payment", note: `کارت به کارت (رسید تأیید شده)، کد پیگیری ${r.reference ?? "-"}` });
+    }
+    send(res, 200, receiptView(r, false));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/receipts\/([^/]+)\/reject$/, async (req, res, url, [id]) => {
+    const r = receipts.find((x) => x.id === id);
+    if (!r) return problem(res, 404, "common.not_found");
+    const b = await readBody(req);
+    if (!b.reason?.trim() || b.reason.length > 300) return problem(res, 400, "validation.failed", { reason: ["payments.receipt.reason_invalid"] });
+    if (r.status !== "needs_review") return problem(res, 409, "payments.receipt.not_reviewable");
+    Object.assign(r, { status: "rejected", rejectReason: b.reason.trim(), decidedBy: me.id, decidedAt: iso(now()) });
+    send(res, 200, receiptView(r, false));
+  }],
+  ["POST", /^\/__mock\/receipts$/, (req, res, url) => {
+    if (url.searchParams.get("scenario") === "seed") seedReceipts();
+    else resetReceipts();
+    send(res, 200, { receipts: receipts.length });
+  }],
   ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/payments\/merchant-account$/, async (req, res) => {
     const b = await readBody(req);
     if (b.merchantId != null && !/^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i.test(b.merchantId)) return problem(res, 400, "payments.merchant_id_invalid", { merchantId: ["payments.merchant_id_invalid"] });
