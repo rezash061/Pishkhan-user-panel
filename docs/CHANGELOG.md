@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.27.0 — 2026-11-05
+
+- Card-to-card receipts (backend #50, BE-2.10; UP-2.2 and UP-2.3):
+  - Settings «پرداخت»:
+    - «کارت‌ها و شباهای دریافت» (`workspace.settings.write`): add, edit, pause and remove up to 10 accounts. The card is checked with Luhn and the Sheba with mod 97 before sending; Persian digits, spaces and dashes are accepted. Each account shows its bank, the card in groups of four and the Sheba.
+    - «بررسی رسیدها»: confidence threshold (80–100%), amount tolerance in Toman, and the payment window in hours.
+    - The auto-approve switch is disabled while `autoApproveAvailable` is false, with a note saying why. When it is allowed, turning it on first asks for a confirmation that explains the risk of fake receipts.
+  - «رسیدهای کارت به کارت» at `/orders/receipts` (linked from «سفارش‌ها»):
+    - Tabs: needs review (the default), auto-approved, approved, rejected, all. Each row shows the amount, status and failed checks.
+    - The detail sheet shows the receipt image (a signed 10-minute URL) and the fields read off it (amount, Jalali time, reference, cards, bank, confidence).
+    - Every check is shown as an icon plus a word (pass/fail/unknown) with the reason in Persian, never colour alone. Links go to the order, the conversation and the earlier receipt of a duplicate.
+    - «تأیید رسید» pays the order. When the receipt has no order, the seller picks one of the customer's orders awaiting payment. «رد رسید» needs a reason (300 characters at most).
+    - A duplicate rejected automatically is labelled «تکراری (رد خودکار)» and can still be approved.
+    - The list and the sheet poll while a receipt is still being scanned or read.
+  - Order page: «رسیدهای کارت به کارت» lists the order's receipts. While the order awaits payment, «ثبت رسید» uploads an image or PDF (purpose `receipt`), waits for the virus scan, submits it and opens it in the queue.
+  - Inbox: «ثبت به‌عنوان رسید» under a customer's image (`workspace.orders.write`) submits it for the customer's order awaiting payment.
+  - Notifications of kind `receipt` get their own icon. All the new `payments.*` error codes are in Persian.
+- Mock Api host: bank accounts, receipt settings and receipts with their checks. `/__mock/receipts?scenario=seed|reset` adds an order awaiting payment and three receipts (one with a wrong amount, an automatic duplicate, an approved one).
+- API refreshed from backend main (BE-2.8 overage and BE-2.10 receipts).
+
 ## 0.25.0 — 2026-11-04
 
 - Bale (backend #48, BE-2.7 part 2):

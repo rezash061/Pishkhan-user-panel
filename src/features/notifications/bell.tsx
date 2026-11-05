@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertTriangle, Bell, BellOff, CheckCheck, FileSpreadsheet, Hand, Headset, Workflow, type LucideIcon } from "lucide-react";
+import { AlertTriangle, Bell, BellOff, CheckCheck, FileCheck2, FileSpreadsheet, Hand, Headset, Workflow, type LucideIcon } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
@@ -16,7 +16,7 @@ import { formatDateTime, formatRelative } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { notificationHref, useMarkNotificationRead, useNotifications, useUnreadNotifications } from "./data";
 
-const kindIcons: Record<string, LucideIcon> = { handoff: Hand, automation: Workflow, channel: AlertTriangle, support: Headset, crm_export: FileSpreadsheet };
+const kindIcons: Record<string, LucideIcon> = { handoff: Hand, automation: Workflow, channel: AlertTriangle, support: Headset, crm_export: FileSpreadsheet, receipt: FileCheck2 };
 
 /** Bell with the unread count; opens the caller's notifications for this workspace. */
 export function NotificationBell({ className }: { className?: string }) {

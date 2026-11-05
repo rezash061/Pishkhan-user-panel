@@ -7,6 +7,7 @@ import { cn } from "@/lib/cn";
 import { formatDateTime, formatTime } from "@/lib/i18n/format";
 import { useCodeMessage } from "@/lib/i18n/use-error-message";
 import { looksFinglish } from "@/lib/persian/finglish";
+import { MarkReceipt } from "@/features/receipts/mark-receipt";
 import { Attachments } from "./attachments";
 import type { OptimisticMessage } from "./data";
 
@@ -47,6 +48,7 @@ export function MessageBubble({ message, senderName, onRetry }: { message: Optim
     <div className={cn("flex", outbound ? "justify-end" : "justify-start")}>
       <div className={cn("max-w-[85%] space-y-1 sm:max-w-[70%]", outbound ? "items-end" : "items-start")}>
         <Attachments items={attachments} outbound={outbound} />
+        {!outbound && !message.local && attachments.some((a) => a.type === "image" && a.url) ? <MarkReceipt messageId={message.id} /> : null}
         {message.transcriptStatus ? <Transcript status={message.transcriptStatus} text={message.transcript ?? null} /> : null}
         {message.text || kindLabel ? (
           <div

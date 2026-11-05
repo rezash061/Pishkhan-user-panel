@@ -4,10 +4,10 @@ import { api, csrfToken, unwrap } from "./client";
 import { ApiError, toApiError } from "./errors";
 import type { FileInfo } from "./types";
 
-export type FilePurpose = "product_image" | "import_sheet" | "knowledge_document";
+export type FilePurpose = "product_image" | "import_sheet" | "knowledge_document" | "receipt";
 
 /** Upload sizes from backend `FilePolicy` (checked here only to fail fast; the backend enforces them). */
-export const maxUploadBytes: Record<FilePurpose, number> = { product_image: 10 * 1024 * 1024, import_sheet: 5 * 1024 * 1024, knowledge_document: 20 * 1024 * 1024 };
+export const maxUploadBytes: Record<FilePurpose, number> = { product_image: 10 * 1024 * 1024, import_sheet: 5 * 1024 * 1024, knowledge_document: 20 * 1024 * 1024, receipt: 10 * 1024 * 1024 };
 
 /** Multipart upload through the BFF (one part named `file`, query `purpose`). The file starts as `pending_scan`. */
 export async function uploadFile(ws: string, purpose: FilePurpose, file: File): Promise<FileInfo> {
