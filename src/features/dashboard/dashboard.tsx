@@ -15,6 +15,7 @@ import { PageContainer } from "@/components/ui/page";
 import { useChannels } from "@/features/channels/data";
 import { useQuickReplies } from "@/features/inbox/data";
 import { useMembers } from "@/features/team/data";
+import { OverageBlockedBanner } from "@/features/billing/overage";
 import { useWorkspace } from "@/features/workspace/context";
 import { api, unwrap } from "@/lib/api/client";
 import type { Dashboard as DashboardData } from "@/lib/api/types";
@@ -139,6 +140,8 @@ export function Dashboard() {
         <h1 className="text-xl font-bold sm:text-2xl">{me.displayName ? t("dashboard.greeting", { name: me.displayName }) : t("dashboard.greetingNoName")}</h1>
         <p className="text-sm text-muted-foreground">{t("dashboard.subtitle", { workspace: workspace.name })}</p>
       </div>
+
+      <OverageBlockedBanner ws={ws} />
 
       {data?.overnight ? <Overnight data={data.overnight} /> : null}
 

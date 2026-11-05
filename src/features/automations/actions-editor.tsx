@@ -373,14 +373,14 @@ export function FollowUpBody({
         </div>
       </Field>
       <div className="space-y-2">
-        <label className="flex items-center justify-between gap-3 text-sm">
+        <div className="flex items-center justify-between gap-3 text-sm">
           <span>{t("cancelOnReply")}</span>
           <Switch label={t("cancelOnReply")} checked={a.cancelOnReply ?? true} disabled={disabled} onChange={(cancelOnReply) => onChange({ cancelOnReply })} />
-        </label>
-        <label className="flex items-center justify-between gap-3 text-sm">
+        </div>
+        <div className="flex items-center justify-between gap-3 text-sm">
           <span>{t("cancelOnPurchase")}</span>
           <Switch label={t("cancelOnPurchase")} checked={a.cancelOnPurchase ?? true} disabled={disabled} onChange={(cancelOnPurchase) => onChange({ cancelOnPurchase })} />
-        </label>
+        </div>
       </div>
     </div>
   );

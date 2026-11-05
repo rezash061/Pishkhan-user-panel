@@ -67,6 +67,9 @@ test("a DM rule schedules a follow-up; one per rule and the delay stays inside t
   await expect(page.getByText(/۲۴ ساعت بعد از آخرین پیام مشتری/)).toBeVisible();
   await expect(page.getByRole("switch", { name: "اگر مشتری پیام داد، فرستاده نشود" })).toHaveAttribute("aria-checked", "true");
   await expect(page.getByRole("switch", { name: "اگر مشتری خرید کرد، فرستاده نشود" })).toHaveAttribute("aria-checked", "true");
+  // One click turns a toggle off (a label around the switch used to toggle it twice).
+  await page.getByRole("switch", { name: "اگر مشتری خرید کرد، فرستاده نشود" }).click();
+  await expect(page.getByRole("switch", { name: "اگر مشتری خرید کرد، فرستاده نشود" })).toHaveAttribute("aria-checked", "false");
   await expect(page.locator("#action-0-delay")).toHaveValue("1");
   await page.locator("#action-0-delay").fill("30");
   // 30 hours is clamped to the 23-hour maximum.

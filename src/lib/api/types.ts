@@ -166,3 +166,5 @@ export type FeedItemUpdate = Schemas["FeedItemUpdate"];
 export type OutageStatus = Schemas["OutageStatusResponse"];
 export type CampaignAudience = Schemas["CampaignAudienceResponse"];
 export type OutageCampaign = Schemas["CampaignResponse"];
+export type Overage = Schemas["OverageResponse"];
+export type OverageCharge = Schemas["OverageChargeResponse"];

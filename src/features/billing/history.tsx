@@ -12,7 +12,7 @@ import { toPersianDigits } from "@/lib/i18n/digits";
 import { formatDate, formatDateTime, formatToman } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { rialOf } from "@/lib/money";
-import { isKind, toneOf } from "./checkout";
+import { isKind, isOverage, toneOf } from "./checkout";
 import { useCheckouts } from "./data";
 
 /** «پرداخت‌ها و فاکتورها»: the last 100 checkouts; a paid one is the invoice, with its number, reference and card. */
@@ -56,7 +56,7 @@ export function CheckoutHistory({ ws }: { ws: string }) {
 function CheckoutRow({ ws, checkout: c }: { ws: string; checkout: Checkout }) {
   const t = useTranslations("billing");
   const status = t.has(`history.statuses.${c.status}`) ? t(`history.statuses.${c.status}` as "history.statuses.paid") : c.status;
-  const kind = isKind(c.kind) ? t(`plans.kind.${c.kind}`) : c.kind;
+  const kind = isKind(c.kind) ? t(`plans.kind.${c.kind}`) : isOverage(c.kind) ? t("overage.kind") : c.kind;
   const cycle = t(c.cycle === "annual" ? "cycle.annual" : "cycle.monthly");
   const details: [string, string][] = [];
   if (c.referenceId) details.push([t("result.reference"), toPersianDigits(c.referenceId)]);
@@ -71,7 +71,7 @@ function CheckoutRow({ ws, checkout: c }: { ws: string; checkout: Checkout }) {
             <Badge tone={toneOf(c.status)}>{status}</Badge>
           </p>
           <p className="text-xs text-muted-foreground">
-            {kind} · {c.planName} · {cycle} · <time dateTime={c.paidAt ?? c.createdAt}>{formatDate(c.paidAt ?? c.createdAt)}</time>
+            {kind} · {isOverage(c.kind) ? null : <>{c.planName} · {cycle} · </>} <time dateTime={c.paidAt ?? c.createdAt}>{formatDate(c.paidAt ?? c.createdAt)}</time>
           </p>
           {details.length ? (
             <p className="text-xs text-muted-foreground">

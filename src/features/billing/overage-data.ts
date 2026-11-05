@@ -1,0 +1,50 @@
+"use client";
+
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { api, newIdempotencyKey, unwrap } from "@/lib/api/client";
+import { qk } from "@/lib/api/keys";
+import { checkoutCookie } from "./checkout";
+
+const ws$ = (ws: string) => ({ path: { workspaceId: ws } });
+
+/** Overage this period (BE-2.8): price, cap, conversations beyond the plan, what is owed, and whether the AI is blocked. */
+export function useOverage(ws: string, enabled = true) {
+  return useQuery({
+    queryKey: qk.overage(ws),
+    enabled,
+    queryFn: async () => unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/billing/overage", { params: ws$(ws) })),
+    refetchInterval: 5 * 60_000,
+  });
+}
+
+export function useUpdateOverage(ws: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (body: { enabled: boolean; cap: number | null }) => unwrap(await api.PUT("/api/v1/workspaces/{workspaceId}/billing/overage", { params: ws$(ws), body })),
+    onSuccess: (o) => qc.setQueryData(qk.overage(ws), o),
+  });
+}
+
+/** Charges of closed periods, newest first. */
+export function useOverageCharges(ws: string) {
+  return useQuery({
+    queryKey: qk.overageCharges(ws),
+    queryFn: async () => unwrap(await api.GET("/api/v1/workspaces/{workspaceId}/billing/overage/charges", { params: ws$(ws) })),
+  });
+}
+
+/** Pays every due charge through Zarinpal; returns like a plan checkout (`/billing?checkout=`). */
+export function useStartOverageCheckout(ws: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (idempotencyKey: string) =>
+      unwrap(await api.POST("/api/v1/workspaces/{workspaceId}/billing/overage/checkout", { params: { ...ws$(ws), header: { "Idempotency-Key": idempotencyKey } } })),
+    onSuccess: ({ paymentUrl }) => {
+      void qc.invalidateQueries({ queryKey: qk.checkouts(ws) });
+      document.cookie = `${checkoutCookie}=${ws}; path=/; max-age=7200; samesite=lax`;
+      window.location.assign(paymentUrl);
+    },
+  });
+}
+
+export { newIdempotencyKey };

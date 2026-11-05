@@ -498,12 +498,56 @@ const settleCheckout = (c, outcome) => {
   if (outcome === "cancelled") return Object.assign(c, { status: "failed", error: "cancelled" });
   if (outcome === "failed") return Object.assign(c, { status: "failed", error: "-51" });
   if (outcome === "pending") return;
+  if (c.kind === "overage") {
+    // An overage payment settles every charge it was opened for; there is no subscription.
+    for (const ch of overageCharges) if (ch.status === "due") Object.assign(ch, { status: "settled", checkoutId: c.id, settledAt: iso(now()) });
+    return Object.assign(c, { status: "paid", invoiceNumber: ++invoiceSeq, referenceId: String(70_000_000 + invoiceSeq), cardMask: "6219-86**-****-4321", subscriptionId: null, paidAt: iso(now()) });
+  }
   const later = c.kind === "renewal" || c.kind === "downgrade";
   const sub = { id: randomUUID(), planId: c.planId, planCode: c.planCode, planVersion: c.planVersion, state: later ? "scheduled" : "active", trial: false, startsAt: c.startsAt, endsAt: c.endsAt, endedAt: null, endReason: null, cycle: c.cycle, checkoutId: c.id };
   if (!later) for (const s of subscriptions) if (s.state === "active" || s.state === "trialing") Object.assign(s, { state: "ended", endedAt: iso(now()), endReason: "replaced" });
   subscriptions.push(sub);
   Object.assign(c, { status: "paid", invoiceNumber: ++invoiceSeq, referenceId: String(70_000_000 + invoiceSeq), cardMask: "6219-86**-****-4321", subscriptionId: sub.id, paidAt: iso(now()) });
 };
+// Overage (BE-2.8). Scenarios for tests (`/__mock/overage?scenario=`): `trial` (the default: no overage on a trial),
+// `overage` (1,000 included, 1,150 used, 150 extra at 5,000 Toman each) and `unpaid` (a charge 15 days overdue, AI blocked).
+let overageScenario = "trial";
+let overageSettings = { enabled: true, cap: null };
+let overageCharges = [];
+const OVERAGE_PRICE = 50_000;
+const OVERAGE_MONTHLY = 8_900_000;
+const setOverageScenario = (name) => {
+  overageScenario = name;
+  // Overage needs a paid plan: the overage scenarios are on a paid «رشد» month; `trial` puts billing back as it was.
+  resetBilling();
+  if (name !== "trial") {
+    const growth = salePlans[2];
+    subscriptions = [{ id: randomUUID(), planId: growth.id, planCode: growth.code, planVersion: 2, state: "active", trial: false, startsAt: ago(12 * D), endsAt: iso(new Date(Date.now() + 18 * D)), endedAt: null, endReason: null, cycle: "monthly", checkoutId: null }];
+  }
+  overageSettings = { enabled: true, cap: null };
+  overageCharges = name === "unpaid"
+    ? [
+        { id: randomUUID(), periodStart: "2026-09-22T20:30:00Z", periodEnd: "2026-10-22T20:30:00Z", conversations: 64, unitPrice: { amount: OVERAGE_PRICE, currency: "IRR" }, amount: { amount: 64 * OVERAGE_PRICE, currency: "IRR" }, status: "due", checkoutId: null, settledAt: null, createdAt: ago(15 * 24 * H) },
+        { id: randomUUID(), periodStart: "2026-08-22T20:30:00Z", periodEnd: "2026-09-22T20:30:00Z", conversations: 20, unitPrice: { amount: OVERAGE_PRICE, currency: "IRR" }, amount: { amount: 20 * OVERAGE_PRICE, currency: "IRR" }, status: "settled", checkoutId: null, settledAt: ago(40 * 24 * H), createdAt: ago(45 * 24 * H) },
+      ]
+    : [];
+};
+const overageView = () => {
+  const available = overageScenario !== "trial";
+  const included = available ? 1000 : 500;
+  const used = overageScenario === "overage" ? 1150 : overageScenario === "unpaid" ? 1012 : 412;
+  const cap = overageSettings.cap ?? OVERAGE_MONTHLY;
+  const extra = available ? Math.max(0, used - included) : 0;
+  const amount = Math.min(extra * OVERAGE_PRICE, cap);
+  const due = overageCharges.filter((c) => c.status === "due").reduce((n, c) => n + c.amount.amount, 0);
+  const blocked = due > 0 && overageScenario === "unpaid";
+  const state = !available ? (used >= included ? "plan_limit" : "within") : blocked ? "overage_unpaid" : extra === 0 ? "within" : !overageSettings.enabled ? "plan_limit" : amount >= cap ? "overage_cap" : "overage";
+  return {
+    available, enabled: overageSettings.enabled, pricePerConversation: available ? { amount: OVERAGE_PRICE, currency: "IRR" } : null, cap: { amount: cap, currency: "IRR" }, capIsDefault: overageSettings.cap === null,
+    included, used, extra, amount: { amount, currency: "IRR" }, due: { amount: due, currency: "IRR" }, blocked, state, periodStart: "2026-10-22T20:30:00Z", periodEnd: "2026-11-21T20:30:00Z",
+  };
+};
+
 const gatewayPage = (c) => `<!doctype html><html lang="fa" dir="rtl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>درگاه آزمایشی زرین‌پال</title></head>
 <body style="font-family:sans-serif;max-width:28rem;margin:2rem auto;padding:0 1rem"><main><h1>درگاه آزمایشی زرین‌پال</h1><p>پرداخت ${(c.amount.amount / 10).toLocaleString("fa-IR")} تومان به پیشخوان</p>
 <ul style="list-style:none;padding:0;display:grid;gap:.5rem">
@@ -992,6 +1036,30 @@ const routes = [
     send(res, 204);
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/subscription$/, (req, res) => send(res, 200, currentPlanView())],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/overage$/, (req, res) => send(res, 200, overageView())],
+  ["PUT", /^\/api\/v1\/workspaces\/[^/]+\/billing\/overage$/, async (req, res) => {
+    const b = await readBody(req);
+    if (b.cap != null && (!Number.isInteger(b.cap) || b.cap < 0 || b.cap > OVERAGE_MONTHLY * 10)) return problem(res, 400, "validation.failed", { cap: ["billing.overage.cap_invalid"] });
+    overageSettings = { enabled: b.enabled !== false, cap: b.cap ?? null };
+    send(res, 200, overageView());
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/overage\/charges$/, (req, res) => send(res, 200, overageCharges)],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/billing\/overage\/checkout$/, (req, res) => {
+    const due = overageView().due.amount;
+    if (!due) return problem(res, 422, "billing.overage.nothing_due");
+    const key = req.headers["idempotency-key"];
+    const seen = key && checkouts.find((c) => c.idempotencyKey === key);
+    if (seen) return send(res, 201, { checkout: checkoutView(seen), paymentUrl: `http://localhost:${port}/__mock/zarinpal/${seen.authority}` });
+    if (checkouts.some((c) => c.kind === "overage" && c.status === "pending" && Date.now() - new Date(c.createdAt).getTime() < H)) return problem(res, 409, "billing.overage.checkout_pending");
+    const plan = salePlans[2];
+    const c = { id: randomUUID(), kind: "overage", planId: plan.id, planCode: plan.code, planName: plan.name, planVersion: 2, cycle: "monthly", price: { amount: due, currency: "IRR" }, credit: { amount: 0, currency: "IRR" }, amount: { amount: due, currency: "IRR" }, status: "pending", error: null, invoiceNumber: null, referenceId: null, cardMask: null, subscriptionId: null, createdBy: me.id, createdAt: iso(now()), paidAt: null, authority: `A${randomUUID().replace(/-/g, "").slice(0, 35)}`, startsAt: null, endsAt: null, idempotencyKey: key ?? null };
+    checkouts.unshift(c);
+    send(res, 201, { checkout: checkoutView(c), paymentUrl: `http://localhost:${port}/__mock/zarinpal/${c.authority}` });
+  }],
+  ["POST", /^\/__mock\/overage$/, (req, res, url) => {
+    setOverageScenario(url.searchParams.get("scenario") ?? "trial");
+    send(res, 200, overageView());
+  }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/plans$/, (req, res) => {
     const cur = currentSub();
     send(res, 200, salePlans.map((p) => {
