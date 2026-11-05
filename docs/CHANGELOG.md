@@ -13,6 +13,7 @@
   - «پرداخت» when something is due: `POST /overage/checkout` with an Idempotency-Key goes to Zarinpal and returns through the existing `?checkout=` handling. An overage checkout reads «پرداخت مصرف مازاد», has no plan cycle, and its result says the debt is paid. `billing.overage.checkout_pending`, `billing.overage.nothing_due`, `billing.checkout.unavailable` and `billing.checkout.gateway_unavailable` are in Persian.
   - When an unpaid charge has stopped the AI (`blocked`), a prominent notice with the amount shows on the billing page (with the pay button) and on the dashboard (linking to billing).
   - Handoff reasons `ai:overage_cap` and `ai:overage_unpaid` read in Persian, beside `ai:plan_limit`. Notifications of kind `billing` get a card icon and a name in the preferences.
+- Fix: success badges use a darker green for their text (3.2:1 → AA contrast); axe flagged «در محدودهٔ طرح» on phones.
 - Fix: a switch inside a `<label>` toggled twice on one click, so the follow-up toggles in the rule editor could not be turned off. The rows are no longer labels (the switch carries its own name), and the follow-ups e2e test checks a toggle turns off.
 - Mock Api host: overage scenarios (`/__mock/overage?scenario=trial|overage|unpaid`), settings, charges, and overage checkouts through the stand-in gateway. New e2e spec `overage.spec.ts`.
 - API refreshed from backend main (BE-2.8 overage).
