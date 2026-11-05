@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.26.0 — 2026-11-04
+
+- Overage billing (backend #49, BE-2.8 overage):
+  - «مصرف مازاد» card on the billing page (`GET /billing/overage`):
+    - the AI conversations used against the plan's share;
+    - the extra conversations, the price of each and the cost so far, against this period's cap;
+    - the state in Persian (within, overage, plan limit, cap reached, unpaid) with what it means for new conversations.
+    - On a trial or the free plan (`available: false`) the editor is hidden. The card explains that the AI hands new conversations to the team at the limit, and links to the plans.
+  - Settings (`workspace.billing.manage`, PUT): overage on or off, and the cap per period, either the default (the plan's monthly price) or a Toman amount from 0 to 10× it, checked before saving. `billing.overage.cap_invalid` is in Persian. The explanation: when overage is off or at the cap, new conversations go to the team.
+  - «صورت‌حساب‌های مازاد»: period, conversations, price each, amount, and due or settled (with when).
+  - «پرداخت» when something is due: `POST /overage/checkout` with an Idempotency-Key goes to Zarinpal and returns through the existing `?checkout=` handling. An overage checkout reads «پرداخت مصرف مازاد», has no plan cycle, and its result says the debt is paid. `billing.overage.checkout_pending`, `billing.overage.nothing_due`, `billing.checkout.unavailable` and `billing.checkout.gateway_unavailable` are in Persian.
+  - When an unpaid charge has stopped the AI (`blocked`), a prominent notice with the amount shows on the billing page (with the pay button) and on the dashboard (linking to billing).
+  - Handoff reasons `ai:overage_cap` and `ai:overage_unpaid` read in Persian, beside `ai:plan_limit`. Notifications of kind `billing` get a card icon and a name in the preferences.
+- Fix: success badges use a darker green for their text (3.2:1 → AA contrast); axe flagged «در محدودهٔ طرح» on phones.
+- Fix: a switch inside a `<label>` toggled twice on one click, so the follow-up toggles in the rule editor could not be turned off. The rows are no longer labels (the switch carries its own name), and the follow-ups e2e test checks a toggle turns off.
+- Mock Api host: overage scenarios (`/__mock/overage?scenario=trial|overage|unpaid`), settings, charges, and overage checkouts through the stand-in gateway. New e2e spec `overage.spec.ts`.
+- API refreshed from backend main (BE-2.8 overage).
+
 ## 0.25.0 — 2026-11-04
 
 - Bale (backend #48, BE-2.7 part 2):

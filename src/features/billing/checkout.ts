@@ -67,6 +67,9 @@ export function initialCycle(current: CurrentPlan | undefined): Cycle {
   return current?.subscription?.cycle === "annual" ? "annual" : "monthly";
 }
 
+/** Overage payments (BE-2.8) are checkouts too, of kind `overage`, with no subscription. */
+export const isOverage = (kind: string | null | undefined) => kind === "overage";
+
 export function isKind(value: string | null | undefined): value is CheckoutKind {
   return checkoutKinds.includes(value as CheckoutKind);
 }

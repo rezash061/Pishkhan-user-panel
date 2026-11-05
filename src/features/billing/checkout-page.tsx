@@ -17,7 +17,7 @@ import { toPersianDigits } from "@/lib/i18n/digits";
 import { formatDateTime, formatToman } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { rialOf } from "@/lib/money";
-import { isKind, outcomeOf, subscriptionOf, toneOf, type Outcome } from "./checkout";
+import { isKind, isOverage, outcomeOf, subscriptionOf, toneOf, type Outcome } from "./checkout";
 import { useCheckout, useCurrentPlan, useRefreshBilling } from "./data";
 
 const icons = { paid: CircleCheck, failed: CircleX, cancelled: CircleX, expired: TimerOff, pending: Clock } as const;
@@ -99,9 +99,11 @@ function Result({ checkout: c, refreshing, onRefresh }: { checkout: Checkout; re
 
   const body =
     outcome === "paid"
-      ? startsLater
-        ? t("result.paidLater", { plan: c.planName, cycle, date: formatDateTime(bought.startsAt) })
-        : t("result.paidBody", { plan: c.planName, cycle })
+      ? isOverage(c.kind)
+        ? t("result.paidOverage")
+        : startsLater
+          ? t("result.paidLater", { plan: c.planName, cycle, date: formatDateTime(bought.startsAt) })
+          : t("result.paidBody", { plan: c.planName, cycle })
       : t(`result.${outcome}Body`);
 
   return (
@@ -141,8 +143,8 @@ function Result({ checkout: c, refreshing, onRefresh }: { checkout: Checkout; re
             {c.referenceId ? <Item label={t("result.reference")} value={<bdi dir="ltr" className="font-mono">{toPersianDigits(c.referenceId)}</bdi>} /> : null}
             {c.cardMask ? <Item label={t("result.card")} value={<bdi dir="ltr" className="font-mono">{c.cardMask}</bdi>} /> : null}
             <Item label={t("result.plan")} value={c.planName} />
-            <Item label={t("result.kind")} value={isKind(c.kind) ? t(`plans.kind.${c.kind}`) : c.kind} />
-            <Item label={t("result.cycle")} value={cycle} />
+            <Item label={t("result.kind")} value={isKind(c.kind) ? t(`plans.kind.${c.kind}`) : isOverage(c.kind) ? t("overage.kind") : c.kind} />
+            {isOverage(c.kind) ? null : <Item label={t("result.cycle")} value={cycle} />}
             <Item label={t("result.price")} value={formatToman(rialOf(c.price) ?? 0)} />
             {credit > 0 ? <Item label={t("result.credit")} value={formatToman(credit)} /> : null}
             <Item label={t("result.amount")} value={formatToman(rialOf(c.amount) ?? 0)} strong />
