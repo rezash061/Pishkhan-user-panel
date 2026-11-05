@@ -1,15 +1,18 @@
 "use client";
 
 import { Info, MessageSquareText, Send, Users } from "lucide-react";
+import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { useState } from "react";
+import { useRef, useState } from "react";
 import { toast } from "sonner";
+import { BaleIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { ConfirmDialog } from "@/components/ui/dialog";
 import { Field, Textarea } from "@/components/ui/field";
 import { EmptyState, Skeleton } from "@/components/ui/misc";
+import { useChannels } from "@/features/channels/data";
 import { useWorkspace } from "@/features/workspace/context";
 import { ApiError } from "@/lib/api/errors";
 import type { OutageCampaign } from "@/lib/api/types";
@@ -18,7 +21,7 @@ import { formatDateTime, formatNumber, formatRelative } from "@/lib/i18n/format"
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
 import { newIdempotencyKey, useCampaignAudience, useCampaigns, useOutageStatus, useStartCampaign } from "./data";
-import { CAMPAIGN_MAX, campaignTextValid, hasLink, isDown, smsBody, smsParts } from "./model";
+import { BALE_LINK, CAMPAIGN_MAX, campaignTextValid, hasLink, insertLink, isDown, previewBody, smsBody, smsParts } from "./model";
 
 const tones = { sending: "primary", completed: "success", limit_reached: "warning" } as const;
 
@@ -85,8 +88,11 @@ function Composer({ ws, shop }: { ws: string; shop: string }) {
   const [text, setText] = useState("");
   const [key, setKey] = useState(newIdempotencyKey);
   const [confirming, setConfirming] = useState(false);
+  const area = useRef<HTMLTextAreaElement>(null);
+  const channels = useChannels(ws);
+  const bot = channels.data?.find((c) => c.kind === "bale" && c.status === "active") ?? null;
   const a = audience.data;
-  const body = smsBody(shop, text);
+  const body = previewBody(shop, text, bot?.username);
   const parts = smsParts(body);
   const valid = campaignTextValid(text);
   const nextAllowed = a?.nextAllowedAt ?? null;
@@ -125,8 +131,41 @@ function Composer({ ws, shop }: { ws: string; shop: string }) {
         </p>
       ) : null}
       <Field label={t("text")} htmlFor="outage-text" hint={t("textHint", { max: formatNumber(CAMPAIGN_MAX) })} error={text && !valid ? t("textInvalid") : null}>
-        <Textarea id="outage-text" dir="auto" rows={4} maxLength={CAMPAIGN_MAX} value={text} placeholder={t("placeholder")} onChange={(e) => setText(e.target.value)} />
+        <Textarea ref={area} id="outage-text" dir="auto" rows={4} maxLength={CAMPAIGN_MAX} value={text} placeholder={t("placeholder")} onChange={(e) => setText(e.target.value)} />
       </Field>
+      <div className="flex flex-wrap items-center gap-2">
+        {bot ? (
+          <Button
+            size="sm"
+            variant="outline"
+            disabled={text.includes(BALE_LINK) || text.length + BALE_LINK.length + 2 > CAMPAIGN_MAX}
+            onClick={() => {
+              const el = area.current;
+              const r = insertLink(text, el?.selectionStart ?? text.length, el?.selectionEnd ?? text.length);
+              setText(r.text);
+              requestAnimationFrame(() => {
+                el?.focus();
+                el?.setSelectionRange(r.cursor, r.cursor);
+              });
+            }}
+          >
+            <BaleIcon className="size-4" />
+            {t("addBaleLink")}
+          </Button>
+        ) : null}
+        <p className="text-xs text-muted-foreground">
+          {bot ? (
+            t("baleLinkHint")
+          ) : (
+            <>
+              {t("baleLinkNoBot")}{" "}
+              <Link href={`/w/${ws}/channels`} className="text-primary underline underline-offset-2">
+                {t("connectBale")}
+              </Link>
+            </>
+          )}
+        </p>
+      </div>
       <p className="text-xs text-muted-foreground">
         {formatNumber(text.trim().length)} / {formatNumber(CAMPAIGN_MAX)}
       </p>
@@ -145,6 +184,7 @@ function Composer({ ws, shop }: { ws: string; shop: string }) {
         <div className="max-w-sm rounded-2xl rounded-es-md bg-bubble-in px-3.5 py-2 text-sm leading-7 whitespace-pre-wrap" dir="auto" aria-label={t("preview")}>
           {text.trim() ? body : <span className="text-muted-foreground">{smsBody(shop, t("previewEmpty"))}</span>}
         </div>
+        {text.includes(BALE_LINK) ? <p className="text-xs text-muted-foreground">{t("previewLinkNote")}</p> : null}
         <p className="text-xs text-muted-foreground">{t("parts", { n: formatNumber(parts.parts), length: formatNumber(parts.length) })}</p>
       </div>
 

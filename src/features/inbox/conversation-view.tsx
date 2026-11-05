@@ -9,6 +9,7 @@ import { toast } from "sonner";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Dialog } from "@/components/ui/dialog";
+import { BaleIcon } from "@/components/icons";
 import { Avatar, EmptyState, Skeleton } from "@/components/ui/misc";
 import { useMembers } from "@/features/team/data";
 import { useWorkspace } from "@/features/workspace/context";
@@ -133,6 +134,12 @@ export function ConversationView({ conversationId }: { conversationId: string })
               ) : null}
             </p>
             <div className="flex items-center gap-1.5 overflow-hidden">
+              {c.channelKind === "bale" ? (
+                <Badge tone="success">
+                  <BaleIcon className="size-3" />
+                  {t("channelKinds.bale")}
+                </Badge>
+              ) : null}
               <Badge tone={statusTone[c.status as ConversationStatus] ?? "neutral"}>{t(`status.${c.status}` as "status.open")}</Badge>
               {c.aiPaused ? (
                 <Badge title={t("aiPaused")}>

@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.25.0 — 2026-11-04
+
+- Bale (backend #48, BE-2.7 part 2):
+  - Channels «اتصال بله» (`workspace.channels.manage`): connect the shop's own Bale bot with its token. The dialog explains each step: make a bot with BotFather (بات‌فادر) in Bale, copy the token, paste it. The token's shape is checked before sending.
+    - Errors in Persian: `channels.bale_token_invalid`, `channels.bale_bot_taken`, `channels.bale_unavailable`, and `billing.plan_limit` (which also opens the upgrade sheet).
+    - Bale bots are listed with their username, a Bale icon and status. They are disconnected the usual way, with their own warning. «پست‌های اخیر» and the Instagram reconnect are hidden for them.
+  - Inbox: Bale conversations carry a «بله» label in the list and the thread header and show the Bale icon in the side panel. Bale has no 24-hour window, so the window warning is hidden and the side panel reads «بدون محدودیت زمانی (بله)».
+  - «دعوت به بله» on the contact page and in the inbox side panel (`workspace.crm.write`) makes a one-time link valid 14 days, with «کپی لینک» and «کپی متن دعوت». While the Instagram window is open, «ارسال در گفتگو» sends the invitation through the normal send. It explains that pressing start in Bale joins that chat to the same contact. `channels.bale_not_connected` links to the channels page.
+  - Outage campaign: «افزودن لینک بله» puts `{link}` at the cursor, and the help says each recipient gets their own link. The preview shows a sample link in its place. Without a bot, a line links to connecting one. `outage.link_needs_bale` is in Persian.
+- Mock Api host: Bale connect with token outcomes, disconnect, a Bale conversation (23), invite links, `{link}` checks and `/__mock/bale/reset`. New e2e spec `bale.spec.ts`.
+- API refreshed from backend main (BE-2.7 part 2).
+
 ## 0.24.0 — 2026-11-04
 
 - Instagram outage (backend #47, BE-2.7 part 1):

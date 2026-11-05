@@ -171,6 +171,11 @@ for (const c of conversations) {
     m(0, "inbound", c.lastMessagePreview),
   ].reverse());
 }
+// Bale (BE-2.7 part 2): the seller's own bots, none until a test connects one. Conversation 23 came in through Bale.
+const BALE_ACCOUNT_ID = "0199b000-0000-7000-8000-0000000000b1";
+let baleChannels = [];
+const baleBot = () => ({ id: BALE_ACCOUNT_ID, kind: "bale", externalId: "1234567890", username: "niloofar_bot", displayName: "گالری نیلوفر", status: "active", statusReason: null, tokenExpiresAt: null, createdAt: iso(now()) });
+Object.assign(conversations[23], { channelKind: "bale", channelAccountId: BALE_ACCOUNT_ID, windowExpiresAt: ago(10 * 24 * H), humanAgentUntil: ago(3 * 24 * H), lastInboundAt: ago(11 * 24 * H) });
 // Voice notes (BE-2.4) in conversation 16: one transcribed, one still being transcribed, one that failed.
 {
   const c = conversations[16];
@@ -1118,7 +1123,32 @@ const routes = [
     invitations.splice(index, 1);
     send(res, 204);
   }],
-  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/channels\/?$/, (req, res) => send(res, 200, [channel])],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/channels\/?$/, (req, res) => send(res, 200, [channel, ...baleChannels])],
+  // Token outcomes for tests: 111… is refused by Bale, 222… is another shop's bot, 333… Bale is down, 444… over the plan.
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/channels\/bale\/connect$/, async (req, res) => {
+    const token = (await readBody(req)).botToken ?? "";
+    if (!/^\d{5,15}:[A-Za-z0-9_-]{20,}$/.test(token) || token.startsWith("111")) return problem(res, 422, "channels.bale_token_invalid");
+    if (token.startsWith("222")) return problem(res, 409, "channels.bale_bot_taken");
+    if (token.startsWith("333")) return problem(res, 503, "channels.bale_unavailable");
+    if (token.startsWith("444")) return send(res, 402, { type: "about:blank", title: "billing.plan_limit", status: 402, detail: "channel_accounts", code: "billing.plan_limit" });
+    if (baleChannels.length) return problem(res, 409, "channels.bale_bot_taken");
+    const bot = baleBot();
+    baleChannels = [bot];
+    send(res, 201, bot);
+  }],
+  ["DELETE", /^\/api\/v1\/workspaces\/[^/]+\/channels\/([^/]+)$/, (req, res, url, [id]) => {
+    baleChannels = baleChannels.filter((c) => c.id !== id);
+    send(res, 204);
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/contacts\/([^/]+)\/bale-link$/, (req, res, url, [id]) => {
+    if (!crmContacts.some((c) => c.id === id)) return problem(res, 404, "common.not_found");
+    if (!baleChannels.length) return problem(res, 422, "channels.bale_not_connected");
+    send(res, 200, { url: `https://ble.ir/${baleChannels[0].username}?start=${randomUUID().replace(/-/g, "").slice(0, 24)}`, expiresAt: iso(new Date(Date.now() + 14 * 24 * H)) });
+  }],
+  ["POST", /^\/__mock\/bale\/reset$/, (req, res) => {
+    baleChannels = [];
+    send(res, 204);
+  }],
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/channels\/instagram\/connect$/, (req, res) => problem(res, 422, "channels.instagram.not_configured")],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/channels\/[^/]+\/media$/, (req, res, url) => send(res, 200, page(media, url.searchParams.get("cursor"), Number(url.searchParams.get("limit") ?? 12)))],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/conversations\/?$/, (req, res, url) => {
@@ -1723,6 +1753,7 @@ const routes = [
     if (text.length < 5 || text.length > 300) return problem(res, 400, "validation.failed", { text: ["validation.text.length"] });
     if (outage.status !== "down") return problem(res, 422, "outage.not_down");
     if (nextCampaignAt()) return problem(res, 409, "outage.campaign_cooldown");
+    if (text.includes("{link}") && !baleChannels.some((b) => b.username)) return problem(res, 422, "outage.link_needs_bale");
     const c = { id: randomUUID(), channel: "sms", text: `${ws.name}:\n${text}`, status: "sending", scanned: outageAudience.reachable, sent: 0, failed: 0, createdAt: iso(now()), completedAt: null, idempotencyKey: key ?? null };
     outageCampaigns.unshift(c);
     send(res, 202, campaignView(c));

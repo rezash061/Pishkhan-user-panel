@@ -4,7 +4,7 @@ import { ChevronDown, PlugZap, RefreshCw, Unplug } from "lucide-react";
 import { useTranslations } from "next-intl";
 import { useState } from "react";
 import { toast } from "sonner";
-import { InstagramIcon } from "@/components/icons";
+import { BaleIcon, InstagramIcon } from "@/components/icons";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Card, CardBody } from "@/components/ui/card";
@@ -16,6 +16,7 @@ import type { Channel } from "@/lib/api/types";
 import { formatDate } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
+import { ConnectBaleDialog } from "./bale";
 import { startInstagramConnect } from "./connect";
 import { useChannelMedia, useChannels, useDisconnectChannel } from "./data";
 import { OAuthResult } from "./oauth-result";
@@ -30,6 +31,7 @@ export function ChannelsPage({ status, reason, channelId }: { status: string | n
   const manage = can(P.channelsManage);
   const [connecting, setConnecting] = useState(false);
   const [confirm, setConfirm] = useState<Channel | null>(null);
+  const [bale, setBale] = useState(false);
 
   const connect = async () => {
     setConnecting(true);
@@ -50,10 +52,16 @@ export function ChannelsPage({ status, reason, channelId }: { status: string | n
         description={t("subtitle")}
         action={
           manage ? (
-            <Button onClick={connect} loading={connecting}>
-              {connecting ? null : <InstagramIcon className="size-4" />}
-              {t("connect")}
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button onClick={connect} loading={connecting}>
+                {connecting ? null : <InstagramIcon className="size-4" />}
+                {t("connect")}
+              </Button>
+              <Button variant="outline" onClick={() => setBale(true)}>
+                <BaleIcon className="size-4" />
+                {t("bale.open")}
+              </Button>
+            </div>
           ) : null
         }
       />
@@ -86,12 +94,13 @@ export function ChannelsPage({ status, reason, channelId }: { status: string | n
         <p className="text-sm text-muted-foreground">{t("comingSoon")}</p>
       </div>
 
+      {bale ? <ConnectBaleDialog open onClose={() => setBale(false)} /> : null}
       <ConfirmDialog
         open={Boolean(confirm)}
         onClose={() => setConfirm(null)}
         danger
         title={t("disconnect")}
-        body={confirm ? t("disconnectConfirm", { username: confirm.username ?? confirm.externalId }) : null}
+        body={confirm ? t(confirm.kind === "bale" ? "disconnectConfirmBale" : "disconnectConfirm", { username: confirm.username ?? confirm.externalId }) : null}
         confirmLabel={t("disconnect")}
         loading={disconnect.isPending}
         onConfirm={() =>
@@ -111,20 +120,30 @@ function ChannelCard({ channel: c, manage, onReconnect, onDisconnect }: { channe
   const { workspace, can } = useWorkspace();
   const [showMedia, setShowMedia] = useState(false);
   const media = useChannelMedia(workspace.id, c.id, showMedia);
-  const needsReauth = c.status === "reauth_required" || c.status === "token_expiring";
+  const isBale = c.kind === "bale";
+  const needsReauth = !isBale && (c.status === "reauth_required" || c.status === "token_expiring");
 
   return (
     <Card>
       <CardBody className="space-y-4">
         <div className="flex flex-wrap items-center gap-3">
-          <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-[oklch(0.65_0.22_20)] to-[oklch(0.55_0.22_310)] text-white">
-            <InstagramIcon className="size-6" />
-          </span>
+          {isBale ? (
+            <span className="grid size-11 place-items-center rounded-2xl bg-[oklch(0.5_0.13_165)] text-white">
+              <BaleIcon className="size-6" />
+              <span className="sr-only">{t("kinds.bale")}</span>
+            </span>
+          ) : (
+            <span className="grid size-11 place-items-center rounded-2xl bg-gradient-to-br from-[oklch(0.65_0.22_20)] to-[oklch(0.55_0.22_310)] text-white">
+              <InstagramIcon className="size-6" />
+              <span className="sr-only">{t("kinds.instagram")}</span>
+            </span>
+          )}
           <div className="min-w-0 flex-1">
             <p className="truncate font-semibold" dir="ltr" style={{ textAlign: "right" }}>
               @{c.username ?? c.externalId}
             </p>
             <p className="text-xs text-muted-foreground">
+              {isBale ? `${t("kinds.bale")} · ` : ""}
               {c.displayName ? `${c.displayName} · ` : ""}
               {t("connectedSince", { date: formatDate(c.createdAt) })}
             </p>
@@ -139,7 +158,7 @@ function ChannelCard({ channel: c, manage, onReconnect, onDisconnect }: { channe
               {t("reconnect")}
             </Button>
           ) : null}
-          {can(P.automationWrite) ? (
+          {can(P.automationWrite) && !isBale ? (
             <Button size="sm" variant="outline" onClick={() => setShowMedia((v) => !v)} aria-expanded={showMedia}>
               <ChevronDown className={showMedia ? "rotate-180" : ""} aria-hidden />
               {t("media")}

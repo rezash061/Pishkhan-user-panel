@@ -11,6 +11,8 @@ import { Card, CardBody, CardHeader } from "@/components/ui/card";
 import { Field, Input } from "@/components/ui/field";
 import { Avatar, EmptyState, Skeleton } from "@/components/ui/misc";
 import { PageContainer } from "@/components/ui/page";
+import { BaleInvite } from "@/features/channels/bale";
+import { useNow, windowOpenSince } from "@/features/inbox/window";
 import { useChannels } from "@/features/channels/data";
 import { OrdersMini } from "@/features/orders/orders-mini";
 import { useWorkspace } from "@/features/workspace/context";
@@ -62,6 +64,7 @@ function Loaded({ detail }: { detail: ContactDetail }) {
       <TagsCard key={c.tags.join("\u0000")} detail={detail} writable={writable} />
       <FieldsCard key={JSON.stringify(c.fields)} detail={detail} writable={writable} />
       <ConsentCard contactId={c.id} writable={writable} />
+      {writable ? <BaleInviteCard detail={detail} /> : null}
       <ContactSubmissionsCard contactId={c.id} />
       <ContactOrdersCard contactId={c.id} />
       <ConversationsCard detail={detail} />
@@ -336,6 +339,21 @@ function ContactOrdersCard({ contactId }: { contactId: string }) {
     <Card>
       <CardBody>
         <OrdersMini contactId={contactId} heading={() => <h2 className="text-base font-semibold">{t("ordersTitle")}</h2>} />
+      </CardBody>
+    </Card>
+  );
+}
+
+/** «دعوت به بله» on the contact page: a one-time link; it can go straight into an Instagram chat whose window is open. */
+function BaleInviteCard({ detail }: { detail: ContactDetail }) {
+  const t = useTranslations("channels.baleLink");
+  const now = useNow(60_000);
+  const open = detail.conversations.find((v) => v.channelKind === "instagram" && windowOpenSince(v.lastInboundAt, now));
+  return (
+    <Card>
+      <CardHeader title={t("cardTitle")} description={t("cardSubtitle")} />
+      <CardBody>
+        <BaleInvite contactId={detail.contact.id} sendIn={open ? { conversationId: open.id, windowOpen: true } : null} />
       </CardBody>
     </Card>
   );
