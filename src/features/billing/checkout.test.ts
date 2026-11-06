@@ -4,6 +4,15 @@ import messages from "../../../messages/fa.json";
 import type { BillingPlanOption, CurrentPlan, PublicPlan, Subscription } from "@/lib/api/types";
 import {
   annualSaving,
+  breakdown,
+  couponErrorCodes,
+  isCouponError,
+  isPlanless,
+  isWalletTopUp,
+  MINIMUM_RIAL,
+  normalizeCoupon,
+  topUpRial,
+  walletEntryKinds,
   checkoutErrorCodes,
   checkoutKinds,
   checkoutReturnPath,
@@ -161,11 +170,53 @@ describe("Persian messages", () => {
     for (const code of checkoutErrorCodes) expect(t.has(`errors.${code}` as never), code).toBe(true);
   });
 
+  it("translates every coupon error and wallet change", () => {
+    for (const code of couponErrorCodes) expect(t.has(`errors.${code}` as never), code).toBe(true);
+    for (const kind of walletEntryKinds) expect(t.has(`billing.wallet.kinds.${kind}` as never), kind).toBe(true);
+  });
+
   it("names every kind and status", () => {
     for (const kind of checkoutKinds) {
       for (const group of ["action", "kind", "kindHint"]) expect(t.has(`billing.plans.${group}.${kind}` as never), `${group}.${kind}`).toBe(true);
     }
     for (const status of ["pending", "paid", "failed", "expired"]) expect(t.has(`billing.history.statuses.${status}` as never)).toBe(true);
     for (const outcome of ["paid", "failed", "cancelled", "expired", "pending"]) expect(t.has(`billing.result.${outcome}` as never)).toBe(true);
+  });
+});
+
+describe("coupon and wallet (BE-1.11)", () => {
+  const m = (amount: number) => ({ amount, currency: "IRR" as const });
+
+  it("breaks the quote down and tells a fully covered checkout apart", () => {
+    const covered = breakdown({ price: m(8_900_000), credit: m(0), discount: m(890_000), walletUsed: m(8_010_000), amount: m(0) });
+    expect(covered).toMatchObject({ discount: 890_000, walletUsed: 8_010_000, covered: true, minimumApplied: false });
+    const partly = breakdown({ price: m(8_900_000), credit: m(0), discount: m(0), walletUsed: m(5_000_000), amount: m(3_900_000) });
+    expect(partly).toMatchObject({ covered: false, minimumApplied: false, amount: 3_900_000 });
+  });
+
+  it("flags Zarinpal's minimum only when less was left", () => {
+    expect(breakdown({ price: m(390_000), credit: m(385_000), discount: m(0), walletUsed: m(0), amount: m(MINIMUM_RIAL) }).minimumApplied).toBe(true);
+    expect(breakdown({ price: m(MINIMUM_RIAL), credit: m(0), discount: m(0), walletUsed: m(0), amount: m(MINIMUM_RIAL) }).minimumApplied).toBe(false);
+  });
+
+  it("normalizes coupon codes and tells coupon errors apart", () => {
+    expect(normalizeCoupon("  norooz1405 ")).toBe("NOROOZ1405");
+    expect(isCouponError("billing.coupon.expired")).toBe(true);
+    expect(isCouponError("billing.checkout.unavailable")).toBe(false);
+    expect(isCouponError(undefined)).toBe(false);
+  });
+
+  it("checks top-ups against the backend's limits in Toman and sends Rial", () => {
+    expect(topUpRial(null)).toEqual({ error: "required" });
+    expect(topUpRial(9_999)).toEqual({ error: "min" });
+    expect(topUpRial(100_000_001)).toEqual({ error: "max" });
+    expect(topUpRial(500_000)).toEqual({ rial: 5_000_000 });
+  });
+
+  it("knows the checkouts that buy no plan", () => {
+    expect(isWalletTopUp("wallet_top_up")).toBe(true);
+    expect(isPlanless("wallet_top_up")).toBe(true);
+    expect(isPlanless("overage")).toBe(true);
+    expect(isPlanless("new")).toBe(false);
   });
 });

@@ -1,5 +1,16 @@
 # Changelog
 
+## 0.28.0 — 2026-11-06
+
+- Coupons and the wallet at checkout (backend #55, BE-1.11; UP-2.8):
+  - Quote dialog: «کد تخفیف دارید؟» opens a code field. The code is tried on the quote first; a refused one (invalid, expired, used up, not for this plan, first purchase only, already used) is explained in Persian under the field and the quote stays as it was. An applied code shows as a chip with «حذف کد», and the discount gets its own row.
+  - Quote dialog: with a wallet balance, «پرداخت از کیف پول (موجودی …)» takes as much as it can; the wallet part gets its own row. When the coupon and the wallet cover it all, the button reads «پرداخت و فعال‌سازی», no gateway is opened, and the panel goes straight to the paid checkout. A note explains when part of the balance is kept back for Zarinpal's 1,000 Toman minimum.
+  - Each coupon and wallet choice uses its own Idempotency-Key, so a double tap opens one payment and a changed choice opens a new one.
+  - «کیف پول» card on the billing page: balance, «افزایش موجودی» (presets or any amount from 10,000 to 100,000,000 Toman, checked before sending, paid through Zarinpal), and the latest changes (top-up, staff adjustment, refund, spent on a plan, given back) with the balance after each. Rows tied to a checkout open it.
+  - Checkout page and history: the discount with its code, the wallet part, and «پرداخت در درگاه»; wallet top-ups show as «شارژ کیف پول» without plan or cycle.
+  - A checkout with no `paymentUrl` (overage included) opens the checkout page instead of the gateway.
+- Mock Api host: coupons (NOROOZ, FIRST50, PRO20, FREEALL, OLD), the wallet with top-ups, holds and give-backs, and checkouts paid without the gateway. `/__mock/billing/wallet?balance=` sets the balance in Rial.
+- API refreshed from backend main (BE-1.11).
 ## 0.27.0 — 2026-11-05
 
 - Card-to-card receipts (backend #50, BE-2.10; UP-2.2 and UP-2.3):

@@ -446,12 +446,62 @@ const salePlans = [
 let subscriptions = [];
 let checkouts = [];
 let invoiceSeq = 1000;
+// Coupons and the wallet (BE-1.11). Codes for tests: NOROOZ (10%), FIRST50 (50%, first purchase only), PRO20 (20%, «حرفه‌ای»
+// only), FREEALL (100%), OLD (expired). `/__mock/billing/wallet?balance=` sets the balance in Rial.
+const coupons = [
+  { code: "NOROOZ", kind: "percent", value: 10 },
+  { code: "FIRST50", kind: "percent", value: 50, firstPurchaseOnly: true },
+  { code: "PRO20", kind: "percent", value: 20, planCodes: ["pro"] },
+  { code: "FREEALL", kind: "percent", value: 100 },
+  { code: "OLD", kind: "percent", value: 30, expired: true },
+];
+let wallet = { balance: 0, entries: [] };
+const walletEntry = (kind, amount, checkoutId, reason = null) => {
+  wallet.balance += amount;
+  wallet.entries.unshift({ id: randomUUID(), kind, amount: { amount, currency: "IRR" }, balanceAfter: { amount: wallet.balance, currency: "IRR" }, reason, checkoutId, actorKind: kind === "adjustment" ? "staff" : "user", createdAt: iso(now()) });
+};
+const couponRefusal = (code, p, kind) => {
+  const c = coupons.find((x) => x.code === String(code).trim().toUpperCase());
+  if (!c) return { error: "billing.coupon.invalid" };
+  if (c.expired) return { error: "billing.coupon.expired" };
+  if (c.planCodes && !c.planCodes.includes(p.code)) return { error: "billing.coupon.not_for_plan" };
+  const paidBefore = checkouts.some((x) => x.status === "paid" && x.kind !== "overage" && x.kind !== "wallet_top_up");
+  if (c.firstPurchaseOnly && (kind !== "new" || paidBefore)) return { error: "billing.coupon.first_purchase_only" };
+  if (checkouts.some((x) => x.status === "paid" && x.couponCode === c.code)) return { error: "billing.coupon.already_used" };
+  return { coupon: c };
+};
+// Mirrors the backend's CheckoutQuote.Priced: coupon off the price after credit, then the wallet; Zarinpal gets 0 or ≥ 10,000 Rial.
+const priced = (q, coupon, balance) => {
+  const base = Math.max(0, q.price.amount - q.credit.amount);
+  const discount = coupon ? Math.min(base, Math.round((base * coupon.value) / 100)) : 0;
+  const due = base - discount;
+  let fromWallet = Math.min(Math.max(balance, 0), due);
+  let rest = due - fromWallet;
+  if (rest > 0 && rest < 10_000 && fromWallet > 0) {
+    fromWallet = Math.max(0, fromWallet - (10_000 - rest));
+    rest = due - fromWallet;
+  }
+  if ((rest > 0 && rest < 10_000) || (rest === 0 && discount === 0 && fromWallet === 0)) rest = 10_000;
+  return { ...q, discount: { amount: discount, currency: "IRR" }, couponCode: coupon?.code ?? null, walletUsed: { amount: fromWallet, currency: "IRR" }, amount: { amount: rest, currency: "IRR" } };
+};
+const quoteWith = (p, cycle, body) => {
+  const r = quoteFor(p, cycle);
+  if (r.error) return r;
+  let coupon = null;
+  if (body.couponCode && String(body.couponCode).trim()) {
+    const c = couponRefusal(body.couponCode, p, r.quote.kind);
+    if (c.error) return c;
+    coupon = c.coupon;
+  }
+  return { quote: priced(r.quote, coupon, body.useWallet ? wallet.balance : 0) };
+};
 const resetBilling = () => {
   // A 12-day trial of «رشد», as the Billing v1 e2e test expects.
   const growth = salePlans[2];
   subscriptions = [{ id: randomUUID(), planId: growth.id, planCode: growth.code, planVersion: 2, state: "trialing", trial: true, startsAt: ago(2 * D), endsAt: iso(new Date(Date.now() + 12 * D)), endedAt: null, endReason: null, cycle: null, checkoutId: null }];
   checkouts = [];
   invoiceSeq = 1000;
+  wallet = { balance: 0, entries: [] };
 };
 resetBilling();
 const currentSub = () => subscriptions.find((s) => s.state === "active" || s.state === "trialing") ?? null;
@@ -467,7 +517,7 @@ const quoteFor = (p, cycle) => {
   const nowMs = Date.now();
   const cur = currentSub();
   const curPlan = cur && salePlans.find((x) => x.code === cur.planCode);
-  const quote = (kind, credit, startMs) => ({ kind, planId: p.id, planCode: p.code, planName: p.name, cycle, price: { amount: price, currency: "IRR" }, credit: { amount: credit, currency: "IRR" }, amount: { amount: Math.max(price - credit, 10_000), currency: "IRR" }, startsAt: iso(new Date(startMs)), endsAt: iso(new Date(startMs + length)) });
+  const quote = (kind, credit, startMs) => ({ kind, planId: p.id, planCode: p.code, planName: p.name, cycle, price: { amount: price, currency: "IRR" }, credit: { amount: credit, currency: "IRR" }, amount: { amount: Math.max(price - credit, 10_000), currency: "IRR" }, startsAt: iso(new Date(startMs)), endsAt: iso(new Date(startMs + length)), discount: { amount: 0, currency: "IRR" }, couponCode: null, walletUsed: { amount: 0, currency: "IRR" } });
   if (!cur || cur.trial || !curPlan) return { quote: quote("new", 0, nowMs) };
   if (!cur.endsAt) return { error: "billing.checkout.managed_subscription" };
   const lastEnd = Math.max(new Date(cur.endsAt).getTime(), ...scheduledSubs().map((s) => new Date(s.endsAt).getTime()));
@@ -483,7 +533,8 @@ const quoteFor = (p, cycle) => {
 };
 const checkoutView = (c) => {
   // The gateway authority, the period and the idempotency key are the mock's own bookkeeping, not part of the response.
-  const view = { ...c, authority: undefined, startsAt: undefined, endsAt: undefined, idempotencyKey: undefined };
+  const zero = { amount: 0, currency: "IRR" };
+  const view = { discount: zero, couponCode: null, walletUsed: zero, ...c, authority: undefined, startsAt: undefined, endsAt: undefined, idempotencyKey: undefined };
   return { ...view, status: c.status === "pending" && Date.now() - new Date(c.createdAt).getTime() > H ? "expired" : c.status };
 };
 const currentPlanView = () => {
@@ -495,9 +546,18 @@ const currentPlanView = () => {
 // What the backend does when Zarinpal confirms: start the subscription now (new, upgrade) or schedule it (renewal, downgrade).
 const settleCheckout = (c, outcome) => {
   if (c.status !== "pending") return;
-  if (outcome === "cancelled") return Object.assign(c, { status: "failed", error: "cancelled" });
-  if (outcome === "failed") return Object.assign(c, { status: "failed", error: "-51" });
   if (outcome === "pending") return;
+  if (outcome === "cancelled" || outcome === "failed") {
+    // The wallet part taken when the checkout opened is given back.
+    if (c.walletUsed?.amount > 0) walletEntry("released", c.walletUsed.amount, c.id);
+    return Object.assign(c, { status: "failed", error: outcome === "cancelled" ? "cancelled" : "-51" });
+  }
+  const paidWithoutGateway = c.amount.amount === 0;
+  const gateway = paidWithoutGateway ? { referenceId: null, cardMask: null } : { referenceId: String(70_000_000 + invoiceSeq + 1), cardMask: "6219-86**-****-4321" };
+  if (c.kind === "wallet_top_up") {
+    walletEntry("top_up", c.amount.amount, c.id);
+    return Object.assign(c, { status: "paid", invoiceNumber: ++invoiceSeq, ...gateway, subscriptionId: null, paidAt: iso(now()) });
+  }
   if (c.kind === "overage") {
     // An overage payment settles every charge it was opened for; there is no subscription.
     for (const ch of overageCharges) if (ch.status === "due") Object.assign(ch, { status: "settled", checkoutId: c.id, settledAt: iso(now()) });
@@ -507,7 +567,7 @@ const settleCheckout = (c, outcome) => {
   const sub = { id: randomUUID(), planId: c.planId, planCode: c.planCode, planVersion: c.planVersion, state: later ? "scheduled" : "active", trial: false, startsAt: c.startsAt, endsAt: c.endsAt, endedAt: null, endReason: null, cycle: c.cycle, checkoutId: c.id };
   if (!later) for (const s of subscriptions) if (s.state === "active" || s.state === "trialing") Object.assign(s, { state: "ended", endedAt: iso(now()), endReason: "replaced" });
   subscriptions.push(sub);
-  Object.assign(c, { status: "paid", invoiceNumber: ++invoiceSeq, referenceId: String(70_000_000 + invoiceSeq), cardMask: "6219-86**-****-4321", subscriptionId: sub.id, paidAt: iso(now()) });
+  Object.assign(c, { status: "paid", invoiceNumber: ++invoiceSeq, ...gateway, subscriptionId: sub.id, paidAt: iso(now()) });
 };
 // Overage (BE-2.8). Scenarios for tests (`/__mock/overage?scenario=`): `trial` (the default: no overage on a trial),
 // `overage` (1,000 included, 1,150 used, 150 extra at 5,000 Toman each) and `unpaid` (a charge 15 days overdue, AI blocked).
@@ -1131,24 +1191,49 @@ const routes = [
     if (!["monthly", "annual"].includes(cycle)) return problem(res, 400, "validation.failed", { cycle: ["billing.checkout.cycle_invalid"] });
     const p = salePlans.find((x) => x.id === b.planId);
     if (!p) return problem(res, 404, "billing.plan.not_found");
-    const r = quoteFor(p, cycle);
+    const r = quoteWith(p, cycle, b);
     if (r.error) return problem(res, r.error.endsWith("_pending") || r.error.endsWith("managed_subscription") ? 409 : 422, r.error);
     send(res, 200, r.quote);
   }],
   ["POST", /^\/api\/v1\/workspaces\/[^/]+\/billing\/checkout$/, async (req, res) => {
     const key = req.headers["idempotency-key"];
     const seen = key && checkouts.find((c) => c.idempotencyKey === key);
-    if (seen) return send(res, 201, { checkout: checkoutView(seen), paymentUrl: `http://localhost:${port}/__mock/zarinpal/${seen.authority}` });
+    if (seen) return send(res, 201, { checkout: checkoutView(seen), paymentUrl: seen.amount.amount > 0 ? `http://localhost:${port}/__mock/zarinpal/${seen.authority}` : null });
     const b = await readBody(req);
     const cycle = b.cycle ?? "monthly";
     const p = salePlans.find((x) => x.id === b.planId);
     if (!p) return problem(res, 404, "billing.plan.not_found");
-    const r = quoteFor(p, cycle);
+    const r = quoteWith(p, cycle, b);
     if (r.error) return problem(res, r.error.endsWith("_pending") || r.error.endsWith("managed_subscription") ? 409 : 422, r.error);
     const q = r.quote;
-    const c = { id: randomUUID(), kind: q.kind, planId: p.id, planCode: p.code, planName: p.name, planVersion: 2, cycle, price: q.price, credit: q.credit, amount: q.amount, status: "pending", error: null, invoiceNumber: null, referenceId: null, cardMask: null, subscriptionId: null, createdBy: me.id, createdAt: iso(now()), paidAt: null, authority: `A${randomUUID().replace(/-/g, "").slice(0, 35)}`, startsAt: q.startsAt, endsAt: q.endsAt, idempotencyKey: key ?? null };
+    const c = { id: randomUUID(), kind: q.kind, planId: p.id, planCode: p.code, planName: p.name, planVersion: 2, cycle, price: q.price, credit: q.credit, amount: q.amount, discount: q.discount, couponCode: q.couponCode, walletUsed: q.walletUsed, status: "pending", error: null, invoiceNumber: null, referenceId: null, cardMask: null, subscriptionId: null, createdBy: me.id, createdAt: iso(now()), paidAt: null, authority: `A${randomUUID().replace(/-/g, "").slice(0, 35)}`, startsAt: q.startsAt, endsAt: q.endsAt, idempotencyKey: key ?? null };
+    checkouts.unshift(c);
+    if (q.walletUsed.amount > 0) walletEntry("checkout", -q.walletUsed.amount, c.id);
+    // Covered by the coupon and the wallet: paid at once, no gateway.
+    if (q.amount.amount === 0) {
+      settleCheckout(c, "paid");
+      return send(res, 201, { checkout: checkoutView(c), paymentUrl: null });
+    }
+    send(res, 201, { checkout: checkoutView(c), paymentUrl: `http://localhost:${port}/__mock/zarinpal/${c.authority}` });
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/wallet$/, (req, res) => send(res, 200, { balance: { amount: wallet.balance, currency: "IRR" }, entries: wallet.entries.slice(0, 100) })],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/billing\/wallet\/top-up$/, async (req, res) => {
+    const key = req.headers["idempotency-key"];
+    const seen = key && checkouts.find((c) => c.idempotencyKey === key);
+    if (seen) return send(res, 201, { checkout: checkoutView(seen), paymentUrl: `http://localhost:${port}/__mock/zarinpal/${seen.authority}` });
+    const b = await readBody(req);
+    if (!Number.isInteger(b.amount) || b.amount < 100_000 || b.amount > 1_000_000_000) return problem(res, 400, "validation.failed", { amount: ["validation.out_of_range"] });
+    const money = { amount: b.amount, currency: "IRR" };
+    const zero = { amount: 0, currency: "IRR" };
+    const c = { id: randomUUID(), kind: "wallet_top_up", planId: "00000000-0000-0000-0000-000000000000", planCode: "", planName: "شارژ کیف پول", planVersion: 0, cycle: "monthly", price: money, credit: zero, amount: money, discount: zero, couponCode: null, walletUsed: zero, status: "pending", error: null, invoiceNumber: null, referenceId: null, cardMask: null, subscriptionId: null, createdBy: me.id, createdAt: iso(now()), paidAt: null, authority: `A${randomUUID().replace(/-/g, "").slice(0, 35)}`, idempotencyKey: key ?? null };
     checkouts.unshift(c);
     send(res, 201, { checkout: checkoutView(c), paymentUrl: `http://localhost:${port}/__mock/zarinpal/${c.authority}` });
+  }],
+  ["POST", /^\/__mock\/billing\/wallet$/, (req, res, url) => {
+    wallet = { balance: 0, entries: [] };
+    const balance = Number(url.searchParams.get("balance") ?? 0);
+    if (balance) walletEntry("adjustment", balance, null, "شارژ آزمایشی");
+    send(res, 204);
   }],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/checkouts$/, (req, res) => send(res, 200, checkouts.slice(0, 100).map(checkoutView))],
   ["GET", /^\/api\/v1\/workspaces\/[^/]+\/billing\/checkouts\/([^/]+)$/, (req, res, url, [id]) => {

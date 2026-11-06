@@ -17,8 +17,9 @@ import { toPersianDigits } from "@/lib/i18n/digits";
 import { formatDateTime, formatToman } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { rialOf } from "@/lib/money";
-import { isKind, isOverage, outcomeOf, subscriptionOf, toneOf, type Outcome } from "./checkout";
+import { isOverage, isPlanless, isWalletTopUp, outcomeOf, subscriptionOf, toneOf, type Outcome } from "./checkout";
 import { useCheckout, useCurrentPlan, useRefreshBilling } from "./data";
+import { kindLabel } from "./history";
 
 const icons = { paid: CircleCheck, failed: CircleX, cancelled: CircleX, expired: TimerOff, pending: Clock } as const;
 const panels = {
@@ -96,11 +97,15 @@ function Result({ checkout: c, refreshing, onRefresh }: { checkout: Checkout; re
   const bought = outcome === "paid" ? subscriptionOf(current.data, c) : null;
   const startsLater = bought?.state === "scheduled";
   const credit = rialOf(c.credit) ?? 0;
+  const discount = rialOf(c.discount) ?? 0;
+  const walletUsed = rialOf(c.walletUsed) ?? 0;
 
   const body =
     outcome === "paid"
       ? isOverage(c.kind)
         ? t("result.paidOverage")
+        : isWalletTopUp(c.kind)
+          ? t("result.paidTopUp", { amount: formatToman(rialOf(c.amount) ?? 0) })
         : startsLater
           ? t("result.paidLater", { plan: c.planName, cycle, date: formatDateTime(bought.startsAt) })
           : t("result.paidBody", { plan: c.planName, cycle })
@@ -142,12 +147,29 @@ function Result({ checkout: c, refreshing, onRefresh }: { checkout: Checkout; re
             <Item label={t("history.status")} value={<Badge tone={toneOf(c.status)}>{t.has(`history.statuses.${c.status}`) ? t(`history.statuses.${c.status}` as "history.statuses.paid") : c.status}</Badge>} />
             {c.referenceId ? <Item label={t("result.reference")} value={<bdi dir="ltr" className="font-mono">{toPersianDigits(c.referenceId)}</bdi>} /> : null}
             {c.cardMask ? <Item label={t("result.card")} value={<bdi dir="ltr" className="font-mono">{c.cardMask}</bdi>} /> : null}
-            <Item label={t("result.plan")} value={c.planName} />
-            <Item label={t("result.kind")} value={isKind(c.kind) ? t(`plans.kind.${c.kind}`) : isOverage(c.kind) ? t("overage.kind") : c.kind} />
-            {isOverage(c.kind) ? null : <Item label={t("result.cycle")} value={cycle} />}
-            <Item label={t("result.price")} value={formatToman(rialOf(c.price) ?? 0)} />
+            {isPlanless(c.kind) ? null : <Item label={t("result.plan")} value={c.planName} />}
+            <Item label={t("result.kind")} value={kindLabel(t, c.kind)} />
+            {isPlanless(c.kind) ? null : <Item label={t("result.cycle")} value={cycle} />}
+            {isWalletTopUp(c.kind) ? null : <Item label={t("result.price")} value={formatToman(rialOf(c.price) ?? 0)} />}
             {credit > 0 ? <Item label={t("result.credit")} value={formatToman(credit)} /> : null}
-            <Item label={t("result.amount")} value={formatToman(rialOf(c.amount) ?? 0)} strong />
+            {discount > 0 ? (
+              <Item
+                label={t("result.discount")}
+                value={
+                  <>
+                    {formatToman(discount)}
+                    {c.couponCode ? (
+                      <>
+                        {" "}
+                        (<bdi dir="ltr" className="font-mono">{c.couponCode}</bdi>)
+                      </>
+                    ) : null}
+                  </>
+                }
+              />
+            ) : null}
+            {walletUsed > 0 ? <Item label={t("result.walletUsed")} value={formatToman(walletUsed)} /> : null}
+            <Item label={walletUsed > 0 || discount > 0 ? t("result.amountGateway") : t("result.amount")} value={formatToman(rialOf(c.amount) ?? 0)} strong />
             <Item label={t("result.createdAt")} value={formatDateTime(c.createdAt)} />
             {c.paidAt ? <Item label={t("result.paidAt")} value={formatDateTime(c.paidAt)} /> : null}
             {bought ? <Item label={t("quote.starts")} value={formatDateTime(bought.startsAt)} /> : null}
