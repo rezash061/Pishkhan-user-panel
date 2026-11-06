@@ -34,7 +34,9 @@ export const qk = {
   billingPlan: (ws: string) => ["billing", ws, "plan"] as const,
   billingUsage: (ws: string) => ["billing", ws, "usage"] as const,
   billingPlans: (ws: string) => ["billing", ws, "plans"] as const,
-  billingQuote: (ws: string, planId: string, cycle: string) => ["billing", ws, "quote", planId, cycle] as const,
+  billingQuote: (ws: string, planId: string, cycle: string, coupon: string | null = null, useWallet = false) =>
+    ["billing", ws, "quote", planId, cycle, coupon, useWallet] as const,
+  wallet: (ws: string) => ["billing", ws, "wallet"] as const,
   bankAccounts: (ws: string) => ["payments", ws, "bank-accounts"] as const,
   receiptSettings: (ws: string) => ["payments", ws, "receipt-settings"] as const,
   receipts: (ws: string) => ["receipts", ws] as const,

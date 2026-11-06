@@ -17,10 +17,11 @@ import { daysLeft, meterState, shareOf, useBillingPlans, useCurrentPlan, useUsag
 import { CheckoutHistory } from "./history";
 import { OverageBlockedBanner, OverageCard } from "./overage";
 import { PlansCard } from "./plans";
+import { WalletCard } from "./wallet";
 
 /**
  * «اشتراک»: the current plan with any periods already paid for, this Jalali month's usage (UP-1.15), the plans on sale
- * with a quote and Zarinpal checkout, and the payments and invoices (BE-2.8).
+ * with a quote and Zarinpal checkout (with a coupon and the wallet, BE-1.11), the wallet, and the payments and invoices (BE-2.8).
  */
 export function BillingPage() {
   const t = useTranslations("billing");
@@ -33,6 +34,7 @@ export function BillingPage() {
       <PlanCard ws={workspace.id} />
       <UsageCard ws={workspace.id} />
       <OverageCard ws={workspace.id} />
+      <WalletCard ws={workspace.id} />
       <div id="plans" className="scroll-mt-4">
         <PlansCard ws={workspace.id} current={current.data} />
       </div>

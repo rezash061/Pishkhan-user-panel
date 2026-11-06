@@ -1,4 +1,4 @@
-import type { BillingPlanOption, Checkout, CurrentPlan, PublicPlan, Subscription } from "@/lib/api/types";
+import type { BillingPlanOption, Checkout, CheckoutQuote, CurrentPlan, PublicPlan, Subscription } from "@/lib/api/types";
 import { rialOf } from "@/lib/money";
 
 /** Billing cycles the backend sells: `monthly` (30 days, the default) and `annual` (365 days). */
@@ -23,6 +23,65 @@ export const checkoutErrorCodes = [
   "billing.checkout.managed_subscription",
   "billing.checkout.scheduled_pending",
 ] as const;
+
+/** Why a coupon cannot be used (BE-1.11); shown under the coupon field, the quote without the coupon stays. */
+export const couponErrorCodes = [
+  "billing.coupon.invalid",
+  "billing.coupon.expired",
+  "billing.coupon.used_up",
+  "billing.coupon.not_for_plan",
+  "billing.coupon.first_purchase_only",
+  "billing.coupon.already_used",
+] as const;
+
+export const isCouponError = (code: string | null | undefined) => !!code && code.startsWith("billing.coupon.");
+
+/** Zarinpal's smallest payment (backend `CheckoutPlanner.MinimumAmount`), 1,000 Toman. */
+export const MINIMUM_RIAL = 10_000;
+
+/** Coupon codes are 3–32 letters, digits, `-` or `_`; the backend compares them in upper case. */
+export function normalizeCoupon(raw: string): string {
+  return raw.trim().toUpperCase();
+}
+
+const rial = (m: { amount?: number | string | null } | null | undefined) => Number(m?.amount ?? 0);
+
+/** How the quote's amount comes about, in Rial: what is left after credit, coupon and wallet, and the Zarinpal amount. */
+export function breakdown(q: Pick<CheckoutQuote, "price" | "credit" | "discount" | "walletUsed" | "amount">) {
+  const price = rial(q.price);
+  const credit = rial(q.credit);
+  const discount = rial(q.discount);
+  const walletUsed = rial(q.walletUsed);
+  const amount = rial(q.amount);
+  const left = Math.max(0, price - credit - discount - walletUsed);
+  return {
+    price,
+    credit,
+    discount,
+    walletUsed,
+    amount,
+    /** Nothing goes to Zarinpal: the coupon and the wallet paid it all. */
+    covered: amount === 0,
+    /** Zarinpal's minimum was charged instead of a smaller amount. */
+    minimumApplied: amount === MINIMUM_RIAL && left < MINIMUM_RIAL,
+  };
+}
+
+/** Wallet top-ups (backend `CheckoutService.MinTopUp`/`MaxTopUp`): 10,000 to 100,000,000 Toman. */
+export const TOP_UP_MIN_TOMAN = 10_000;
+export const TOP_UP_MAX_TOMAN = 100_000_000;
+export const topUpPresetsToman = [100_000, 500_000, 1_000_000, 2_000_000];
+
+/** The Rial amount for a typed Toman top-up, or the reason it is refused. */
+export function topUpRial(toman: number | null): { rial: number } | { error: "required" | "min" | "max" } {
+  if (toman === null || !Number.isFinite(toman) || toman <= 0) return { error: "required" };
+  if (toman < TOP_UP_MIN_TOMAN) return { error: "min" };
+  if (toman > TOP_UP_MAX_TOMAN) return { error: "max" };
+  return { rial: Math.round(toman) * 10 };
+}
+
+/** Wallet changes (backend `WalletEntryKinds`). */
+export const walletEntryKinds = ["top_up", "adjustment", "refund", "checkout", "released"] as const;
 
 /** The plan's price for a cycle in Rial, or null when the plan is not sold for that cycle (no price, or zero). */
 export function priceOf(plan: PublicPlan, cycle: Cycle): number | null {
@@ -69,6 +128,12 @@ export function initialCycle(current: CurrentPlan | undefined): Cycle {
 
 /** Overage payments (BE-2.8) are checkouts too, of kind `overage`, with no subscription. */
 export const isOverage = (kind: string | null | undefined) => kind === "overage";
+
+/** Money into the wallet (BE-1.11) is a checkout of kind `wallet_top_up`, with no plan. */
+export const isWalletTopUp = (kind: string | null | undefined) => kind === "wallet_top_up";
+
+/** Checkouts that buy no plan: no cycle, no subscription. */
+export const isPlanless = (kind: string | null | undefined) => isOverage(kind) || isWalletTopUp(kind);
 
 export function isKind(value: string | null | undefined): value is CheckoutKind {
   return checkoutKinds.includes(value as CheckoutKind);

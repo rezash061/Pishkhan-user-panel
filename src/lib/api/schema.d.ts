@@ -8346,7 +8346,7 @@ export interface paths {
         put?: never;
         /**
          * What buying a plan costs now, and when it would start
-         * @description 404 `billing.plan.not_found`; 422 `billing.checkout.plan_not_for_sale` or `billing.checkout.cycle_not_offered`; 409 `billing.checkout.managed_subscription` (a plan granted by the Pishkhan team without an end) or `billing.checkout.scheduled_pending` (an upgrade while a later period is already paid for).
+         * @description 404 `billing.plan.not_found`; 422 `billing.checkout.plan_not_for_sale` or `billing.checkout.cycle_not_offered`, or for the coupon `billing.coupon.invalid`, `expired`, `used_up`, `not_for_plan`, `first_purchase_only` or `already_used`; 409 `billing.checkout.managed_subscription` (a plan granted by the Pishkhan team without an end) or `billing.checkout.scheduled_pending` (an upgrade while a later period is already paid for).
          */
         post: {
             parameters: {
@@ -8819,6 +8819,162 @@ export interface paths {
                 };
             };
         };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/billing/wallet": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** The wallet balance and its latest changes */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WalletResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/billing/wallet/top-up": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Pay money into the wallet: opens the payment at Zarinpal
+         * @description 400 on `amount` outside 100,000 to 1,000,000,000 Rial; 422 `billing.checkout.unavailable` or `billing.checkout.gateway_unavailable`. The balance grows when Zarinpal confirms the payment; the checkout (kind `wallet_top_up`) is the invoice.
+         */
+        post: {
+            parameters: {
+                query?: never;
+                header?: {
+                    /** @description UUID; retries with the same key return the first response. */
+                    "Idempotency-Key"?: string;
+                };
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody: {
+                content: {
+                    /**
+                     * @example {
+                     *       "amount": 5000000
+                     *     }
+                     */
+                    "application/json": components["schemas"]["WalletTopUpRequest"];
+                };
+            };
+            responses: {
+                /** @description Created */
+                201: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["StartCheckoutResponse"];
+                    };
+                };
+                /** @description Bad Request */
+                400: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Unprocessable Entity */
+                422: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+                /** @description Too Many Requests */
+                429: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/problem+json": components["schemas"]["ProblemDetails"];
+                    };
+                };
+            };
+        };
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/api/v1/workspaces/{workspaceId}/features": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Feature flags that are on for this workspace */
+        get: {
+            parameters: {
+                query?: never;
+                header?: never;
+                path: {
+                    workspaceId: string;
+                };
+                cookie?: never;
+            };
+            requestBody?: never;
+            responses: {
+                /** @description OK */
+                200: {
+                    headers: {
+                        [name: string]: unknown;
+                    };
+                    content: {
+                        "application/json": components["schemas"]["WorkspaceFeaturesResponse"];
+                    };
+                };
+            };
+        };
+        put?: never;
+        post?: never;
         delete?: never;
         options?: never;
         head?: never;
@@ -11085,11 +11241,17 @@ export interface components {
             startsAt: string;
             /** Format: date-time */
             endsAt: string;
+            discount: components["schemas"]["Money"];
+            couponCode: null | string;
+            walletUsed: components["schemas"]["Money"];
         };
         CheckoutRequest: {
             /** Format: uuid */
             planId: string;
             cycle: null | string;
+            couponCode?: null | string;
+            /** @default false */
+            useWallet: boolean;
         };
         CheckoutResponse: {
             /** Format: uuid */
@@ -11119,6 +11281,9 @@ export interface components {
             createdAt: string;
             /** Format: date-time */
             paidAt: null | string;
+            discount: components["schemas"]["Money"];
+            couponCode: null | string;
+            walletUsed: components["schemas"]["Money"];
         };
         ConnectBaleRequest: {
             botToken: string;
@@ -12749,7 +12914,7 @@ export interface components {
         };
         StartCheckoutResponse: {
             checkout: components["schemas"]["CheckoutResponse"];
-            paymentUrl: string;
+            paymentUrl: null | string;
         };
         StorefrontCard: {
             /** Format: uuid */
@@ -13100,6 +13265,30 @@ export interface components {
         VerifyOtpRequest: {
             phone: string;
             code: string;
+        };
+        WalletEntryResponse: {
+            /** Format: uuid */
+            id: string;
+            kind: string;
+            amount: components["schemas"]["Money"];
+            balanceAfter: components["schemas"]["Money"];
+            reason: null | string;
+            /** Format: uuid */
+            checkoutId: null | string;
+            actorKind: string;
+            /** Format: date-time */
+            createdAt: string;
+        };
+        WalletResponse: {
+            balance: components["schemas"]["Money"];
+            entries: components["schemas"]["WalletEntryResponse"][];
+        };
+        WalletTopUpRequest: {
+            /** Format: int64 */
+            amount: number;
+        };
+        WorkspaceFeaturesResponse: {
+            enabled: string[];
         };
         WorkspaceResponse: {
             /** Format: uuid */

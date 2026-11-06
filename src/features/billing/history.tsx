@@ -12,7 +12,7 @@ import { toPersianDigits } from "@/lib/i18n/digits";
 import { formatDate, formatDateTime, formatToman } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { rialOf } from "@/lib/money";
-import { isKind, isOverage, toneOf } from "./checkout";
+import { isKind, isOverage, isPlanless, isWalletTopUp, toneOf } from "./checkout";
 import { useCheckouts } from "./data";
 
 /** «پرداخت‌ها و فاکتورها»: the last 100 checkouts; a paid one is the invoice, with its number, reference and card. */
@@ -56,7 +56,7 @@ export function CheckoutHistory({ ws }: { ws: string }) {
 function CheckoutRow({ ws, checkout: c }: { ws: string; checkout: Checkout }) {
   const t = useTranslations("billing");
   const status = t.has(`history.statuses.${c.status}`) ? t(`history.statuses.${c.status}` as "history.statuses.paid") : c.status;
-  const kind = isKind(c.kind) ? t(`plans.kind.${c.kind}`) : isOverage(c.kind) ? t("overage.kind") : c.kind;
+  const kind = kindLabel(t, c.kind);
   const cycle = t(c.cycle === "annual" ? "cycle.annual" : "cycle.monthly");
   const details: [string, string][] = [];
   if (c.referenceId) details.push([t("result.reference"), toPersianDigits(c.referenceId)]);
@@ -71,7 +71,7 @@ function CheckoutRow({ ws, checkout: c }: { ws: string; checkout: Checkout }) {
             <Badge tone={toneOf(c.status)}>{status}</Badge>
           </p>
           <p className="text-xs text-muted-foreground">
-            {kind} · {isOverage(c.kind) ? null : <>{c.planName} · {cycle} · </>} <time dateTime={c.paidAt ?? c.createdAt}>{formatDate(c.paidAt ?? c.createdAt)}</time>
+            {kind} · {isPlanless(c.kind) ? null : <>{c.planName} · {cycle} · </>} <time dateTime={c.paidAt ?? c.createdAt}>{formatDate(c.paidAt ?? c.createdAt)}</time>
           </p>
           {details.length ? (
             <p className="text-xs text-muted-foreground">
@@ -89,9 +89,26 @@ function CheckoutRow({ ws, checkout: c }: { ws: string; checkout: Checkout }) {
         </div>
         <div className="text-end">
           <p className="text-sm font-semibold tabular-nums">{formatToman(rialOf(c.amount) ?? 0)}</p>
+          {c.couponCode ? (
+            <p className="text-xs text-muted-foreground">
+              {t("history.coupon")}{" "}
+              <bdi dir="ltr" className="font-mono">
+                {c.couponCode}
+              </bdi>
+            </p>
+          ) : null}
+          {(rialOf(c.walletUsed) ?? 0) > 0 ? <p className="text-xs text-muted-foreground">{t("history.wallet", { amount: formatToman(rialOf(c.walletUsed) ?? 0) })}</p> : null}
           {c.paidAt ? <p className="text-xs text-muted-foreground">{formatDateTime(c.paidAt)}</p> : null}
         </div>
       </Link>
     </li>
   );
+}
+
+/** «خرید تازه», «پرداخت مصرف مازاد», «شارژ کیف پول»… for a checkout's kind. */
+export function kindLabel(t: ReturnType<typeof useTranslations<"billing">>, kind: string): string {
+  if (isKind(kind)) return t(`plans.kind.${kind}`);
+  if (isOverage(kind)) return t("overage.kind");
+  if (isWalletTopUp(kind)) return t("wallet.kind");
+  return kind;
 }
