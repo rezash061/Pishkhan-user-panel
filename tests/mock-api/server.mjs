@@ -920,6 +920,37 @@ const loginResponse = () => ({
   isNewUser: false,
 });
 
+
+// Support tickets and announcements (UP-1.18, AD-2.6). `/__mock/support?reset=1` puts the seed back;
+// `/__mock/support/staff-reply?ticket=<id>` answers a ticket as Pishkhan support; `/__mock/announcements?set=critical|none|seed`.
+const STAFF = "پشتیبانی پیشخوان";
+let ticketNumber = 1000;
+const supportTickets = [];
+const supportMessages = new Map();
+const ticketMessage = (authorKind, body, at) => ({ id: randomUUID(), authorKind, authorId: authorKind === "staff" ? null : me.id, authorName: authorKind === "staff" ? STAFF : me.displayName, body, createdAt: at });
+const addTicket = (subject, category, messages, status) => {
+  const id = randomUUID();
+  const list = messages.map(([kind, body, at]) => ticketMessage(kind, body, at));
+  const last = list[list.length - 1];
+  supportTickets.unshift({ id, number: ++ticketNumber, subject, category, status, lastMessageBy: last.authorKind, messageCount: list.length, lastMessageAt: last.createdAt, createdAt: list[0].createdAt, closedAt: status === "closed" ? last.createdAt : null });
+  supportMessages.set(id, list);
+  return id;
+};
+const resetSupport = () => {
+  supportTickets.length = 0;
+  supportMessages.clear();
+  addTicket("فاکتور رسمی برای اشتراک", "billing", [["seller", "برای اشتراک ماه قبل فاکتور رسمی لازم دارم.", ago(9 * 24 * H)], ["staff", "فاکتور رسمی به ایمیل شما فرستاده شد.", ago(8 * 24 * H)]], "closed");
+  addTicket("دستیار قیمت قدیمی را می‌گوید", "ai", [["seller", "دستیار قیمت مانتو را قدیمی می‌گوید.", ago(5 * H)], ["staff", "کاتالوگ دوباره خوانده شد. لطفاً دوباره امتحان کنید.", ago(2 * H)]], "answered");
+};
+resetSupport();
+const ticketView = (t) => ({ ...t });
+const ticketDetail = (t) => ({ ticket: ticketView(t), messages: supportMessages.get(t.id) ?? [] });
+const seedAnnouncements = () => [
+  { id: "0199b000-0000-7000-8000-00000000a001", title: "به‌روزرسانی سرورها", body: "پنج‌شنبه ساعت ۲ تا ۳ بامداد ممکن است پنل کند باشد.", severity: "warning", link: "/billing", startsAt: ago(H), endsAt: iso(new Date(Date.now() + 24 * H)) },
+];
+// None by default, so other tests see no extra banner; `/__mock/announcements?set=seed` adds the warning.
+let announcements = [];
+
 const routes = [
   ["GET", /^\/api\/v1\/public\/altcha\/challenge$/, (req, res) => {
     const salt = `${randomUUID().slice(0, 8)}?expires=${Math.floor(Date.now() / 1000) + 300}`;
@@ -2310,6 +2341,76 @@ const routes = [
   ["GET", /^\/files\/exports\/([^/]+)$/, (req, res, url, [name]) => {
     res.writeHead(200, { "content-type": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet", "content-disposition": `attachment; filename="${name}"` });
     res.end("mock");
+  }],
+  // `/__mock/payments/merchant` connects a sandbox Zarinpal merchant, so a test can make payment links straight away.
+  ["POST", /^\/__mock\/payments\/merchant$/, (req, res) => {
+    merchant = { configured: true, provider: "zarinpal", merchantIdHint: "1234", sandbox: true, enabled: true, updatedAt: iso(now()) };
+    send(res, 204);
+  }],
+  ["POST", /^\/__mock\/support$/, (req, res, url) => {
+    if (url.searchParams.get("reset")) resetSupport();
+    send(res, 204);
+  }],
+  ["POST", /^\/__mock\/support\/staff-reply$/, (req, res, url) => {
+    const t = supportTickets.find((x) => x.id === url.searchParams.get("ticket")) ?? supportTickets[0];
+    if (!t) return problem(res, 404, "common.not_found");
+    const m = ticketMessage("staff", url.searchParams.get("body") ?? "سلام، بررسی کردیم و مشکل برطرف شد.", iso(now()));
+    supportMessages.get(t.id).push(m);
+    Object.assign(t, { status: "answered", lastMessageBy: "staff", lastMessageAt: m.createdAt, messageCount: t.messageCount + 1, closedAt: null });
+    send(res, 200, ticketDetail(t));
+  }],
+  ["POST", /^\/__mock\/announcements$/, (req, res, url) => {
+    const set = url.searchParams.get("set") ?? "seed";
+    announcements = set === "none" ? [] : set === "critical"
+      ? [{ id: "0199b000-0000-7000-8000-00000000a002", title: "اختلال در اتصال اینستاگرام", body: "متا مشکل دارد؛ پیام‌ها با تأخیر می‌رسند.", severity: "critical", link: "https://status.pishkhan.ir", startsAt: ago(H), endsAt: null }, ...seedAnnouncements()]
+      : seedAnnouncements();
+    send(res, 204);
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/announcements$/, (req, res) => {
+    const order = { critical: 0, warning: 1, info: 2 };
+    send(res, 200, [...announcements].sort((a, b) => order[a.severity] - order[b.severity]));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/support\/tickets$/, (req, res, url) => {
+    const status = url.searchParams.get("status") ?? "";
+    if (status && !["open", "answered", "closed"].includes(status)) return problem(res, 400, "validation.failed", { status: ["validation.invalid"] });
+    const p = Math.max(1, Number(url.searchParams.get("page") ?? 1) || 1);
+    const size = Math.min(100, Math.max(1, Number(url.searchParams.get("pageSize") ?? 20) || 20));
+    const items = supportTickets.filter((t) => !status || t.status === status).sort((a, b) => b.lastMessageAt.localeCompare(a.lastMessageAt));
+    send(res, 200, { items: items.slice((p - 1) * size, p * size).map(ticketView), totalCount: items.length, page: p, pageSize: size });
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/support\/tickets$/, async (req, res) => {
+    const b = await readBody(req);
+    const errors = {};
+    const subject = (b.subject ?? "").trim();
+    if (subject.length < 3 || subject.length > 150) errors.subject = ["validation.length"];
+    if (!["billing", "technical", "instagram", "ai", "other"].includes(b.category)) errors.category = ["validation.invalid"];
+    const body = (b.body ?? "").trim();
+    if (!body || body.length > 4000) errors.body = ["validation.length"];
+    if (Object.keys(errors).length) return problem(res, 400, "validation.failed", errors);
+    if (supportTickets.filter((t) => t.status !== "closed").length >= 10) return problem(res, 409, "support.ticket.too_many_open");
+    const id = addTicket(subject, b.category, [["seller", body, iso(now())]], "open");
+    send(res, 201, ticketDetail(supportTickets.find((t) => t.id === id)));
+  }],
+  ["GET", /^\/api\/v1\/workspaces\/[^/]+\/support\/tickets\/([^/]+)$/, (req, res, url, [id]) => {
+    const t = supportTickets.find((x) => x.id === id);
+    if (!t) return problem(res, 404, "common.not_found");
+    send(res, 200, ticketDetail(t));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/support\/tickets\/([^/]+)\/messages$/, async (req, res, url, [id]) => {
+    const t = supportTickets.find((x) => x.id === id);
+    if (!t) return problem(res, 404, "common.not_found");
+    const body = ((await readBody(req)).body ?? "").trim();
+    if (!body || body.length > 4000) return problem(res, 400, "validation.failed", { body: ["validation.length"] });
+    const m = ticketMessage("seller", body, iso(now()));
+    supportMessages.get(t.id).push(m);
+    Object.assign(t, { status: "open", lastMessageBy: "seller", lastMessageAt: m.createdAt, messageCount: t.messageCount + 1, closedAt: null });
+    send(res, 200, ticketDetail(t));
+  }],
+  ["POST", /^\/api\/v1\/workspaces\/[^/]+\/support\/tickets\/([^/]+)\/close$/, (req, res, url, [id]) => {
+    const t = supportTickets.find((x) => x.id === id);
+    if (!t) return problem(res, 404, "common.not_found");
+    if (t.status !== "closed") Object.assign(t, { status: "closed", closedAt: iso(now()) });
+    send(res, 200, ticketView(t));
   }],
 ];
 

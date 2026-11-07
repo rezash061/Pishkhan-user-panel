@@ -18,6 +18,7 @@ import { formatRelative } from "@/lib/i18n/format";
 import { useErrorMessage } from "@/lib/i18n/use-error-message";
 import { P } from "@/lib/permissions";
 import { useJoinConversation } from "@/lib/realtime/hub";
+import { PayLinkButton } from "@/features/payments/pay-link-button";
 import { Composer, type ComposerHandle } from "./composer";
 import { contactTitle } from "./contact";
 import { isAiDraft, useHandoffReason } from "./handoff-reason";
@@ -197,6 +198,9 @@ export function ConversationView({ conversationId }: { conversationId: string })
           quickReplies={quickReplies.data ?? []}
           quickRepliesHref={`/w/${ws}/settings/quick-replies`}
           onSend={sendText}
+          tools={(blocked) =>
+            can(P.ordersWrite) ? <PayLinkButton ws={ws} conversationId={c.id} disabled={blocked} onInsert={(text) => composer.current?.append(text)} /> : null
+          }
         />
       </section>
 

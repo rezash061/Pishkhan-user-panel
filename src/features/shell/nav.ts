@@ -1,8 +1,8 @@
-import { Blocks, Bot, BookOpen, CreditCard, Inbox, LayoutDashboard, Package, Radio, Settings, ShoppingBag, Users, UsersRound, Workflow, type LucideIcon } from "lucide-react";
+import { Blocks, Bot, BookOpen, CreditCard, Inbox, LayoutDashboard, LifeBuoy, Package, Radio, Settings, ShoppingBag, Users, UsersRound, Workflow, type LucideIcon } from "lucide-react";
 import { P, type Permission } from "@/lib/permissions";
 
 export interface NavItem {
-  key: "dashboard" | "inbox" | "orders" | "automations" | "agent" | "knowledge" | "catalog" | "contacts" | "channels" | "team" | "billing" | "settings";
+  key: "dashboard" | "inbox" | "orders" | "automations" | "agent" | "knowledge" | "catalog" | "contacts" | "channels" | "team" | "billing" | "settings" | "support";
   href: string;
   icon: LucideIcon;
   permission?: Permission;
@@ -25,6 +25,7 @@ export const navItems: NavItem[] = [
   { key: "team", href: "/team", icon: Users, permission: P.membersRead },
   { key: "billing", href: "/billing", icon: CreditCard, permission: P.billingManage },
   { key: "settings", href: "/settings", icon: Settings, permission: P.settingsRead, tab: true },
+  { key: "support", href: "/support", icon: LifeBuoy, permission: P.settingsRead },
 ];
 
 export const moreIcon = Blocks;

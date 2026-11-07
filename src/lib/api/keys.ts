@@ -87,4 +87,8 @@ export const qk = {
   outageCampaigns: (ws: string) => ["outage", ws, "campaigns"] as const,
   merchantAccount: (ws: string) => ["payments", ws, "merchant"] as const,
   paymentLinks: (ws: string, orderId: string) => ["orders", ws, "one", orderId, "payment-links"] as const,
+  tickets: (ws: string) => ["support-tickets", ws] as const,
+  ticketList: (ws: string, filter: object) => ["support-tickets", ws, "list", filter] as const,
+  ticket: (ws: string, id: string) => ["support-tickets", ws, "one", id] as const,
+  announcements: (ws: string) => ["announcements", ws] as const,
 };
