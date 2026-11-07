@@ -1,17 +1,87 @@
 "use client";
 
-import { CloudOff, PlugZap, TriangleAlert, WifiOff } from "lucide-react";
+import { CloudOff, Megaphone, PlugZap, TriangleAlert, WifiOff, X } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { useEffect, useState, type ReactNode } from "react";
 import { useChannels } from "@/features/channels/data";
 import { useOutageStatus } from "@/features/outage/data";
+import { useAnnouncements } from "@/features/tickets/data";
 import { isDown } from "@/features/outage/model";
 import { P } from "@/lib/permissions";
 import { useWorkspace } from "@/features/workspace/context";
 import { cn } from "@/lib/cn";
 import { useHubStatus } from "@/lib/realtime/hub";
+import type { Announcement } from "@/lib/api/types";
+
+const DISMISSED_KEY = "pishkhan.announcements.dismissed";
+
+function readDismissed(): string[] {
+  try {
+    const raw = JSON.parse(localStorage.getItem(DISMISSED_KEY) ?? "[]") as unknown;
+    return Array.isArray(raw) ? raw.filter((x): x is string => typeof x === "string") : [];
+  } catch {
+    return [];
+  }
+}
+
+/** Platform notices from Pishkhan (AD-2.6). Info and warning notices can be hidden on this device; critical ones stay. */
+function AnnouncementBanners({ items, base }: { items: Announcement[]; base: string }) {
+  const t = useTranslations("banners");
+  // Read lazily: notices arrive from a query after hydration, so the server render never shows any.
+  const [dismissed, setDismissed] = useState<string[]>(() => (typeof window === "undefined" ? [] : readDismissed()));
+  const dismiss = (id: string) => {
+    const next = [...dismissed, id].slice(-50);
+    setDismissed(next);
+    try {
+      localStorage.setItem(DISMISSED_KEY, JSON.stringify(next));
+    } catch {
+      // Private mode or blocked storage: hidden for this visit only.
+    }
+  };
+  return (
+    <>
+      {items
+        .filter((a) => a.severity === "critical" || !dismissed.includes(a.id))
+        .map((a) => {
+          const link = a.link ? (a.link.startsWith("/") ? `${base}${a.link}` : a.link) : null;
+          return (
+            <Banner
+              key={a.id}
+              tone={a.severity === "critical" ? "danger" : a.severity === "warning" ? "warning" : "neutral"}
+              icon={<Megaphone />}
+              action={
+                <span className="flex shrink-0 items-center gap-2">
+                  {link ? (
+                    link.startsWith("/") ? (
+                      <Link href={link} className="font-semibold underline-offset-4 hover:underline">
+                        {t("announcementMore")}
+                      </Link>
+                    ) : (
+                      <a href={link} target="_blank" rel="noopener noreferrer" className="font-semibold underline-offset-4 hover:underline">
+                        {t("announcementMore")}
+                      </a>
+                    )
+                  ) : null}
+                  {a.severity !== "critical" ? (
+                    <button type="button" onClick={() => dismiss(a.id)} aria-label={t("announcementDismiss")} className="grid size-6 place-items-center rounded-md hover:bg-black/5">
+                      <X />
+                    </button>
+                  ) : null}
+                </span>
+              }
+            >
+              <span data-testid="announcement">
+                <span className="font-semibold">{a.title}</span>
+                {a.body ? <span> {a.body}</span> : null}
+              </span>
+            </Banner>
+          );
+        })}
+    </>
+  );
+}
 
 function Banner({ tone, icon, children, action }: { tone: "danger" | "warning" | "neutral"; icon: ReactNode; children: ReactNode; action?: ReactNode }) {
   return (
@@ -52,6 +122,7 @@ export function Banners() {
   const { workspace, can } = useWorkspace();
   const channels = useChannels(workspace.id);
   const outage = useOutageStatus(workspace.id, can(P.inboxRead));
+  const announcements = useAnnouncements(workspace.id, can(P.settingsRead));
   const hub = useHubStatus();
   const online = useOnline();
   const pathname = usePathname();
@@ -91,6 +162,7 @@ export function Banners() {
           {t("realtimeDown")}
         </Banner>
       ) : null}
+      <AnnouncementBanners items={announcements.data ?? []} base={base} />
       {isDown(outage.data?.status) ? (
         <Banner
           tone="danger"

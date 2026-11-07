@@ -1,5 +1,11 @@
 # Changelog
 
+## 0.29.0 — 2026-11-07
+
+- Support (backend batch 4, UP-1.18): «پشتیبانی» in the menu opens `/w/{ws}/support`, the workspace's tickets with Pishkhan's support team, filtered by status. «تیکت جدید» asks for a subject, a category and the problem; a ticket page shows the conversation, takes replies (a closed ticket opens again) and «مشکل حل شد» closes it. A staff answer arrives as a notification that opens the ticket. At most ten tickets can be open at once; the eleventh is explained.
+- Announcements (AD-2.6): platform notices show as a banner above every page, most severe first, with «بیشتر بدانید» for a panel page or an outside link. Info and warning notices can be hidden on the device; critical ones stay.
+- Inbox: «لینک پرداخت» next to saved replies takes the conversation's latest order still to be paid, reuses its active Zarinpal link or makes one, and adds a ready message with the amount and link to the reply box. With no such order it offers «ثبت سفارش»; without a connected gateway it says so.
+
 ## 0.28.0 — 2026-11-06
 
 - Coupons and the wallet at checkout (backend #55, BE-1.11; UP-2.8):

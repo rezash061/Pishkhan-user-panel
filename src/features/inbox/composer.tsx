@@ -3,7 +3,7 @@
 import { Clock, Lock, SendHorizontal, Zap } from "lucide-react";
 import Link from "next/link";
 import { useTranslations } from "next-intl";
-import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent } from "react";
+import { forwardRef, useEffect, useImperativeHandle, useMemo, useRef, useState, type KeyboardEvent, type ReactNode } from "react";
 import { Button } from "@/components/ui/button";
 import type { Conversation, QuickReply } from "@/lib/api/types";
 import { cn } from "@/lib/cn";
@@ -13,6 +13,8 @@ import { messagingWindow, useNow } from "./window";
 export interface ComposerHandle {
   focus: () => void;
   setText: (text: string) => void;
+  /** Adds text after what is already typed (on its own line). */
+  append: (text: string) => void;
 }
 
 const MAX_LENGTH = 1000;
@@ -27,7 +29,9 @@ export const Composer = forwardRef<ComposerHandle, {
   quickReplies: QuickReply[];
   quickRepliesHref: string;
   onSend: (text: string) => void;
-}>(function Composer({ conversation, canReply, quickReplies, quickRepliesHref, onSend }, ref) {
+  /** Extra buttons beside saved replies (the payment link). */
+  tools?: (blocked: boolean) => ReactNode;
+}>(function Composer({ conversation, canReply, quickReplies, quickRepliesHref, onSend, tools }, ref) {
   const t = useTranslations("inbox.composer");
   const [text, setText] = useState("");
   const [pickerIndex, setPickerIndex] = useState(0);
@@ -40,6 +44,10 @@ export const Composer = forwardRef<ComposerHandle, {
     focus: () => area.current?.focus(),
     setText: (value: string) => {
       setText(value);
+      requestAnimationFrame(() => area.current?.focus());
+    },
+    append: (value: string) => {
+      setText((old) => (old.trim() ? `${old.trimEnd()}\n${value}` : value).slice(0, MAX_LENGTH));
       requestAnimationFrame(() => area.current?.focus());
     },
   }));
@@ -166,6 +174,7 @@ export const Composer = forwardRef<ComposerHandle, {
         >
           <Zap />
         </Button>
+        {tools?.(blocked)}
         <label htmlFor="composer" className="sr-only">
           {t("placeholder")}
         </label>
